@@ -1,37 +1,8 @@
-import { CreateWorkspace, type WorkspaceRepository } from '@weft/core'
-import { FixedClock, InMemoryWorkspaceRepository, SequentialIdGenerator } from '@weft/core/testing'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { createApp, type AppDeps, type SessionUser } from './app'
+import { InMemoryWorkspaceRepository } from '@weft/core/testing'
+import { beforeEach, describe, expect, it } from 'vitest'
+import { buildTestApp, NOW, postJson, type TestAppOptions } from './test-app'
 
-const NOW = new Date('2026-10-15T12:00:00.000Z')
-
-function buildApp(overrides: Partial<AppDeps> & { user?: SessionUser | null } = {}) {
-  const workspaces: WorkspaceRepository = overrides.workspaces ?? new InMemoryWorkspaceRepository()
-  const logger = { error: vi.fn() }
-  const authHandler = vi.fn(async () => new Response('auth', { status: 200 }))
-  const user = overrides.user === undefined ? { id: 'user_1' } : overrides.user
-  const app = createApp({
-    authHandler,
-    getSessionUser: async () => user,
-    workspaces,
-    createWorkspace: new CreateWorkspace({
-      workspaces,
-      ids: new SequentialIdGenerator('ws'),
-      clock: new FixedClock(NOW),
-    }),
-    logger,
-    ...overrides,
-  })
-  return { app, logger, authHandler }
-}
-
-function postJson(body: unknown): RequestInit {
-  return {
-    method: 'POST',
-    headers: { 'content-type': 'application/json' },
-    body: JSON.stringify(body),
-  }
-}
+const buildApp = (options: TestAppOptions = {}) => buildTestApp(options)
 
 describe('HTTP app', () => {
   let ctx: ReturnType<typeof buildApp>

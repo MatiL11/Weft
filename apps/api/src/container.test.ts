@@ -31,6 +31,11 @@ describe('container (integration: signup → personal workspace)', () => {
       DATABASE_URL: pg.getConnectionUri(),
       BETTER_AUTH_SECRET: 'test-secret-that-is-long-enough-1234567890',
       PUBLIC_URL,
+      // Storage is not touched by the sign-up flow under test.
+      S3_ENDPOINT: 'http://127.0.0.1:1',
+      S3_PUBLIC_ENDPOINT: 'http://127.0.0.1:1',
+      S3_ACCESS_KEY_ID: 'unused',
+      S3_SECRET_ACCESS_KEY: 'unused-secret',
     })
     container = createContainer(config, pino({ level: 'silent' }))
   })

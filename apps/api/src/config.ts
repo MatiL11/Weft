@@ -8,6 +8,14 @@ const ConfigSchema = z.object({
   PUBLIC_URL: z.url().default('http://localhost:3000'),
   BETTER_AUTH_SECRET: z.string().min(32, 'BETTER_AUTH_SECRET must be at least 32 characters'),
   RUN_MIGRATIONS: z.stringbool().default(true),
+  /** S3-compatible storage as reached by this server (e.g. http://seaweedfs:8333). */
+  S3_ENDPOINT: z.url(),
+  /** The same storage as reached by browsers; presigned URLs point here. */
+  S3_PUBLIC_ENDPOINT: z.url(),
+  S3_REGION: z.string().min(1).default('us-east-1'),
+  S3_BUCKET: z.string().min(3).default('weft'),
+  S3_ACCESS_KEY_ID: z.string().min(1),
+  S3_SECRET_ACCESS_KEY: z.string().min(8),
   MIGRATIONS_DIR: z.string().optional(),
   LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace']).default('info'),
 })

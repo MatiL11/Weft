@@ -25,12 +25,16 @@ packages/
 
 ```bash
 cp .env.example .env
-# set BETTER_AUTH_SECRET in .env, e.g. with: openssl rand -base64 48
+# set BETTER_AUTH_SECRET (openssl rand -base64 48) and S3_SECRET_ACCESS_KEY (openssl rand -hex 24)
 docker compose up --build
 ```
 
 Open http://localhost:3000, create an account, and you'll land in your personal workspace.
 Use `WEB_PORT=3100 PUBLIC_URL=http://localhost:3100 docker compose up` if port 3000 is taken.
+
+Videos are stored in SeaweedFS (S3-compatible). Browsers upload and stream media directly from
+it through short-lived presigned URLs, so its port (8333 by default) must be reachable by viewers.
+In production, put it behind your domain and set `STORAGE_PUBLIC_URL` (e.g. `https://media.example.com`).
 
 ## Development
 

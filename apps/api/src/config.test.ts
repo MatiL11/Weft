@@ -4,6 +4,10 @@ import { loadConfig } from './config'
 const VALID = {
   DATABASE_URL: 'postgres://weft:weft@localhost:5432/weft',
   BETTER_AUTH_SECRET: 'a'.repeat(32),
+  S3_ENDPOINT: 'http://seaweedfs:8333',
+  S3_PUBLIC_ENDPOINT: 'http://localhost:8333',
+  S3_ACCESS_KEY_ID: 'weft',
+  S3_SECRET_ACCESS_KEY: 'weft-secret',
 }
 
 describe('loadConfig', () => {
@@ -14,6 +18,8 @@ describe('loadConfig', () => {
       PUBLIC_URL: 'http://localhost:3000',
       RUN_MIGRATIONS: true,
       LOG_LEVEL: 'info',
+      S3_REGION: 'us-east-1',
+      S3_BUCKET: 'weft',
     })
   })
 

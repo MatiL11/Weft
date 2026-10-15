@@ -12,7 +12,23 @@ if (config.RUN_MIGRATIONS) {
   logger.info('database migrations applied')
 }
 
+const STORAGE_READY_ATTEMPTS = 30
+const STORAGE_RETRY_MS = 1000
+
 const container = createContainer(config, logger)
+
+// Object storage may still be starting (e.g. in docker compose); retry for a while.
+for (let attempt = 1; ; attempt++) {
+  try {
+    await container.storage.ensureBucket({ corsOrigins: [config.PUBLIC_URL] })
+    break
+  } catch (error) {
+    if (attempt >= STORAGE_READY_ATTEMPTS) throw error
+    logger.warn({ attempt, err: error }, 'object storage not ready, retrying')
+    await new Promise((resolve) => setTimeout(resolve, STORAGE_RETRY_MS))
+  }
+}
+logger.info({ bucket: config.S3_BUCKET }, 'object storage ready')
 const server = serve({ fetch: container.app.fetch, port: config.PORT }, (info) => {
   logger.info({ port: info.port }, 'api listening')
 })
