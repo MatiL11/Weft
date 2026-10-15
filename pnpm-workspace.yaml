@@ -2,6 +2,14 @@ packages:
   - apps/*
   - packages/*
   - packages/infra/*
+
+# Install scripts are blocked by default; only allow what is required.
+allowBuilds:
+  esbuild: true
+  cpu-features: false
+  ssh2: false
+  protobufjs: false
+
 minimumReleaseAgeExclude:
   - '@vitest/coverage-v8@5.0.5'
   - '@vitest/mocker@5.0.5'
