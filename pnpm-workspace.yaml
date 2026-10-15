@@ -1,0 +1,9 @@
+packages:
+  - apps/*
+  - packages/*
+  - packages/infra/*
+minimumReleaseAgeExclude:
+  - '@vitest/coverage-v8@5.0.5'
+  - '@vitest/mocker@5.0.5'
+  - '@vitest/spy@5.0.5'
+  - vitest@5.0.5
