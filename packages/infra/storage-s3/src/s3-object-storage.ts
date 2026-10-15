@@ -1,8 +1,10 @@
 import {
   CreateBucketCommand,
+  DeleteObjectsCommand,
   GetObjectCommand,
   HeadBucketCommand,
   HeadObjectCommand,
+  ListObjectsV2Command,
   PutBucketCorsCommand,
   PutObjectCommand,
   S3Client,
@@ -86,6 +88,21 @@ export class S3ObjectStorage implements ObjectStorage {
       if (isNotFound(error)) return null
       throw error
     }
+  }
+
+  async deletePrefix(prefix: string): Promise<void> {
+    const Bucket = this.config.bucket
+    let ContinuationToken: string | undefined
+    do {
+      const page = await this.internal.send(
+        new ListObjectsV2Command({ Bucket, Prefix: prefix, ContinuationToken }),
+      )
+      const keys = (page.Contents ?? []).flatMap((o) => (o.Key ? [{ Key: o.Key }] : []))
+      if (keys.length > 0) {
+        await this.internal.send(new DeleteObjectsCommand({ Bucket, Delete: { Objects: keys } }))
+      }
+      ContinuationToken = page.IsTruncated ? page.NextContinuationToken : undefined
+    } while (ContinuationToken)
   }
 
   /** Creates the bucket if needed and allows browser uploads/playback from the app's origins. */

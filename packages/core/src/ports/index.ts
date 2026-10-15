@@ -27,6 +27,8 @@ export interface VideoRepository {
   findSegment(videoId: string, kind: SegmentKind, index: number): Promise<VideoSegment | null>
   markSegmentUploaded(videoId: string, kind: SegmentKind, index: number, at: Date): Promise<void>
   listSegments(videoId: string): Promise<VideoSegment[]>
+  /** Deletes the video and its segment records. */
+  delete(id: string): Promise<void>
 }
 
 export interface PresignedUpload {
@@ -43,4 +45,6 @@ export interface ObjectStorage {
   presignGet(key: string, options: { expiresInSeconds: number }): Promise<string>
   /** Size of a stored object, or null if it does not exist. */
   head(key: string): Promise<{ byteLength: number } | null>
+  /** Deletes every object whose key starts with `prefix`. */
+  deletePrefix(prefix: string): Promise<void>
 }

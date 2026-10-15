@@ -82,6 +82,19 @@ describe('S3ObjectStorage (integration, SeaweedFS)', () => {
     expect(await storage.head('videos/b/seg-000000.m4s')).toBeNull()
   })
 
+  it('deletes every object under a prefix, leaving other videos alone', async () => {
+    await put('videos/del/init.mp4', sample(100))
+    await put('videos/del/seg-000000.m4s', sample(200))
+    await put('videos/keep/init.mp4', sample(50))
+
+    await storage.deletePrefix('videos/del/')
+
+    expect(await storage.head('videos/del/init.mp4')).toBeNull()
+    expect(await storage.head('videos/del/seg-000000.m4s')).toBeNull()
+    expect(await storage.head('videos/keep/init.mp4')).toEqual({ byteLength: 50 })
+    await expect(storage.deletePrefix('videos/nothing-here/')).resolves.toBeUndefined()
+  })
+
   it('reports missing objects as null', async () => {
     expect(await storage.head('videos/none/init.mp4')).toBeNull()
   })

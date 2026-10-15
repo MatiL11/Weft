@@ -77,6 +77,11 @@ export class DrizzleVideoRepository implements VideoRepository {
     return rows.map(toSegment)
   }
 
+  async delete(id: string): Promise<void> {
+    // Segments go with it (ON DELETE CASCADE).
+    await this.db.delete(videos).where(eq(videos.id, id))
+  }
+
   private segmentMatch(videoId: string, kind: SegmentKind, index: number) {
     return and(
       eq(videoSegments.videoId, videoId),

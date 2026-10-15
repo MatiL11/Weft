@@ -5,6 +5,7 @@ import {
   createVideo,
   segmentKey,
   validateSegmentUpload,
+  videoPrefix,
   type SegmentKind,
   type SegmentUploadRequest,
   type Video,
@@ -168,6 +169,21 @@ export class CompleteRecording {
     }
     await this.deps.videos.update(completed)
     return completed
+  }
+}
+
+/** Deletes a video and all of its stored media (e.g. a discarded recording). Owner only. */
+export class DeleteVideo {
+  constructor(private readonly deps: RecordingDeps) {}
+
+  async execute(input: { userId: string; videoId: string }): Promise<void> {
+    const video = await loadVideo(this.deps.videos, input.videoId)
+    if (video.ownerId !== input.userId) {
+      throw new DomainError('video.forbidden', 'Only the owner can delete this video.')
+    }
+    // Remove the record first so the share link stops working immediately.
+    await this.deps.videos.delete(video.id)
+    await this.deps.storage.deletePrefix(videoPrefix(video.id))
   }
 }
 

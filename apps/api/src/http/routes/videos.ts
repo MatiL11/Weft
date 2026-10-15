@@ -4,6 +4,7 @@ import {
   MAX_MEDIA_SEGMENTS,
   type CompleteRecording,
   type ConfirmSegmentUpload,
+  type DeleteVideo,
   type GetPlayback,
   type PrepareSegmentUpload,
   type StartRecording,
@@ -21,6 +22,7 @@ export interface VideoRouteDeps {
   prepareSegmentUpload: PrepareSegmentUpload
   confirmSegmentUpload: ConfirmSegmentUpload
   completeRecording: CompleteRecording
+  deleteVideo: DeleteVideo
   getPlayback: GetPlayback
   /** Public base URL of the web app, used to build share links. */
   publicUrl: string
@@ -119,6 +121,14 @@ export function videoRoutes(deps: VideoRouteDeps): Hono<AppEnv> {
       videoId: c.req.param('id'),
     })
     return c.json(ok(videoSummary(video, userId)))
+  })
+
+  routes.delete('/:id', requireUser, async (c) => {
+    await deps.deleteVideo.execute({
+      userId: currentUser(c.get('user')).id,
+      videoId: c.req.param('id'),
+    })
+    return c.json(ok({ deleted: true }))
   })
 
   // ── Viewers (anonymous allowed; privacy enforced by GetPlayback) ──

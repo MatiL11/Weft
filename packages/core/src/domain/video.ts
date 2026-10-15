@@ -103,6 +103,11 @@ export function validateSegmentUpload(request: SegmentUploadRequest): void {
   }
 }
 
+/** Object-storage prefix holding all of a video's media. */
+export function videoPrefix(videoId: string): string {
+  return `videos/${videoId}/`
+}
+
 /** Object-storage key for a segment. */
 export function segmentKey(videoId: string, kind: SegmentKind, index: number): string {
   return kind === 'init'

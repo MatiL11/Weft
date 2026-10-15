@@ -177,4 +177,24 @@ describe('video routes', () => {
     )
     expect(res.status).toBe(403)
   })
+
+  it('lets the owner delete a video, after which its link stops working', async () => {
+    const ctx = await setup()
+    const { video } = await startVideo(ctx)
+    await uploadSegment(ctx, video.id, 'init', 0)
+
+    ctx.actAs({ id: 'intruder' })
+    expect((await ctx.app.request(`/api/videos/${video.id}`, { method: 'DELETE' })).status).toBe(
+      403,
+    )
+
+    ctx.actAs({ id: 'user_1' })
+    expect((await ctx.app.request(`/api/videos/${video.id}`, { method: 'DELETE' })).status).toBe(
+      200,
+    )
+    expect(ctx.storage.keys()).toEqual([])
+
+    ctx.actAs(null)
+    expect((await ctx.app.request(`/api/videos/${video.id}/playlist.m3u8`)).status).toBe(404)
+  })
 })

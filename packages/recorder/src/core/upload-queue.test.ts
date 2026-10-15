@@ -175,4 +175,18 @@ describe('UploadQueue', () => {
     expect(() => queue.enqueue(item('media', 0))).toThrow(/finished/)
     await finishing
   })
+
+  it('cancels waiting uploads and refuses new ones', async () => {
+    const gate = deferred()
+    const { queue, transport } = setup({ transport: { put: vi.fn(() => gate.promise) } })
+    ;[0, 1, 2, 3].forEach((i) => queue.enqueue(item('media', i)))
+    await new Promise((r) => setTimeout(r, 0))
+
+    queue.cancel()
+    expect(queue.getSnapshot().pending).toBe(2)
+    expect(() => queue.enqueue(item('media', 9))).toThrow(/finished/)
+    gate.resolve()
+    await new Promise((r) => setTimeout(r, 0))
+    expect(transport.put).toHaveBeenCalledTimes(2)
+  })
 })

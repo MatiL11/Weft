@@ -100,10 +100,11 @@ describe('DrizzleVideoRepository (integration)', () => {
     expect(await repo.listSegments('other')).toEqual([])
   })
 
-  it('deletes segments with their video', async () => {
+  it('deletes a video together with its segments', async () => {
     await repo.create(newVideo())
     await repo.upsertSegment(segment())
-    await handle.db.delete(videos)
+    await repo.delete('vid_1')
+    expect(await repo.findById('vid_1')).toBeNull()
     expect(await repo.listSegments('vid_1')).toEqual([])
   })
 

@@ -98,6 +98,14 @@ export class UploadQueue {
     this.pump()
   }
 
+  /** Drops waiting items and accepts no more; uploads already in flight finish on their own. */
+  cancel(): void {
+    this.finishing = true
+    const dropped = this.waiting.splice(0).length
+    if (dropped > 0) this.update({ pending: this.snapshot.pending - dropped })
+    if (this.active === 0) this.flushIdle()
+  }
+
   /** Waits for every upload, then completes the video. Rejects if any segment failed. */
   async finish(summary: { durationMs: number; segmentCount: number }): Promise<void> {
     this.finishing = true

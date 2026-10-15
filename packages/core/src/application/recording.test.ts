@@ -9,6 +9,7 @@ import {
 import {
   CompleteRecording,
   ConfirmSegmentUpload,
+  DeleteVideo,
   GetPlayback,
   PrepareSegmentUpload,
   StartRecording,
@@ -272,6 +273,28 @@ describe('recording use cases', () => {
       await expect(
         new GetPlayback(deps).execute({ viewerId: 'viewer_1', videoId: video.id }),
       ).resolves.toBeDefined()
+    })
+  })
+
+  describe('DeleteVideo', () => {
+    it('removes the video, its segments and its stored media', async () => {
+      const video = await start()
+      await upload(video.id, 'init', 0)
+      await upload(video.id, 'media', 0)
+
+      await new DeleteVideo(deps).execute({ userId: 'owner_1', videoId: video.id })
+
+      expect(await videos.findById(video.id)).toBeNull()
+      expect(await videos.listSegments(video.id)).toEqual([])
+      expect(storage.keys()).toEqual([])
+    })
+
+    it('only lets the owner delete', async () => {
+      const video = await start()
+      await expect(
+        new DeleteVideo(deps).execute({ userId: 'member_1', videoId: video.id }),
+      ).rejects.toMatchObject({ code: 'video.forbidden' })
+      expect(await videos.findById(video.id)).not.toBeNull()
     })
   })
 })

@@ -109,6 +109,13 @@ export class InMemoryVideoRepository implements VideoRepository {
   async listSegments(videoId: string): Promise<VideoSegment[]> {
     return [...this.segments.values()].filter((s) => s.videoId === videoId)
   }
+
+  async delete(id: string): Promise<void> {
+    this.videos.delete(id)
+    for (const [key, segment] of this.segments) {
+      if (segment.videoId === id) this.segments.delete(key)
+    }
+  }
 }
 
 /** ObjectStorage fake with deterministic URLs; `simulateUpload` stands in for the browser's PUT. */
@@ -136,7 +143,18 @@ export class FakeObjectStorage implements ObjectStorage {
     return byteLength === undefined ? null : { byteLength }
   }
 
+  async deletePrefix(prefix: string): Promise<void> {
+    for (const key of [...this.objects.keys()]) {
+      if (key.startsWith(prefix)) this.objects.delete(key)
+    }
+  }
+
   simulateUpload(key: string, byteLength: number): void {
     this.objects.set(key, byteLength)
+  }
+
+  /** Stored object keys, for assertions. */
+  keys(): string[] {
+    return [...this.objects.keys()]
   }
 }
