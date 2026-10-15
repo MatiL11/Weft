@@ -170,10 +170,14 @@ Cada fase cierra con tests (≥80 % de cobertura en paquetes de dominio), revisi
 
 ### Fase 2 — Subida en streaming + link instantáneo (1–2 semanas)
 
-- [ ] Endpoints de video y segmentos, URLs prefirmadas, verificación de hash
-- [ ] Cola de subida con reintentos y backoff; indicador de progreso
-- [ ] Playlist HLS provisoria para reproducir antes del procesamiento
+- [x] SeaweedFS (S3) en docker compose; adaptador S3 compatible con SeaweedFS/Garage/R2/S3
+- [x] Endpoints de video y segmentos, URLs prefirmadas atadas al SHA-256 del segmento (el almacenamiento rechaza bytes alterados), confirmación contra el storage, completar solo si no falta ningún segmento
+- [x] Cola de subida con reintentos, backoff y URL nueva en cada intento; indicador de progreso
+- [x] Playlist HLS (fMP4) generada desde los segmentos: en vivo (EVENT) mientras se graba, cerrada (VOD) al terminar
+- [x] Página pública `/v/:id` con reproductor hls.js (HLS nativo en Safari) y privacidad link/workspace/privado
+- [x] Descartar borra el video del servidor; si no hay conexión, la grabación sigue solo en local
 - **Hito:** al detener, el link copiado ya reproduce en otra pestaña en menos de 3 s.
+  - ✅ E2E con la stack real: link listo **~0,2 s** después de detener, copiado al portapapeles; un espectador anónimo lo reproduce completo y también lo ve en vivo mientras se graba.
 
 ### Fase 3 — Procesamiento + reproductor (2 semanas)
 
