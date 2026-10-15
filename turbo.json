@@ -14,5 +14,6 @@
     "test:coverage": {
       "outputs": ["coverage/**"]
     }
-  }
+  },
+  "globalPassThroughEnv": ["CHROMIUM_PATH"]
 }

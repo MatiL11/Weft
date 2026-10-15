@@ -10,6 +10,10 @@ Thanks for helping! A few ground rules keep the project healthy:
 - **Tests first.** Write a failing test, make it pass, refactor. Keep coverage ≥ 80%.
 - **Conventional commits.** `feat:`, `fix:`, `refactor:`, `docs:`, `test:`, `chore:`, `ci:`, `perf:`.
 
+The recorder's browser tests run in headless Chromium. Either install Playwright's build once
+(`pnpm --filter @weft/recorder exec playwright install chromium`) or point to a local Chromium
+with `CHROMIUM_PATH=/usr/bin/chromium`.
+
 Before opening a PR run:
 
 ```bash
