@@ -1,0 +1,159 @@
+# Open-Source Landscape: Loom Alternatives and Building Blocks
+
+> Research date: 2026-10-15. Star counts and last-push dates were pulled from the GitHub REST API on that day. Licenses come from each repo's LICENSE file or README.
+> Context: the target user runs Arch/CachyOS on Wayland. Loom has no Linux desktop app, so Linux capture quality is the deciding criterion.
+
+## TL;DR
+
+- **Cap (CapSoftware/Cap)** is the only mature, actively developed, self-hostable open-source Loom clone. It has an instant link, camera, comments, transcripts, AI summaries and an editor. It now ships Linux packages (.deb, .rpm, AppImage and an Arch pacman package). Most of it is **AGPLv3**; only the `cap-camera*` and `scap-*` crates are MIT. Wayland window capture is still being stabilised: PR "enable Wayland window/display recording with PipeWire" was open on 2026-10-07.
+- Every other project is either a **local recorder/editor with no share link** (Recordly, OpenScreen, Screenity free tier, Kooha), a **thin S3 uploader** (ClipShare), or **tied to a vendor cloud** (Bloom, which needs VideoDB).
+- **Recommendation: compose rather than fork.** Run Cap self-hosted on CachyOS as a reference baseline. Then build a slim, permissively licensed product from mature building blocks: Chromium/Electron capture through the xdg-desktop-portal, tus/Uppy uploads to S3, ffmpeg to HLS, whisper.cpp, and Video.js 10 with hls.js. Fork Cap only if the product can be AGPL. The reasons are in the Recommendation section below.
+
+---
+
+## 1. Complete products (Loom-like)
+
+| Project | Repo | License | Stars / last push | Stack | Platforms (Linux?) | Self-host server | Camera bubble | Instant link | Comments | Transcripts | Trim/edit |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| **Cap** | https://github.com/CapSoftware/Cap | **AGPLv3**, except the MIT `cap-camera*` and `scap-*` crates | 23.3k / 2026-10-15 (daily) | Tauri v2 + SolidStart + Rust capture/encode crates; web app in Next.js + Drizzle + MySQL; S3 storage | macOS, Windows (beta), **Linux (.deb/.rpm/AppImage/Arch, needs glibc 2.39 or newer)**, Chrome extension | **Yes**: docker compose (about 5 containers, MySQL), Railway, Coolify; any S3 (R2, B2, MinIO, etc.) | Yes (round camera; on Linux Instant mode the camera is composited into the frame) | **Yes** ("Instant Mode" uploads while recording) | Yes, plus reactions and analytics | Yes (Cap AI: transcripts, captions, titles, summaries, chapters) | Yes ("Studio Mode" editor: zoom, backgrounds, trim, captions) |
+| **Screenity** | https://github.com/alyssaxuu/screenity | GPL-3.0 (MV3 version, 3.0 and later) | 18.8k / 2026-10-05 | Chrome MV3 extension in JS/TS with webpack and ffmpeg | Any OS with Chrome, so **Linux works** | No. Self-built extension is local-only; free sharing goes through Google Drive; link sharing is in the paid hosted "Pro" | Yes (camera recording with AI background or blur) | Pro only (or Drive) | No (OSS) | Pro (captions) | Yes (cut, trim, crop) |
+| **OpenScreen** | https://github.com/siddharthvaddem/openscreen | MIT | 39.9k / **archived** (last push 2026-06-17) | Electron + PixiJS + Vite/React | macOS, Windows, **Linux (.deb, .pacman, AppImage, Nix)**; Linux uses the browser capture pipeline | No | Yes (PiP webcam overlay) | No (MP4/GIF export) | No | No | Yes (auto-zoom, trim). A community continuation lives at https://github.com/EtienneLescot/openscreen |
+| **Recordly** | https://github.com/webadderallorg/Recordly | **AGPL-3.0** | 33.9k / 2026-10-14 | Electron + PixiJS; native helpers on mac/Windows | macOS, Windows, **Linux** (X11 window list; Wayland system picker; system audio through PipeWire) | No | Yes (configurable bubble) | No | No | No | Yes (timeline trim, zoom). Started as a fork of OpenScreen |
+| **ClipShare** | https://github.com/goshops-com/clipshare | MIT | 371 / 2026-02-09 | Electron + AWS SDK (S3/CloudFront/Terraform); optional MinIO | Electron (cross-platform; Linux not explicitly documented) | No server. Uploads straight to S3, so the link is a bucket/CDN URL | Camera included | Yes (S3 URL) | No | No | No |
+| **Bloom** (VideoDB) | https://github.com/video-db/bloom | MIT (UI only) | 235 / 2026-04-06 | Electron + VideoDB SDK | macOS, Windows; **Linux "coming soon"** | **No.** Needs the VideoDB cloud and an API key | Yes | Yes (through VideoDB) | No | Yes (VideoDB) | No |
+| **Kooha** | https://github.com/SeaDve/Kooha | GPL-3.0 | 3.5k / 2026-10-02 | Rust + GTK4 + GStreamer + xdg-desktop-portal | **Linux only** (Wayland-native) | No | No | No | No | No | No. Useful as a reference for portal + PipeWire capture in Rust |
+| Small, young projects | e.g. https://github.com/anenthg/OpenLoom, https://github.com/uzairkath/gravityRecorder, https://github.com/0xnyn/userplane, https://github.com/mangledbottles/screenlink | mostly MIT | 10–110 stars | various | mostly macOS or web | some | — | — | — | — | — |
+| Non-Loom references | OBS Studio (GPL-2.0), Jitsi Jibri (Apache-2.0) | — | — | — | Linux yes | — | — | No link workflow | — | — | — |
+
+Notes:
+- Cap's GitHub release pages carry **no Linux assets**. The Linux builds are served from https://cap.so/download. The packaging pipeline is documented in `packaging/linux/README.md`, and it states that on Omarchy/Hyprland capture uses the desktop portal and PipeWire, and that "runtime validation must additionally cover … each supported desktop."
+- Open Cap Linux issues as of 2026-10-15 include: a transparent window on WebKitGTK 2.54 caused by forced `WEBKIT_DISABLE_DMABUF_RENDERER=1`; Wayland window capture distorting the aspect ratio and dropping the cursor and clicks; and a CLI auth panic with Secret Service. This confirms that Tauri/WebKitGTK on Linux is Cap's weakest platform.
+- Cap's `crates/` folder has native capture back ends for macOS (`scap-screencapturekit`) and Windows (`scap-direct3d`), plus `scap-ffmpeg` and `scap-cpal`. There is no dedicated MIT Linux PipeWire crate there, so the MIT carve-out does **not** give us a ready Linux capturer.
+
+## 2. Building blocks
+
+### 2.1 Capture and encode (client)
+
+| Option | License / status | Linux notes | Verdict |
+|---|---|---|---|
+| `getDisplayMedia` + **MediaRecorder** | Web standard | Chromium and Firefox on Wayland go through **xdg-desktop-portal ScreenCast → PipeWire**, using the libwebrtc PipeWire capturer. Chrome 126 and later can record **MP4**; Chrome 147 emits fragmented MP4. Firefox records WebM (VP8/VP9/Opus) only. Safari emits MP4 with zero-duration fields | Simplest path to an "instant link". Chunks from `timeslice` can be streamed to the server while recording. Durations and seeking need fixing server-side (remux with ffmpeg) |
+| **WebCodecs** + muxer | Chrome/Edge 94+, **Firefox 130+**, Safari 26+ (full) | Same capture path; gives you encoder control (bitrate, keyframes, H.264/AV1) and lets you composite the camera bubble on canvas before encoding | Better quality and control. Mux with **Mediabunny** (https://github.com/Vanilagy/mediabunny, MPL-2.0, 7.3k stars, active), which succeeds `mp4-muxer` (MIT) |
+| **ffmpeg.wasm** | https://github.com/ffmpegwasm/ffmpeg.wasm (MIT wrapper; the FFmpeg core is LGPL/GPL depending on the build, and x264 makes it GPL) | Large (about 30 MB) and slow; single-thread unless COOP/COEP headers are set | Only for light client-side remux or trim. Do real transcoding on the server |
+| **Native PipeWire capture** | `ashpd` (https://github.com/bilelmoussaoui/ashpd, MIT; Rust bindings for XDG portals) + pipewire-rs or GStreamer `pipewiresrc` | The correct native path on Wayland: portal `ScreenCast` → PipeWire node fd → GStreamer/ffmpeg (VA-API encode). Kooha (GPL) is a working reference | Needed only if we ship a **Tauri** shell or want hardware encode or a no-browser CLI |
+| Electron `desktopCapturer` / `getDisplayMedia` | Electron is MIT | Chromium has PipeWire/portal capture built in (`WebRTCPipeWireCapturer`) | Easiest path to a desktop app with a working Wayland picker |
+
+### 2.2 Desktop shell: Tauri vs Electron
+
+| | Tauri v2 (https://github.com/tauri-apps/tauri, Apache-2.0/MIT, 112k stars) | Electron (https://github.com/electron/electron, MIT, 123k stars) |
+|---|---|---|
+| Linux web engine | **WebKitGTK**. `getDisplayMedia` support depends on WebKit's GStreamer/PipeWire back end (https://bugs.webkit.org/show_bug.cgi?id=210926), which is unreliable. Epiphany has reported the portal prompt not appearing (https://gitlab.gnome.org/GNOME/epiphany/-/issues/1536). Cap also hits WebKitGTK DMABUF rendering bugs | Bundled Chromium, with known-good portal and PipeWire capture plus MediaRecorder MP4 and WebCodecs |
+| Implication | Must capture natively in Rust (ashpd + PipeWire/GStreamer), which is what Cap does | Capture can be done in JS; native helpers are optional |
+| Size / RAM | Small (about 10 MB) | Large (about 100 MB+) |
+| Verdict for a Linux-first Loom | Only with a Rust capture team | **Lower risk for v1** |
+
+A third option is a **PWA/web app plus a small browser extension**, with no desktop shell at all. On Linux, Chromium and Firefox already provide the portal picker. The camera bubble can be a Document Picture-in-Picture window (Chromium), or composited onto a canvas before WebCodecs encoding.
+
+### 2.3 Upload and storage
+
+| Component | Repo / license / status | Notes |
+|---|---|---|
+| **tus protocol / tusd** | https://github.com/tus/tusd (MIT, 3.9k stars, active) | Resumable uploads; S3 multipart backend; hooks fire on upload completion to trigger transcoding. Node alternative: https://github.com/tus/tus-node-server (MIT) |
+| **Uppy** | https://github.com/transloadit/uppy (MIT, 31k stars, active) | Browser uploader with tus and `@uppy/aws-s3` (multipart, presigned) plugins |
+| tus-js-client | https://github.com/tus/tus-js-client (MIT) | Lower-level client. Good for streaming MediaRecorder chunks during recording |
+| Direct S3 multipart with presigned parts | AWS SDK | No extra server. This is the pattern Cap's Instant Mode uses |
+| **MinIO** | https://github.com/minio/minio (AGPLv3), **archived 2026-04-25** | **Do not adopt.** It no longer receives updates |
+| **SeaweedFS** | https://github.com/seaweedfs/seaweedfs (Apache-2.0, 35.5k stars) | Most recommended MinIO replacement |
+| **RustFS** | https://github.com/rustfs/rustfs (Apache-2.0, 35k stars) | Drop-in MinIO replacement; reviewers still call it young or alpha |
+| **Garage** | https://git.deuxfleurs.fr/Deuxfleurs/garage (AGPL-3.0) | Lightweight self-hosted option; fewer S3 features |
+| Cloudflare R2 / Backblaze B2 | SaaS | Cheap egress for public share links |
+
+### 2.4 Processing and packaging (server)
+
+- **FFmpeg** (LGPL/GPL): remux MediaRecorder output to faststart MP4, generate a thumbnail and animated GIF preview, and produce an HLS ladder (`-f hls -hls_segment_type fmp4`). Hardware encode is available with VA-API or NVENC. Note that `fluent-ffmpeg` is **archived**, so call the ffmpeg CLI directly.
+- **Shaka Packager** (https://github.com/shaka-project/shaka-packager, BSD-3) or **GPAC/MP4Box** (LGPL-2.1): only needed for DASH and HLS with DRM or advanced manifests. Plain ffmpeg HLS is enough for Loom-style video.
+- For instant playback, serve the uploaded progressive MP4 immediately and switch to HLS once transcoding completes. This is how Loom feels "instant".
+
+### 2.5 Transcription
+
+| Engine | Repo / license | Notes |
+|---|---|---|
+| **whisper.cpp** | https://github.com/ggml-org/whisper.cpp (MIT, 54k stars, active) | C/C++; CPU, Vulkan, CUDA; easy to run on a small server or on the client. Produces VTT/SRT directly |
+| **faster-whisper** | https://github.com/SYSTRAN/faster-whisper (MIT, 26k stars, active) | Python with CTranslate2; about 4x faster than OpenAI Whisper on GPU; good for a worker queue |
+| **WhisperX** | https://github.com/m-bain/whisperX (BSD-2, 24.6k stars) | Adds word-level timestamps and diarization. Useful for "click a word to seek" and for filler-word removal |
+
+### 2.6 Players
+
+| Player | Repo / license / status | Notes |
+|---|---|---|
+| **Video.js 10** | https://github.com/videojs/video.js (Apache-2.0); **v10.1.0 released 2026-10-12** | Ground-up rebuild by the Media Chrome, Vidstack, Plyr and Mux Player teams (https://mux.com/blog/five-players-one-future-how-we-re-building-video-js-v10). React and HTML components, with a small bundle. **Default choice** |
+| Vidstack | https://github.com/vidstack/player (MIT); **deprecated in favour of Video.js 10**, security fixes only until January 2028 | Do not start on it |
+| **hls.js** | https://github.com/video-dev/hls.js (Apache-2.0, 17k stars, active) | HLS on MSE (Chrome and Firefox); Video.js 10 can use it |
+| Shaka Player | https://github.com/shaka-project/shaka-player (Apache-2.0) | Alternative if DASH is needed |
+
+## 3. Recommendation: build, fork or compose?
+
+### Option A: Fork Cap
+
+- **Pros:** Gets close to feature parity on day one (instant link, comments, transcripts, AI, editor, teams). Linux packaging already exists, including an Arch package. The upstream is very active and VC-backed.
+- **Cons:**
+  - **AGPLv3.** Any modified server you run for others must publish its source, and the license cannot be relicensed or closed.
+  - The monorepo is very large (Rust workspace with about 50 crates, Tauri plus SolidStart, Next.js, MySQL, about 5 containers). Daily upstream churn makes a long-lived fork costly to rebase.
+  - Linux and Wayland is Cap's weakest platform today because of WebKitGTK rendering bugs and open Wayland capture issues.
+- **Use this option only if** the product will itself be AGPL and open source and wants Cap's full feature set. Even then, prefer **contributing Linux fixes upstream** over a hard fork.
+
+### Option B: Fork a permissive desktop recorder (OpenScreen MIT, or its community fork)
+
+- This gets a good Electron and PixiJS recorder/editor with Linux builds and a camera overlay.
+- It brings **no backend at all**: no links, comments or transcripts. The original is archived.
+- It is useful for borrowing editor and compositor ideas, not as a base.
+
+### Option C: Compose (recommended)
+
+Build a thin, opinionated product on permissive and actively maintained blocks:
+
+1. **Recorder:** a web app/PWA first, because Chromium and Firefox on Wayland already use the portal. Use `getDisplayMedia` and `getUserMedia`, composite the camera bubble on a canvas or OffscreenCanvas, and encode with **WebCodecs** (MediaRecorder as fallback) and **Mediabunny** to produce fMP4 chunks.
+2. **Desktop shell (phase 2):** **Electron** for the global hotkey, tray and always-on-top camera bubble, because Chromium's PipeWire capture works today. Revisit Tauri only alongside a native `ashpd` + PipeWire capture crate in Rust; Kooha and Cap are references to read, not to copy, because both are GPL/AGPL.
+3. **Upload while recording:** stream chunks with **tus-js-client** or Uppy to **tusd** using the S3 backend, or use presigned S3 multipart directly. For storage, use **SeaweedFS** or **RustFS** self-hosted, or R2. Avoid MinIO because it is archived.
+4. **Instant link:** create the video record at recording start. The share page plays the progressive MP4 as soon as the last chunk lands. The tusd post-finish hook queues jobs.
+5. **Workers:** FFmpeg for remux, thumbnail, GIF preview and HLS; **whisper.cpp** (or faster-whisper on GPU) for VTT transcripts. Optionally an LLM pass for the title, summary and chapters.
+6. **Player:** **Video.js 10** with hls.js; VTT captions; a transcript panel; timestamped comments.
+7. **Server-side trim:** store `startMs`/`endMs` as metadata and apply non-destructive trimming in the player. Re-encode lazily on download.
+
+**Why compose wins:**
+- Licenses: every core block is MIT, Apache or BSD (MPL-2.0 for Mediabunny, file-level copyleft only). This keeps the product's license choice open.
+- Linux: the browser and Electron capture path is the most stable Wayland path available today. That is where Cap still struggles.
+- Scope: the Loom MVP of record, link, watch, comment and transcribe is a few thousand lines on top of these blocks. Cap's editor and studio features are optional later work.
+- Maintenance: there is no upstream to rebase against, and each block is independently replaceable.
+
+**Immediate next step:** install Cap's Arch package and self-host its stack on CachyOS as a working benchmark for UX and latency. Record its upload and link flow; that work belongs in a separate RE note. Do **not** copy AGPL code into a permissively licensed codebase.
+
+## Sources
+
+- Cap repo, LICENSE and README: https://github.com/CapSoftware/Cap , https://raw.githubusercontent.com/CapSoftware/Cap/main/LICENSE
+- Cap Linux packaging: https://github.com/CapSoftware/Cap/tree/main/packaging/linux
+- Cap downloads (Linux formats, glibc 2.39): https://cap.so/download
+- Cap Linux issues and PRs (GitHub search API, 2026-10-15): https://github.com/CapSoftware/Cap/issues?q=linux
+- Railway Cap template: https://railway.com/deploy/cap-screen-recorder
+- Screenity: https://github.com/alyssaxuu/screenity
+- OpenScreen (archived) and its community fork: https://github.com/siddharthvaddem/openscreen , https://github.com/EtienneLescot/openscreen
+- Recordly: https://github.com/webadderallorg/Recordly
+- ClipShare: https://github.com/goshops-com/clipshare
+- Bloom: https://github.com/video-db/bloom
+- Kooha: https://github.com/SeaDve/Kooha
+- Loom alternatives overviews: https://selfhostedworld.com/software/cap-so , https://thefrontkit.com/blogs/loom-alternatives-2026 , https://toolquestor.com/open-source/alternative/loom
+- MediaRecorder MP4 in Chrome and Safari: https://blog.addpipe.com/duration-in-mp4-files-produced-by-chrome-safari/ , https://blog.addpipe.com/mediarecorder-api/
+- WebCodecs support: https://caniuse.com/webcodecs
+- Mediabunny: https://github.com/Vanilagy/mediabunny ; mp4-muxer: https://github.com/Vanilagy/mp4-muxer
+- ffmpeg.wasm: https://github.com/ffmpegwasm/ffmpeg.wasm
+- Wayland/PipeWire screen sharing via portal: https://www.phoronix.com/news/Wayland-Share-HowTo-Pipe-XDG , https://webrtc.googlesource.com/src/+/main/modules/desktop_capture/linux/wayland/
+- WebKitGTK getDisplayMedia (PipeWire back end): https://bugs.webkit.org/show_bug.cgi?id=210926 ; Epiphany portal issue: https://gitlab.gnome.org/GNOME/epiphany/-/issues/1536 ; Tauri media issue: https://github.com/tauri-apps/tauri/issues/2338
+- ashpd: https://github.com/bilelmoussaoui/ashpd
+- Tauri: https://github.com/tauri-apps/tauri ; Electron: https://github.com/electron/electron
+- tusd: https://github.com/tus/tusd ; tus-node-server: https://github.com/tus/tus-node-server ; tus-js-client: https://github.com/tus/tus-js-client ; Uppy: https://github.com/transloadit/uppy
+- MinIO archived and its replacements: https://github.com/minio/minio , https://pinggy.io/blog/minio_archived_self_hosted_s3_alternatives/ , https://glukhov.org/data-infrastructure/object-storage/minio-dead/ , https://itsfoss.com/news/minio-moves-away-from-open-source/
+- SeaweedFS: https://github.com/seaweedfs/seaweedfs ; RustFS: https://github.com/rustfs/rustfs ; Garage: https://github.com/deuxfleurs-org/garage
+- Shaka Packager: https://github.com/shaka-project/shaka-packager ; GPAC: https://github.com/gpac/gpac
+- whisper.cpp: https://github.com/ggml-org/whisper.cpp ; faster-whisper: https://github.com/SYSTRAN/faster-whisper ; WhisperX: https://github.com/m-bain/whisperX
+- Video.js 10: https://github.com/videojs/video.js , https://videojs.org/docs/framework/html/concepts/v10-roadmap , https://mux.com/blog/five-players-one-future-how-we-re-building-video-js-v10
+- Vidstack (deprecated): https://github.com/vidstack/player ; hls.js: https://github.com/video-dev/hls.js ; Shaka Player: https://github.com/shaka-project/shaka-player
+- fluent-ffmpeg (archived): https://github.com/fluent-ffmpeg/node-fluent-ffmpeg
