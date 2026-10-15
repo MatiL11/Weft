@@ -1,0 +1,50 @@
+@import 'tailwindcss';
+
+/* Weft palette: warm paper, dark ink, and a vermilion "thread" accent. */
+@theme {
+  --color-paper: oklch(97% 0.012 85);
+  --color-paper-deep: oklch(93% 0.018 80);
+  --color-ink: oklch(22% 0.02 260);
+  --color-ink-soft: oklch(45% 0.02 260);
+  --color-thread: oklch(62% 0.19 35);
+  --color-thread-deep: oklch(52% 0.18 35);
+  --color-danger: oklch(55% 0.2 25);
+
+  --font-display: var(--font-fraunces), ui-serif, Georgia, serif;
+  --font-sans: var(--font-instrument), ui-sans-serif, system-ui, sans-serif;
+
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@layer base {
+  body {
+    background-color: var(--color-paper);
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-thread);
+    outline-offset: 3px;
+  }
+}
+
+/* Subtle woven texture: crossing warp and weft threads. */
+.weave {
+  background-image:
+    repeating-linear-gradient(0deg, oklch(22% 0.02 260 / 0.035) 0 1px, transparent 1px 6px),
+    repeating-linear-gradient(90deg, oklch(22% 0.02 260 / 0.035) 0 1px, transparent 1px 6px);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .rise {
+    animation: rise 600ms var(--ease-out-expo) both;
+  }
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
