@@ -1,14 +1,16 @@
-/** Wordmark: three warp threads crossed by one weft thread. */
-export function Logo({ className = '' }: { className?: string }) {
+interface LogoProps {
+  className?: string
+}
+
+/** Wordmark: a magenta tile crossed by one thread, plus "weft". */
+export function Logo({ className = '' }: LogoProps) {
   return (
     <span
-      className={`inline-flex items-center gap-2 font-display text-2xl tracking-tight ${className}`}
+      className={`inline-flex items-center gap-2 text-lg font-semibold tracking-tight text-fg ${className}`}
     >
-      <svg width="22" height="22" viewBox="0 0 22 22" aria-hidden="true">
-        <g stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-          <path d="M5 2v18M11 2v18M17 2v18" opacity="0.35" />
-        </g>
-        <path d="M2 11h18" stroke="var(--color-thread)" strokeWidth="3" strokeLinecap="round" />
+      <svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true">
+        <rect width="20" height="20" rx="5" fill="var(--accent)" />
+        <rect x="4" y="8.5" width="12" height="3" rx="1.5" fill="var(--bg)" />
       </svg>
       weft
     </span>

@@ -6,7 +6,10 @@ export const metadata: Metadata = { title: 'Sign in' }
 
 export default function SignInPage() {
   return (
-    <AuthShell>
+    <AuthShell
+      headline="Say it once, on video."
+      tagline="Record your screen and camera and share a link the moment you stop. Open source and yours to host."
+    >
       <AuthForm mode="sign-in" />
     </AuthShell>
   )

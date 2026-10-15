@@ -16,17 +16,16 @@ export default async function DashboardPage() {
 
   return (
     <div className="min-h-dvh">
-      <header className="flex items-center justify-between border-b border-ink/10 px-6 py-4 sm:px-10">
-        <Logo />
-        <SignOutButton />
+      <header className="sticky top-0 z-10 border-b border-line bg-bg/85 backdrop-blur">
+        <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-3 sm:px-10">
+          <Logo />
+          <SignOutButton />
+        </div>
       </header>
 
-      <main className="mx-auto max-w-5xl px-6 py-14 sm:px-10">
+      <main className="mx-auto max-w-6xl px-6 pt-12 pb-20 sm:px-10">
         {result.kind === 'error' ? (
-          <p
-            role="alert"
-            className="rounded-lg border border-danger/30 bg-danger/5 px-4 py-3 text-danger"
-          >
+          <p role="alert" className="rounded-xl bg-danger-soft px-4 py-3 font-medium text-danger">
             {result.message}
           </p>
         ) : (
@@ -41,37 +40,50 @@ function WorkspaceOverview({ memberships }: { memberships: WorkspaceMembership[]
   const [current, ...others] = memberships
 
   if (!current) {
-    return <p className="text-ink-soft">You are not part of any workspace yet.</p>
+    return <p className="text-muted">You are not part of any workspace yet.</p>
   }
 
   return (
-    <div className="rise">
-      <p className="text-sm font-medium tracking-widest text-thread uppercase">Workspace</p>
-      <h1 className="mt-2 font-display text-5xl tracking-tight">{current.workspace.name}</h1>
-      <p className="mt-2 text-ink-soft">
-        weft/<span className="text-ink">{current.workspace.slug}</span> · {current.role}
-      </p>
+    <div className="rise grid gap-10">
+      <div className="flex flex-wrap items-end justify-between gap-4">
+        <div className="grid gap-1">
+          <p className="font-mono text-xs tracking-wider text-muted uppercase">
+            weft/{current.workspace.slug} · {current.role}
+          </p>
+          <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">
+            {current.workspace.name}
+          </h1>
+        </div>
+      </div>
 
-      <section className="weave mt-12 grid place-items-center rounded-2xl border border-dashed border-ink/20 bg-paper-deep/60 px-6 py-20 text-center">
-        <div className="max-w-sm">
-          <h2 className="font-display text-2xl">No videos yet</h2>
-          <p className="mt-2 text-ink-soft">
-            Recording arrives in the next phase. When it does, your videos will be woven together
-            right here.
+      <section
+        aria-labelledby="library-empty-title"
+        className="grid gap-6 rounded-2xl border border-line bg-surface p-8 sm:grid-cols-[auto_1fr] sm:items-center sm:p-10"
+      >
+        <div className="grid size-16 place-items-center rounded-2xl bg-accent-soft">
+          <span className="size-4 rounded-full bg-accent" />
+        </div>
+        <div className="grid max-w-xl gap-2">
+          <h2 id="library-empty-title" className="text-xl font-semibold tracking-tight">
+            Your library is empty
+          </h2>
+          <p className="text-muted">
+            Recording arrives in the next release. Every video you record will show up here with its
+            link, views and comments.
           </p>
         </div>
       </section>
 
       {others.length > 0 && (
-        <section className="mt-12">
-          <h2 className="text-sm font-medium tracking-widest text-ink-soft uppercase">
+        <section aria-labelledby="other-workspaces-title" className="grid gap-3">
+          <h2 id="other-workspaces-title" className="text-sm font-medium text-muted">
             Other workspaces
           </h2>
-          <ul className="mt-4 divide-y divide-ink/10 border-y border-ink/10">
+          <ul className="divide-y divide-line rounded-2xl border border-line bg-surface">
             {others.map((m) => (
-              <li key={m.workspace.id} className="flex items-center justify-between py-3">
-                <span>{m.workspace.name}</span>
-                <span className="text-sm text-ink-soft">{m.role}</span>
+              <li key={m.workspace.id} className="flex items-center justify-between px-5 py-3.5">
+                <span className="font-medium">{m.workspace.name}</span>
+                <span className="font-mono text-xs text-muted">{m.role}</span>
               </li>
             ))}
           </ul>

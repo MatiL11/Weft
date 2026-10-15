@@ -14,8 +14,8 @@ type FieldErrors = Partial<Record<keyof AuthFormValues, string>>
 
 const COPY = {
   'sign-up': {
-    title: 'Start weaving',
-    subtitle: 'Create an account and get a personal workspace for your videos.',
+    title: 'Create your account',
+    subtitle: 'Record your screen and share the link the moment you stop.',
     submit: 'Create account',
     switchText: 'Already have an account?',
     switchHref: '/sign-in',
@@ -70,10 +70,10 @@ export function AuthForm({ mode }: AuthFormProps) {
 
   return (
     <div className="rise w-full max-w-sm">
-      <h1 className="font-display text-4xl leading-tight tracking-tight">{copy.title}</h1>
-      <p className="mt-2 text-ink-soft">{copy.subtitle}</p>
+      <h1 className="text-3xl font-semibold tracking-tight">{copy.title}</h1>
+      <p className="mt-2 text-muted">{copy.subtitle}</p>
 
-      <form onSubmit={handleSubmit} noValidate className="mt-8 space-y-5">
+      <form onSubmit={handleSubmit} noValidate className="mt-8 grid gap-4">
         {mode === 'sign-up' && (
           <Field
             label="Name"
@@ -106,7 +106,7 @@ export function AuthForm({ mode }: AuthFormProps) {
         {formError && (
           <p
             role="alert"
-            className="rounded-md border border-danger/30 bg-danger/5 px-3 py-2 text-sm text-danger"
+            className="rounded-lg bg-danger-soft px-3 py-2.5 text-sm font-medium text-danger"
           >
             {formError}
           </p>
@@ -115,21 +115,17 @@ export function AuthForm({ mode }: AuthFormProps) {
         <button
           type="submit"
           disabled={isSubmitting}
-          className="group relative w-full overflow-hidden rounded-full bg-ink px-5 py-3 font-medium text-paper transition-transform duration-150 hover:-translate-y-px active:translate-y-0 disabled:opacity-60"
+          className="mt-2 h-11 cursor-pointer rounded-xl bg-primary px-5 font-medium text-on-primary transition-[background-color,transform] duration-200 hover:bg-primary-hover active:scale-[0.98] disabled:cursor-wait disabled:opacity-60"
         >
-          <span className="relative z-10">{isSubmitting ? 'One moment…' : copy.submit}</span>
-          <span
-            aria-hidden="true"
-            className="absolute inset-y-0 left-0 w-full origin-left scale-x-0 bg-thread transition-transform duration-300 ease-(--ease-out-expo) group-hover:scale-x-100"
-          />
+          {isSubmitting ? 'One moment…' : copy.submit}
         </button>
       </form>
 
-      <p className="mt-6 text-sm text-ink-soft">
+      <p className="mt-6 text-sm text-muted">
         {copy.switchText}{' '}
         <Link
           href={copy.switchHref}
-          className="font-medium text-ink underline decoration-thread decoration-2 underline-offset-4"
+          className="font-medium text-fg underline decoration-accent decoration-2 underline-offset-4 transition-colors hover:text-accent"
         >
           {copy.switchLabel}
         </Link>
@@ -149,11 +145,15 @@ interface FieldProps {
 }
 
 function Field({ label, name, value, onChange, type = 'text', autoComplete, error }: FieldProps) {
-  const errorId = `${name}-error`
+  const inputId = `field-${name}`
+  const errorId = `${inputId}-error`
   return (
-    <label className="block">
-      <span className="text-sm font-medium">{label}</span>
+    <div className="grid gap-1.5">
+      <label htmlFor={inputId} className="text-sm font-medium">
+        {label}
+      </label>
       <input
+        id={inputId}
         name={name}
         type={type}
         autoComplete={autoComplete}
@@ -161,13 +161,13 @@ function Field({ label, name, value, onChange, type = 'text', autoComplete, erro
         onChange={(e) => onChange(e.target.value)}
         aria-invalid={error ? true : undefined}
         aria-describedby={error ? errorId : undefined}
-        className="mt-1.5 block w-full rounded-lg border border-ink/15 bg-white/70 px-3.5 py-2.5 shadow-[inset_0_1px_0_rgb(0_0_0/0.03)] transition-colors placeholder:text-ink-soft/60 hover:border-ink/30 focus:border-thread focus:outline-none aria-invalid:border-danger"
+        className="h-11 w-full rounded-xl border border-line bg-surface px-3.5 text-fg transition-colors placeholder:text-muted hover:border-line-strong focus:border-accent focus:ring-4 focus:ring-accent-soft focus:outline-none aria-invalid:border-danger"
       />
       {error && (
-        <span id={errorId} className="mt-1 block text-sm text-danger">
+        <span id={errorId} className="text-sm text-danger">
           {error}
         </span>
       )}
-    </label>
+    </div>
   )
 }
