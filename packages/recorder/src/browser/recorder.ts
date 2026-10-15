@@ -142,6 +142,11 @@ export class Recorder {
     return this.writer.id
   }
 
+  /** The composited output, for showing a live preview of what is being recorded. */
+  get previewCanvas(): HTMLCanvasElement {
+    return this.compositor.canvas
+  }
+
   getSnapshot = (): RecorderSnapshot => this.snapshot
 
   subscribe = (listener: Listener): (() => void) => {

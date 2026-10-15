@@ -7,8 +7,6 @@ import {
   type Size,
 } from '../core/layout'
 
-export type RecordingMode = 'screen-camera' | 'screen' | 'camera'
-
 export interface CompositorSources {
   screen?: MediaStreamTrack
   camera?: MediaStreamTrack

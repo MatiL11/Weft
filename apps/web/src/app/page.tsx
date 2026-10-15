@@ -1,9 +1,8 @@
 import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
 import { getTranslations } from 'next-intl/server'
-import { LocaleSwitcher } from '@/components/locale-switcher'
-import { Logo } from '@/components/logo'
-import { SignOutButton } from '@/components/sign-out-button'
+import Link from 'next/link'
+import { AppHeader } from '@/components/app-header'
 import { errorKey } from '@/lib/error-keys'
 import { fetchWorkspaces, type WorkspaceMembership } from '@/lib/workspaces'
 
@@ -20,15 +19,7 @@ export default async function DashboardPage() {
 
   return (
     <div className="min-h-dvh">
-      <header className="sticky top-0 z-10 border-b border-line bg-bg/85 backdrop-blur">
-        <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-3 sm:px-10">
-          <Logo />
-          <div className="flex items-center gap-2">
-            <LocaleSwitcher />
-            <SignOutButton />
-          </div>
-        </div>
-      </header>
+      <AppHeader />
 
       <main className="mx-auto max-w-6xl px-6 pt-12 pb-20 sm:px-10">
         {result.kind === 'error' ? (
@@ -62,6 +53,13 @@ async function WorkspaceOverview({ memberships }: { memberships: WorkspaceMember
             {current.workspace.name}
           </h1>
         </div>
+        <Link
+          href="/record"
+          className="flex h-11 items-center gap-2.5 rounded-xl bg-primary px-5 font-medium text-on-primary transition-[background-color,transform] duration-200 hover:bg-primary-hover active:scale-[0.98]"
+        >
+          <span className="size-2.5 rounded-full bg-accent" aria-hidden="true" />
+          {t('newRecording')}
+        </Link>
       </div>
 
       <section

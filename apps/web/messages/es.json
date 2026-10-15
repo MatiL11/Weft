@@ -51,14 +51,15 @@
     "signOut": "Cerrar sesión",
     "noWorkspace": "Todavía no perteneces a ningún espacio.",
     "libraryEmptyTitle": "Tu biblioteca está vacía",
-    "libraryEmptyBody": "La grabación llega en la próxima versión. Cada video que grabes aparecerá aquí con su enlace, sus vistas y sus comentarios.",
+    "libraryEmptyBody": "Graba tu pantalla y tu cámara. Cada video que hagas aparecerá aquí con su enlace, sus vistas y sus comentarios.",
     "otherWorkspaces": "Otros espacios",
     "roles": {
       "owner": "propietario",
       "admin": "administrador",
       "member": "miembro",
       "viewer": "lector"
-    }
+    },
+    "newRecording": "Nueva grabación"
   },
   "errors": {
     "unreachable": "No se puede conectar con el servidor. Verifica que la API esté en ejecución.",
@@ -66,5 +67,87 @@
     "load_failed": "No pudimos cargar tus espacios. Inténtalo de nuevo.",
     "internal_error": "Algo falló de nuestro lado. Inténtalo de nuevo.",
     "generic": "Algo salió mal. Inténtalo de nuevo."
+  },
+  "recorder": {
+    "title": "Nueva grabación",
+    "back": "Biblioteca",
+    "modes": {
+      "label": "Qué grabar",
+      "screen-camera": "Pantalla y cámara",
+      "screen": "Solo pantalla",
+      "camera": "Solo cámara"
+    },
+    "camera": {
+      "label": "Cámara",
+      "unavailable": "No hay cámaras disponibles"
+    },
+    "microphone": {
+      "label": "Micrófono",
+      "none": "Sin micrófono",
+      "unavailable": "No hay micrófonos disponibles",
+      "level": "Nivel del micrófono"
+    },
+    "systemAudio": "Incluir el audio de la pestaña o del sistema",
+    "systemAudioHint": "Funciona al compartir una pestaña del navegador. En Linux y macOS los navegadores no pueden capturar el audio del escritorio.",
+    "bubble": {
+      "label": "Burbuja de cámara",
+      "position": {
+        "top-left": "Arriba a la izquierda",
+        "top-right": "Arriba a la derecha",
+        "bottom-left": "Abajo a la izquierda",
+        "bottom-right": "Abajo a la derecha"
+      },
+      "size": {
+        "small": "S",
+        "medium": "M",
+        "large": "L"
+      },
+      "sizeLabel": "Tamaño de la burbuja",
+      "positionLabel": "Posición de la burbuja"
+    },
+    "countdown": "Cuenta regresiva de 3 segundos",
+    "start": "Empezar a grabar",
+    "starting": "Elige qué compartir…",
+    "shareHint": "Tu navegador te preguntará qué pantalla, ventana o pestaña compartir.",
+    "cameraPreviewOff": "Vista previa de la cámara",
+    "limitHint": "Las grabaciones pueden durar hasta {minutes} minutos.",
+    "session": {
+      "rec": "REC",
+      "paused": "En pausa",
+      "pause": "Pausar",
+      "resume": "Reanudar",
+      "stop": "Detener",
+      "discard": "Descartar",
+      "confirmDiscard": "¿Descartar esta grabación? No se podrá recuperar.",
+      "confirmDiscardYes": "Descartar",
+      "confirmDiscardNo": "Seguir grabando",
+      "remaining": "Quedan {time}",
+      "startsIn": "La grabación empieza en",
+      "finishing": "Guardando tu grabación…"
+    },
+    "result": {
+      "title": "Tu grabación está lista",
+      "subtitle": "Está guardada en este navegador. La subida y los enlaces para compartir llegan en la próxima versión.",
+      "download": "Descargar MP4",
+      "again": "Grabar otra",
+      "duration": "Duración {time}",
+      "limitReached": "La grabación se detuvo al llegar al límite de {time}."
+    },
+    "recovery": {
+      "title": "Encontramos una grabación sin terminar",
+      "body": "Del {date}, de unos {duration}. Se conserva lo último que se guardó.",
+      "download": "Descargar",
+      "discard": "Descartar"
+    },
+    "errors": {
+      "permission_denied": "Se denegó el permiso. Habilita el acceso en la configuración del sitio de tu navegador e inténtalo de nuevo.",
+      "device_not_found": "No encontramos ese dispositivo. Verifica que esté conectado.",
+      "device_busy": "Otra aplicación está usando el dispositivo. Ciérrala e inténtalo de nuevo.",
+      "capture_failed": "No pudimos iniciar la captura. Inténtalo de nuevo.",
+      "encoding_failed": "La codificación falló y la grabación se detuvo. Lo que se guardó se puede descargar.",
+      "storage_failed": "El navegador se quedó sin espacio de almacenamiento. Libera espacio e inténtalo de nuevo.",
+      "unsupported_browser": "Este navegador no puede grabar video. Usa una versión reciente de Chrome, Edge o Firefox.",
+      "no_screen_capture": "Este navegador no puede capturar la pantalla. Igual puedes grabar solo con la cámara."
+    }
   }
 }

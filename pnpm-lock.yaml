@@ -78,6 +78,9 @@ importers:
       '@weft/i18n':
         specifier: workspace:*
         version: link:../../packages/i18n
+      '@weft/recorder':
+        specifier: workspace:*
+        version: link:../../packages/recorder
       better-auth:
         specifier: ^1.7.10
         version: 1.7.10(drizzle-kit@0.31.11)(drizzle-orm@0.45.4(kysely@0.29.6)(postgres@3.4.9))(next@16.4.1(@types/node@26.6.5)(react-dom@19.3.1(react@19.3.1))(react@19.3.1))(react-dom@19.3.1(react@19.3.1))(react@19.3.1)(vitest@5.0.5)

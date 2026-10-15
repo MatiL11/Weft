@@ -51,14 +51,15 @@
     "signOut": "Sign out",
     "noWorkspace": "You are not part of any workspace yet.",
     "libraryEmptyTitle": "Your library is empty",
-    "libraryEmptyBody": "Recording arrives in the next release. Every video you record will show up here with its link, views and comments.",
+    "libraryEmptyBody": "Record your screen and camera. Every video you make will show up here with its link, views and comments.",
     "otherWorkspaces": "Other workspaces",
     "roles": {
       "owner": "owner",
       "admin": "admin",
       "member": "member",
       "viewer": "viewer"
-    }
+    },
+    "newRecording": "New recording"
   },
   "errors": {
     "unreachable": "The server is unreachable. Check that the API is running.",
@@ -66,5 +67,87 @@
     "load_failed": "We couldn't load your workspaces. Please try again.",
     "internal_error": "Something went wrong on our side. Please try again.",
     "generic": "Something went wrong. Please try again."
+  },
+  "recorder": {
+    "title": "New recording",
+    "back": "Library",
+    "modes": {
+      "label": "What to record",
+      "screen-camera": "Screen and camera",
+      "screen": "Screen only",
+      "camera": "Camera only"
+    },
+    "camera": {
+      "label": "Camera",
+      "unavailable": "No camera available"
+    },
+    "microphone": {
+      "label": "Microphone",
+      "none": "No microphone",
+      "unavailable": "No microphone available",
+      "level": "Microphone level"
+    },
+    "systemAudio": "Include tab or system audio",
+    "systemAudioHint": "Works when you share a browser tab. Desktop audio on Linux and macOS is not available to browsers.",
+    "bubble": {
+      "label": "Camera bubble",
+      "position": {
+        "top-left": "Top left",
+        "top-right": "Top right",
+        "bottom-left": "Bottom left",
+        "bottom-right": "Bottom right"
+      },
+      "size": {
+        "small": "S",
+        "medium": "M",
+        "large": "L"
+      },
+      "sizeLabel": "Bubble size",
+      "positionLabel": "Bubble position"
+    },
+    "countdown": "3-second countdown",
+    "start": "Start recording",
+    "starting": "Choose what to share…",
+    "shareHint": "Your browser will ask which screen, window or tab to share.",
+    "cameraPreviewOff": "Camera preview",
+    "limitHint": "Recordings can be up to {minutes} minutes long.",
+    "session": {
+      "rec": "REC",
+      "paused": "Paused",
+      "pause": "Pause",
+      "resume": "Resume",
+      "stop": "Stop",
+      "discard": "Discard",
+      "confirmDiscard": "Discard this recording? It can't be recovered.",
+      "confirmDiscardYes": "Discard",
+      "confirmDiscardNo": "Keep recording",
+      "remaining": "{time} left",
+      "startsIn": "Recording starts in",
+      "finishing": "Saving your recording…"
+    },
+    "result": {
+      "title": "Your recording is ready",
+      "subtitle": "It's saved in this browser. Upload and share links come in the next release.",
+      "download": "Download MP4",
+      "again": "Record another",
+      "duration": "Length {time}",
+      "limitReached": "Recording stopped at the {time} limit."
+    },
+    "recovery": {
+      "title": "Unfinished recording found",
+      "body": "From {date}, about {duration} long. Its last saved part is kept.",
+      "download": "Download",
+      "discard": "Discard"
+    },
+    "errors": {
+      "permission_denied": "Permission was denied. Allow access in your browser's site settings and try again.",
+      "device_not_found": "We couldn't find that device. Check that it's connected.",
+      "device_busy": "The device is in use by another app. Close it and try again.",
+      "capture_failed": "We couldn't start the capture. Please try again.",
+      "encoding_failed": "Encoding failed and the recording stopped. What was saved can still be downloaded.",
+      "storage_failed": "The browser ran out of storage space. Free some space and try again.",
+      "unsupported_browser": "This browser can't record video. Use a recent version of Chrome, Edge or Firefox.",
+      "no_screen_capture": "This browser can't capture the screen. You can still record with the camera only."
+    }
   }
 }

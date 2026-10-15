@@ -10,6 +10,8 @@ export interface Rect extends Size {
   readonly y: number
 }
 
+export type RecordingMode = 'screen-camera' | 'screen' | 'camera'
+
 export type BubblePosition = 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right'
 export type BubbleSize = 'small' | 'medium' | 'large'
 
@@ -20,8 +22,12 @@ export interface BubbleOptions {
 
 /** Short side of the output; larger sources are scaled down to this. */
 export const MAX_SHORT_SIDE = 1080
-const BUBBLE_FRACTION: Record<BubbleSize, number> = { small: 0.18, medium: 0.26, large: 0.36 }
-const BUBBLE_MARGIN_FRACTION = 0.03
+export const BUBBLE_FRACTION: Record<BubbleSize, number> = {
+  small: 0.18,
+  medium: 0.26,
+  large: 0.36,
+}
+export const BUBBLE_MARGIN_FRACTION = 0.03
 
 const toEven = (value: number) => Math.max(2, Math.floor(value / 2) * 2)
 

@@ -13,6 +13,7 @@
   },
   "dependencies": {
     "@weft/i18n": "workspace:*",
+    "@weft/recorder": "workspace:*",
     "better-auth": "^1.7.10",
     "next": "^16.4.1",
     "next-intl": "^4.14.9",
