@@ -42,15 +42,24 @@ describe('container (integration: signup → personal workspace)', () => {
     const signUp = await container.app.request('/api/auth/sign-up/email', {
       method: 'POST',
       headers: { 'content-type': 'application/json', origin: PUBLIC_URL },
-      body: JSON.stringify({ name: 'Ana García', email: 'ana@example.com', password: 'supersecret123' }),
+      body: JSON.stringify({
+        name: 'Ana García',
+        email: 'ana@example.com',
+        password: 'supersecret123',
+      }),
     })
     expect(signUp.status).toBe(200)
 
-    const cookie = signUp.headers.getSetCookie().map((c) => c.split(';')[0]).join('; ')
+    const cookie = signUp.headers
+      .getSetCookie()
+      .map((c) => c.split(';')[0])
+      .join('; ')
     expect(cookie).toContain('session_token')
 
     const res = await container.app.request('/api/workspaces', { headers: { cookie } })
-    const body = (await res.json()) as { data: { workspace: { name: string; slug: string }; role: string }[] }
+    const body = (await res.json()) as {
+      data: { workspace: { name: string; slug: string }; role: string }[]
+    }
 
     expect(res.status).toBe(200)
     expect(body.data).toHaveLength(1)

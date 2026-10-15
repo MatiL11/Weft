@@ -60,7 +60,8 @@ export function createApp(deps: AppDeps): Hono<Env> {
 
   api.post('/workspaces', async (c) => {
     const parsed = CreateWorkspaceBody.safeParse(await c.req.json().catch(() => null))
-    if (!parsed.success) return c.json(fail('validation_error', 'Body must be { name: string }.'), 400)
+    if (!parsed.success)
+      return c.json(fail('validation_error', 'Body must be { name: string }.'), 400)
 
     const workspace = await deps.createWorkspace.execute({
       ownerId: c.get('user').id,

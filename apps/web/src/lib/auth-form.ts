@@ -10,7 +10,10 @@ export const MIN_PASSWORD_LENGTH = 8
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
 /** Client-side validation; the server validates again. Returns field → message. */
-export function validateAuthForm(mode: AuthMode, values: AuthFormValues): Partial<Record<keyof AuthFormValues, string>> {
+export function validateAuthForm(
+  mode: AuthMode,
+  values: AuthFormValues,
+): Partial<Record<keyof AuthFormValues, string>> {
   const errors: Partial<Record<keyof AuthFormValues, string>> = {}
 
   if (mode === 'sign-up' && values.name.trim().length === 0) {

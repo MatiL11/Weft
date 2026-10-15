@@ -33,11 +33,15 @@ export function parseWorkspacesResponse(status: number, body: unknown): Workspac
   if (status !== 200 || body.error) {
     return { kind: 'error', message: body.error?.message ?? 'Could not load workspaces.' }
   }
-  if (!Array.isArray(body.data)) return { kind: 'error', message: 'Unexpected response from the server.' }
+  if (!Array.isArray(body.data))
+    return { kind: 'error', message: 'Unexpected response from the server.' }
   return { kind: 'ok', memberships: body.data as WorkspaceMembership[] }
 }
 
-export async function fetchWorkspaces(apiBaseUrl: string, cookieHeader: string): Promise<WorkspacesResult> {
+export async function fetchWorkspaces(
+  apiBaseUrl: string,
+  cookieHeader: string,
+): Promise<WorkspacesResult> {
   try {
     const res = await fetch(`${apiBaseUrl}/api/workspaces`, {
       headers: { cookie: cookieHeader },

@@ -18,7 +18,9 @@ export type Config = z.infer<typeof ConfigSchema>
 export function loadConfig(env: Record<string, string | undefined> = process.env): Config {
   const result = ConfigSchema.safeParse(env)
   if (!result.success) {
-    const issues = result.error.issues.map((i) => `  - ${i.path.join('.')}: ${i.message}`).join('\n')
+    const issues = result.error.issues
+      .map((i) => `  - ${i.path.join('.')}: ${i.message}`)
+      .join('\n')
     throw new Error(`Invalid configuration:\n${issues}`)
   }
   return result.data

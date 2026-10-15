@@ -52,7 +52,11 @@ export function AuthForm({ mode }: AuthFormProps) {
     setIsSubmitting(true)
     const { error } =
       mode === 'sign-up'
-        ? await authClient.signUp.email({ name: values.name.trim(), email: values.email.trim(), password: values.password })
+        ? await authClient.signUp.email({
+            name: values.name.trim(),
+            email: values.email.trim(),
+            password: values.password,
+          })
         : await authClient.signIn.email({ email: values.email.trim(), password: values.password })
     setIsSubmitting(false)
 
@@ -71,9 +75,24 @@ export function AuthForm({ mode }: AuthFormProps) {
 
       <form onSubmit={handleSubmit} noValidate className="mt-8 space-y-5">
         {mode === 'sign-up' && (
-          <Field label="Name" name="name" autoComplete="name" value={values.name} onChange={update('name')} error={fieldErrors.name} />
+          <Field
+            label="Name"
+            name="name"
+            autoComplete="name"
+            value={values.name}
+            onChange={update('name')}
+            error={fieldErrors.name}
+          />
         )}
-        <Field label="Email" name="email" type="email" autoComplete="email" value={values.email} onChange={update('email')} error={fieldErrors.email} />
+        <Field
+          label="Email"
+          name="email"
+          type="email"
+          autoComplete="email"
+          value={values.email}
+          onChange={update('email')}
+          error={fieldErrors.email}
+        />
         <Field
           label="Password"
           name="password"
@@ -85,7 +104,10 @@ export function AuthForm({ mode }: AuthFormProps) {
         />
 
         {formError && (
-          <p role="alert" className="rounded-md border border-danger/30 bg-danger/5 px-3 py-2 text-sm text-danger">
+          <p
+            role="alert"
+            className="rounded-md border border-danger/30 bg-danger/5 px-3 py-2 text-sm text-danger"
+          >
             {formError}
           </p>
         )}
@@ -105,7 +127,10 @@ export function AuthForm({ mode }: AuthFormProps) {
 
       <p className="mt-6 text-sm text-ink-soft">
         {copy.switchText}{' '}
-        <Link href={copy.switchHref} className="font-medium text-ink underline decoration-thread decoration-2 underline-offset-4">
+        <Link
+          href={copy.switchHref}
+          className="font-medium text-ink underline decoration-thread decoration-2 underline-offset-4"
+        >
           {copy.switchLabel}
         </Link>
       </p>

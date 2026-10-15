@@ -64,7 +64,11 @@ describe('DrizzleWorkspaceRepository (integration)', () => {
 
   it('lists workspaces oldest first', async () => {
     const later = new Date(NOW.getTime() + 1000)
-    await repo.createWithMember(workspace({ id: 'ws_b', slug: 'b', createdAt: later }), 'user_1', 'member')
+    await repo.createWithMember(
+      workspace({ id: 'ws_b', slug: 'b', createdAt: later }),
+      'user_1',
+      'member',
+    )
     await repo.createWithMember(workspace({ id: 'ws_a', slug: 'a' }), 'user_1', 'owner')
 
     const slugs = (await repo.listForUser('user_1')).map((m) => m.workspace.slug)

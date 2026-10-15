@@ -23,7 +23,10 @@ export default async function DashboardPage() {
 
       <main className="mx-auto max-w-5xl px-6 py-14 sm:px-10">
         {result.kind === 'error' ? (
-          <p role="alert" className="rounded-lg border border-danger/30 bg-danger/5 px-4 py-3 text-danger">
+          <p
+            role="alert"
+            className="rounded-lg border border-danger/30 bg-danger/5 px-4 py-3 text-danger"
+          >
             {result.message}
           </p>
         ) : (
@@ -53,14 +56,17 @@ function WorkspaceOverview({ memberships }: { memberships: WorkspaceMembership[]
         <div className="max-w-sm">
           <h2 className="font-display text-2xl">No videos yet</h2>
           <p className="mt-2 text-ink-soft">
-            Recording arrives in the next phase. When it does, your videos will be woven together right here.
+            Recording arrives in the next phase. When it does, your videos will be woven together
+            right here.
           </p>
         </div>
       </section>
 
       {others.length > 0 && (
         <section className="mt-12">
-          <h2 className="text-sm font-medium tracking-widest text-ink-soft uppercase">Other workspaces</h2>
+          <h2 className="text-sm font-medium tracking-widest text-ink-soft uppercase">
+            Other workspaces
+          </h2>
           <ul className="mt-4 divide-y divide-ink/10 border-y border-ink/10">
             {others.map((m) => (
               <li key={m.workspace.id} className="flex items-center justify-between py-3">

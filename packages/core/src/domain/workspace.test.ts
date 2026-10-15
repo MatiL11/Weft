@@ -57,8 +57,8 @@ describe('createWorkspace', () => {
   })
 
   it('rejects an invalid slug', () => {
-    expect(() => createWorkspace({ id: 'ws_1', name: 'Acme', slug: 'Bad Slug', now: NOW })).toThrowError(
-      expect.objectContaining({ code: 'workspace.slug_invalid' }),
-    )
+    expect(() =>
+      createWorkspace({ id: 'ws_1', name: 'Acme', slug: 'Bad Slug', now: NOW }),
+    ).toThrowError(expect.objectContaining({ code: 'workspace.slug_invalid' }))
   })
 })

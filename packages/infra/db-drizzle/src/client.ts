@@ -19,7 +19,10 @@ export function connectDatabase(url: string): DatabaseHandle {
   return { db, close: () => client.end() }
 }
 
-export async function runMigrations(url: string, migrationsFolder = MIGRATIONS_FOLDER): Promise<void> {
+export async function runMigrations(
+  url: string,
+  migrationsFolder = MIGRATIONS_FOLDER,
+): Promise<void> {
   const client = postgres(url, { max: 1, onnotice: () => {} })
   try {
     await migrate(drizzle(client, { casing: 'snake_case' }), { migrationsFolder })

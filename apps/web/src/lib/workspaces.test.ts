@@ -2,7 +2,12 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { fetchWorkspaces, parseWorkspacesResponse } from './workspaces'
 
 const MEMBERSHIP = {
-  workspace: { id: 'ws_1', name: "Ana's workspace", slug: 'ana-s-workspace', createdAt: '2026-10-15T12:00:00.000Z' },
+  workspace: {
+    id: 'ws_1',
+    name: "Ana's workspace",
+    slug: 'ana-s-workspace',
+    createdAt: '2026-10-15T12:00:00.000Z',
+  },
   role: 'owner',
 }
 
@@ -15,14 +20,19 @@ describe('parseWorkspacesResponse', () => {
   })
 
   it('detects an expired or missing session', () => {
-    expect(parseWorkspacesResponse(401, { data: null, error: { code: 'unauthorized', message: 'x' } })).toEqual({
+    expect(
+      parseWorkspacesResponse(401, { data: null, error: { code: 'unauthorized', message: 'x' } }),
+    ).toEqual({
       kind: 'unauthenticated',
     })
   })
 
   it('surfaces the API error message', () => {
     expect(
-      parseWorkspacesResponse(500, { data: null, error: { code: 'internal_error', message: 'Something went wrong.' } }),
+      parseWorkspacesResponse(500, {
+        data: null,
+        error: { code: 'internal_error', message: 'Something went wrong.' },
+      }),
     ).toEqual({ kind: 'error', message: 'Something went wrong.' })
   })
 
@@ -33,9 +43,12 @@ describe('parseWorkspacesResponse', () => {
     })
   })
 
-  it.each([null, 'html', { data: [] }, { data: 'nope', error: null }])('rejects malformed body %j', (body) => {
-    expect(parseWorkspacesResponse(200, body)).toMatchObject({ kind: 'error' })
-  })
+  it.each([null, 'html', { data: [] }, { data: 'nope', error: null }])(
+    'rejects malformed body %j',
+    (body) => {
+      expect(parseWorkspacesResponse(200, body)).toMatchObject({ kind: 'error' })
+    },
+  )
 })
 
 describe('fetchWorkspaces', () => {
@@ -57,12 +70,18 @@ describe('fetchWorkspaces', () => {
   })
 
   it('handles a non-JSON body', async () => {
-    vi.stubGlobal('fetch', vi.fn(async () => new Response('<html>', { status: 502 })))
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => new Response('<html>', { status: 502 })),
+    )
     expect(await fetchWorkspaces('http://api:4000', '')).toMatchObject({ kind: 'error' })
   })
 
   it('reports an unreachable API', async () => {
-    vi.stubGlobal('fetch', vi.fn(async () => Promise.reject(new TypeError('fetch failed'))))
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => Promise.reject(new TypeError('fetch failed'))),
+    )
     expect(await fetchWorkspaces('http://api:4000', '')).toEqual({
       kind: 'error',
       message: 'The API is unreachable. Is it running?',

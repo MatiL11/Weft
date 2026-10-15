@@ -26,7 +26,11 @@ function buildApp(overrides: Partial<AppDeps> & { user?: SessionUser | null } = 
 }
 
 function postJson(body: unknown): RequestInit {
-  return { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) }
+  return {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(body),
+  }
 }
 
 describe('HTTP app', () => {
@@ -79,15 +83,18 @@ describe('HTTP app', () => {
     })
   })
 
-  it.each([[{}], [{ name: 42 }], ['not json']])('returns 400 for an invalid body %j', async (body) => {
-    const init =
-      typeof body === 'string'
-        ? { method: 'POST', headers: { 'content-type': 'application/json' }, body }
-        : postJson(body)
-    const res = await ctx.app.request('/api/workspaces', init)
-    expect(res.status).toBe(400)
-    expect(await res.json()).toMatchObject({ error: { code: 'validation_error' } })
-  })
+  it.each([[{}], [{ name: 42 }], ['not json']])(
+    'returns 400 for an invalid body %j',
+    async (body) => {
+      const init =
+        typeof body === 'string'
+          ? { method: 'POST', headers: { 'content-type': 'application/json' }, body }
+          : postJson(body)
+      const res = await ctx.app.request('/api/workspaces', init)
+      expect(res.status).toBe(400)
+      expect(await res.json()).toMatchObject({ error: { code: 'validation_error' } })
+    },
+  )
 
   it('maps domain errors to 400 with their code', async () => {
     const res = await ctx.app.request('/api/workspaces', postJson({ name: '   ' }))

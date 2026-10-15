@@ -16,24 +16,24 @@
 
 ## 2. Stack
 
-| Capa | Elección | Por qué |
-|------|----------|---------|
-| Monorepo | pnpm workspaces + Turborepo | un solo lenguaje y tipos compartidos |
-| Web app | Next.js (App Router) + React + Tailwind | SSR para las páginas `/share/:id` (OG tags, previews en Slack) |
-| API | Hono (Node) + `@hono/zod-openapi` | liviano, OpenAPI generado, validación con Zod |
-| Auth | Better Auth (MIT) | email/password, OAuth y orgs; self-hostable |
-| DB | PostgreSQL 16 + Drizzle ORM | migraciones tipadas |
-| Cola de trabajos | pg-boss (sobre Postgres) | evita Redis en self-host |
-| Tiempo real | WebSocket (Hono) + Postgres `LISTEN/NOTIFY` | comentarios, reacciones y estado de procesamiento |
-| Almacenamiento | API S3: SeaweedFS (self-host) / R2 o S3 (nube) | URLs prefirmadas |
-| Captura | `getDisplayMedia` + `getUserMedia` | estándar, funciona en Linux/Wayland vía portal |
-| Codificación | WebCodecs (H.264 + AAC/Opus) + Mediabunny (MPL-2.0) | segmentos fMP4 de unos 4 s. Si no hay WebCodecs: MediaRecorder WebM |
-| Buffer local | OPFS / IndexedDB | reintentos y recuperación tras un crash |
-| Procesamiento | ffmpeg (proceso externo) en worker | HLS + MP4 faststart, miniaturas, sprite VTT |
-| Transcripción | whisper.cpp (servidor HTTP) | local, sin APIs pagas; intercambiable por API |
-| Reproductor | Video.js 10 + hls.js | HLS con MP4 de respaldo |
-| Tests | Vitest + Playwright | unit/integration + E2E del flujo grabar→ver |
-| Deploy | Docker Compose; imágenes en GHCR | `docker compose up` y listo |
+| Capa             | Elección                                            | Por qué                                                             |
+| ---------------- | --------------------------------------------------- | ------------------------------------------------------------------- |
+| Monorepo         | pnpm workspaces + Turborepo                         | un solo lenguaje y tipos compartidos                                |
+| Web app          | Next.js (App Router) + React + Tailwind             | SSR para las páginas `/share/:id` (OG tags, previews en Slack)      |
+| API              | Hono (Node) + `@hono/zod-openapi`                   | liviano, OpenAPI generado, validación con Zod                       |
+| Auth             | Better Auth (MIT)                                   | email/password, OAuth y orgs; self-hostable                         |
+| DB               | PostgreSQL 16 + Drizzle ORM                         | migraciones tipadas                                                 |
+| Cola de trabajos | pg-boss (sobre Postgres)                            | evita Redis en self-host                                            |
+| Tiempo real      | WebSocket (Hono) + Postgres `LISTEN/NOTIFY`         | comentarios, reacciones y estado de procesamiento                   |
+| Almacenamiento   | API S3: SeaweedFS (self-host) / R2 o S3 (nube)      | URLs prefirmadas                                                    |
+| Captura          | `getDisplayMedia` + `getUserMedia`                  | estándar, funciona en Linux/Wayland vía portal                      |
+| Codificación     | WebCodecs (H.264 + AAC/Opus) + Mediabunny (MPL-2.0) | segmentos fMP4 de unos 4 s. Si no hay WebCodecs: MediaRecorder WebM |
+| Buffer local     | OPFS / IndexedDB                                    | reintentos y recuperación tras un crash                             |
+| Procesamiento    | ffmpeg (proceso externo) en worker                  | HLS + MP4 faststart, miniaturas, sprite VTT                         |
+| Transcripción    | whisper.cpp (servidor HTTP)                         | local, sin APIs pagas; intercambiable por API                       |
+| Reproductor      | Video.js 10 + hls.js                                | HLS con MP4 de respaldo                                             |
+| Tests            | Vitest + Playwright                                 | unit/integration + E2E del flujo grabar→ver                         |
+| Deploy           | Docker Compose; imágenes en GHCR                    | `docker compose up` y listo                                         |
 
 ## 3. Arquitectura
 
@@ -53,7 +53,8 @@
 ```
 
 ### Flujo de grabación
-1. El usuario aprieta "Grabar". `POST /api/videos` crea el video (`status=recording`) y devuelve `videoId`, el link `/share/:id` y un *upload token*.
+
+1. El usuario aprieta "Grabar". `POST /api/videos` crea el video (`status=recording`) y devuelve `videoId`, el link `/share/:id` y un _upload token_.
 2. El encoder emite un segmento cada ~4 s, que se guarda en OPFS. Para subirlo se pide `POST /api/videos/:id/segments/:n/url` (URL prefirmada) y se hace un `PUT` a S3, con verificación MD5/SHA-256.
 3. Pausa y reanudar: los segmentos siguen numerados; un manifiesto lleva las discontinuidades.
 4. Al detener, `POST /api/videos/:id/complete` recibe la lista de segmentos y hashes. Si falta alguno, el cliente reintenta desde OPFS.
@@ -61,6 +62,7 @@
 6. Mientras procesa, el visor ya puede reproducir los segmentos crudos con una playlist HLS provisoria. Así el link sirve al instante.
 
 ### Burbuja de cámara
+
 - **MVP**: se compone en un `<canvas>` (pantalla + cámara circular en una esquina) y se codifica un solo stream. Funciona igual en cualquier navegador y SO.
 - **Fase escritorio**: ventana flotante de la cámara (Electron) para que el presentador la vea.
 
@@ -96,7 +98,7 @@ packages/recorder/           ← librería del grabador: núcleo puro (segmentac
 - **Tests:**
   - El dominio y los casos de uso se prueban con fakes en memoria de los ports: son rápidos y aportan casi toda la cobertura.
   - Los adaptadores se prueban con integration tests contra Postgres y SeaweedFS reales (Testcontainers).
-- **Pragmatismo:** las lecturas simples (listados de biblioteca, analítica) pueden ir por *query services* directos sobre Drizzle (estilo CQRS liviano), sin entidades de dominio. Solo las escrituras con reglas pasan por el dominio.
+- **Pragmatismo:** las lecturas simples (listados de biblioteca, analítica) pueden ir por _query services_ directos sobre Drizzle (estilo CQRS liviano), sin entidades de dominio. Solo las escrituras con reglas pasan por el dominio.
 - **Lint:** `eslint-plugin-boundaries` (o dependency-cruiser) en CI impide que `core` importe de `infra` o `apps`.
 
 ## 4. Modelo de datos (MVP)
@@ -119,23 +121,24 @@ reactions(id, video_id, user_id|anon_id, emoji, timestamp_ms, created_at)
 views(id, video_id, viewer_id|anon_id, started_at, watched_ms, buckets bit(20), referrer)
 share_links(id, video_id, token, expires_at)   -- para privacidad "link"
 ```
+
 Todo se consulta filtrando por `workspace_id`. Los tiempos se guardan siempre en **ms enteros**.
 
 ## 5. API (REST + OpenAPI, primer corte)
 
-| Método | Ruta | Uso |
-|--------|------|-----|
-| POST | `/api/videos` | crear video y empezar sesión de grabación |
-| POST | `/api/videos/:id/segments/:n/url` | URL prefirmada para un segmento |
-| POST | `/api/videos/:id/complete` | cerrar grabación y encolar procesamiento |
-| GET | `/api/videos/:id` | metadata + URLs firmadas (respeta privacidad/password) |
-| PATCH | `/api/videos/:id` | título, carpeta, privacidad, trim |
-| GET | `/api/videos?folder=&q=&cursor=` | biblioteca paginada |
-| GET/POST/DELETE | `/api/videos/:id/comments` | comentarios con timestamp |
-| POST/DELETE | `/api/videos/:id/reactions` | reacciones |
-| POST | `/api/videos/:id/views` · `/views/:vid/progress` | analítica (beacon) |
-| CRUD | `/api/folders`, `/api/workspaces`, `/api/memberships` | organización |
-| WS | `/ws?video=:id` | `comment.*`, `reaction.*`, `video.status`, `view.count` |
+| Método          | Ruta                                                  | Uso                                                     |
+| --------------- | ----------------------------------------------------- | ------------------------------------------------------- |
+| POST            | `/api/videos`                                         | crear video y empezar sesión de grabación               |
+| POST            | `/api/videos/:id/segments/:n/url`                     | URL prefirmada para un segmento                         |
+| POST            | `/api/videos/:id/complete`                            | cerrar grabación y encolar procesamiento                |
+| GET             | `/api/videos/:id`                                     | metadata + URLs firmadas (respeta privacidad/password)  |
+| PATCH           | `/api/videos/:id`                                     | título, carpeta, privacidad, trim                       |
+| GET             | `/api/videos?folder=&q=&cursor=`                      | biblioteca paginada                                     |
+| GET/POST/DELETE | `/api/videos/:id/comments`                            | comentarios con timestamp                               |
+| POST/DELETE     | `/api/videos/:id/reactions`                           | reacciones                                              |
+| POST            | `/api/videos/:id/views` · `/views/:vid/progress`      | analítica (beacon)                                      |
+| CRUD            | `/api/folders`, `/api/workspaces`, `/api/memberships` | organización                                            |
+| WS              | `/ws?video=:id`                                       | `comment.*`, `reaction.*`, `video.status`, `view.count` |
 
 Formato de respuesta: `{ data, error, meta }` en todas las rutas. Hay rate limiting en las rutas públicas (views, reactions anónimas, password).
 
@@ -144,6 +147,7 @@ Formato de respuesta: `{ data, error, meta }` en todas las rutas. Hay rate limit
 Cada fase cierra con tests (≥80 % de cobertura en paquetes de dominio), revisión de código y demo.
 
 ### Fase 0 — Fundaciones (1 semana)
+
 - [ ] Monorepo: `apps/{web,api,worker}`, `packages/{core,recorder,ui,shared}`, `packages/infra/*` (ver Clean Architecture)
 - [ ] Regla de dependencias en CI (`core` no importa `infra` ni `apps`)
 - [ ] LICENSE MIT, README, CONTRIBUTING, CI (lint, typecheck, test, license-check)
@@ -152,6 +156,7 @@ Cada fase cierra con tests (≥80 % de cobertura en paquetes de dominio), revisi
 - **Hito:** `docker compose up` → registrarse → workspace vacío.
 
 ### Fase 1 — Grabador web (2 semanas)
+
 - [ ] Selección de fuentes: pantalla/ventana/pestaña, cámara, micrófono, audio del sistema (si existe)
 - [ ] Compositor canvas con burbuja de cámara (posición y tamaño), modos pantalla+cam / solo pantalla / solo cam
 - [ ] Encoder WebCodecs → segmentos fMP4 4 s (Mediabunny); fallback MediaRecorder
@@ -160,12 +165,14 @@ Cada fase cierra con tests (≥80 % de cobertura en paquetes de dominio), revisi
 - **Hito:** grabar 10 min en Chrome y Firefox sobre CachyOS/Wayland y exportar un archivo local válido.
 
 ### Fase 2 — Subida en streaming + link instantáneo (1–2 semanas)
+
 - [ ] Endpoints de video y segmentos, URLs prefirmadas, verificación de hash
 - [ ] Cola de subida con reintentos y backoff; indicador de progreso
 - [ ] Playlist HLS provisoria para reproducir antes del procesamiento
 - **Hito:** al detener, el link copiado ya reproduce en otra pestaña en menos de 3 s.
 
 ### Fase 3 — Procesamiento + reproductor (2 semanas)
+
 - [ ] Worker pg-boss: ensamblado, HLS 720/1080, MP4 faststart, poster, sprite VTT
 - [ ] Página `/share/:id` SSR con OG tags; Video.js 10 + hls.js; velocidades 0.5–2.5×
 - [ ] Embed `/embed/:id` con parámetros (`t`, `autoplay`, `muted`, `hide_title`…)
@@ -174,11 +181,13 @@ Cada fase cierra con tests (≥80 % de cobertura en paquetes de dominio), revisi
 - **Hito:** video procesado con miniaturas al pasar el mouse, embebible en otro sitio.
 
 ### Fase 4 — Transcripción (1 semana)
+
 - [ ] Worker whisper.cpp → transcripts (JSON) + captions (VTT); selección de idioma
 - [ ] Panel de transcripción con click-to-seek y búsqueda
 - **Hito:** subtítulos automáticos en español e inglés.
 
 ### Fase 5 — Colaboración (2 semanas)
+
 - [ ] Comentarios con timestamp e hilos; marcadores en la barra de tiempo
 - [ ] Reacciones con emoji en el timeline; anónimas con rate limit
 - [ ] Tiempo real (WS + LISTEN/NOTIFY)
@@ -188,11 +197,13 @@ Cada fase cierra con tests (≥80 % de cobertura en paquetes de dominio), revisi
 - **Hito:** dos usuarios comentan el mismo video y se ven en vivo.
 
 ### Fase 6 — Analítica básica (1 semana)
+
 - [ ] Vistas (>1 s reproducido), visto completo/parcial (20 buckets), beacon al cerrar
 - [ ] Panel del dueño: quién vio, cuánto, gráfico de retención
 - **Hito:** retención visible por video.
 
 ### Fase 7 — Release self-host v0.1 (1 semana)
+
 - [ ] Hardening: CSP, rate limits, límites de tamaño, auditoría de seguridad
 - [ ] Docs de instalación (Docker, variables, backups), imágenes GHCR versionadas
 - [ ] E2E Playwright: registro → grabar → compartir → comentar
@@ -201,6 +212,7 @@ Cada fase cierra con tests (≥80 % de cobertura en paquetes de dominio), revisi
 **Total estimado MVP: ~11–13 semanas** (una persona a tiempo parcial puede duplicarlo).
 
 ### Post-MVP
+
 - App de escritorio **Linux primero** (Electron): ventana flotante de cámara, atajos globales, captura vía portal.
 - IA: capítulos y resumen automáticos (LLM configurable), eliminación de muletillas.
 - Editor: cortes múltiples, unir clips, zoom automático.
@@ -209,14 +221,14 @@ Cada fase cierra con tests (≥80 % de cobertura en paquetes de dominio), revisi
 
 ## 7. Riesgos
 
-| Riesgo | Mitigación |
-|--------|-----------|
-| WebCodecs/H.264 no disponible en algunos Linux/Firefox | Detectar capacidades; fallback MediaRecorder WebM + transcodificación en worker |
-| Audio del sistema en Linux (no lo expone `getDisplayMedia` fuera de pestañas) | Documentarlo; resolver en la app Electron (PipeWire) |
-| Pérdida de datos si se cierra la pestaña | OPFS + reanudar subida al volver |
-| Costo de transcodificación/almacenamiento en SaaS | Ladder mínimo (720p + original), políticas de retención |
-| Contaminación de licencias | license-check en CI; prohibido copiar código de terceros incompatible |
-| Abuso de links públicos | Rate limit, URLs firmadas de corta duración, reportes |
+| Riesgo                                                                        | Mitigación                                                                      |
+| ----------------------------------------------------------------------------- | ------------------------------------------------------------------------------- |
+| WebCodecs/H.264 no disponible en algunos Linux/Firefox                        | Detectar capacidades; fallback MediaRecorder WebM + transcodificación en worker |
+| Audio del sistema en Linux (no lo expone `getDisplayMedia` fuera de pestañas) | Documentarlo; resolver en la app Electron (PipeWire)                            |
+| Pérdida de datos si se cierra la pestaña                                      | OPFS + reanudar subida al volver                                                |
+| Costo de transcodificación/almacenamiento en SaaS                             | Ladder mínimo (720p + original), políticas de retención                         |
+| Contaminación de licencias                                                    | license-check en CI; prohibido copiar código de terceros incompatible           |
+| Abuso de links públicos                                                       | Rate limit, URLs firmadas de corta duración, reportes                           |
 
 ## 8. Próximo paso
 
