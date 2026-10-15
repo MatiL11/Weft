@@ -166,7 +166,7 @@ Cada fase cierra con tests (≥80 % de cobertura en paquetes de dominio), revisi
 - [x] Tests: 47 de núcleo + 8 en Chromium real (validan el MP4 resultante) + E2E manual de `/record`
 - **Hito:** grabar 10 min en Chrome y Firefox sobre CachyOS/Wayland y exportar un archivo local válido.
   - ✅ Verificado automáticamente en Chromium headless con dispositivos simulados.
-  - ⏳ Pendiente: prueba manual con pantalla, cámara y micrófono reales en Chrome y Firefox sobre Wayland.
+  - ✅ Probado manualmente con pantalla, cámara y micrófono reales sobre CachyOS: funciona sin problemas.
 
 ### Fase 2 — Subida en streaming + link instantáneo (1–2 semanas)
 
