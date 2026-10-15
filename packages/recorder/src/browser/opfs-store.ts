@@ -98,6 +98,10 @@ export class OpfsSegmentStore implements SegmentStore {
     return { init: init ?? new Uint8Array(), segments }
   }
 
+  async readSegment(id: string, kind: 'init' | 'media', index: number): Promise<Uint8Array> {
+    return readBytes(await this.dir(id), kind === 'init' ? INIT_FILE : segmentFile(index))
+  }
+
   async delete(id: string): Promise<void> {
     await this.root.removeEntry(id, { recursive: true })
   }

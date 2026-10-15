@@ -100,3 +100,22 @@ describe('findRecoverable', () => {
     expect(ids).toEqual(['new', 'old'])
   })
 })
+
+describe('RecordingWriter persistence signals', () => {
+  it('resolves each write with whether it was persisted, and segments can be read back', async () => {
+    const store = new InMemorySegmentStore({ failOnSegment: 1 })
+    const writer = await RecordingWriter.open(store, manifest())
+
+    await expect(writer.writeInit(bytes(1))).resolves.toBe(true)
+    await expect(writer.writeSegment({ index: 0, startTime: 0, data: bytes(10) })).resolves.toBe(
+      true,
+    )
+    await expect(writer.writeSegment({ index: 1, startTime: 4, data: bytes(20) })).resolves.toBe(
+      false,
+    )
+
+    expect(await store.readSegment('rec_1', 'init', 0)).toEqual(bytes(1))
+    expect(await store.readSegment('rec_1', 'media', 0)).toEqual(bytes(10))
+    await expect(store.readSegment('rec_1', 'media', 1)).rejects.toThrow(/not stored/)
+  })
+})

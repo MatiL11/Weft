@@ -27,5 +27,7 @@ export interface SegmentStore {
   list(): Promise<RecordingManifest[]>
   /** Returns the init segment and all media segments, ordered by index. */
   readAll(id: string): Promise<StoredRecording>
+  /** Reads one stored segment (the init segment when kind is 'init'). */
+  readSegment(id: string, kind: 'init' | 'media', index: number): Promise<Uint8Array>
   delete(id: string): Promise<void>
 }

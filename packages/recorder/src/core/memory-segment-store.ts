@@ -54,6 +54,13 @@ export class InMemorySegmentStore implements SegmentStore {
     return { init: entry.init ?? new Uint8Array(), segments }
   }
 
+  async readSegment(id: string, kind: 'init' | 'media', index: number): Promise<Uint8Array> {
+    const entry = this.get(id)
+    const data = kind === 'init' ? entry.init : entry.segments.get(index)
+    if (!data) throw new Error(`Segment not stored: ${id} ${kind} ${index}`)
+    return data
+  }
+
   async delete(id: string): Promise<void> {
     this.entries.delete(id)
   }

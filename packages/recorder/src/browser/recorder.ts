@@ -1,6 +1,8 @@
+import type { MediaSegment } from '../core/fragments'
 import type { BubbleOptions } from '../core/layout'
 import { RecordingWriter } from '../core/recording-writer'
 import type { SegmentStore } from '../core/segment-store'
+import type { SegmentDescriptor } from '../core/upload-queue'
 import {
   createSession,
   elapsedMs,
@@ -48,12 +50,16 @@ export interface RecorderOptions {
   fps?: number
   now?: () => number
   createId?: () => string
+  /** Called once each segment is safely in local storage (e.g. to queue its upload). */
+  onSegmentStored?: (segment: SegmentDescriptor) => void
 }
 
 export interface FinishedRecording {
   id: string
   durationMs: number
   mimeType: string
+  /** Number of media segments produced (the init segment is not counted). */
+  segmentCount: number
 }
 
 type Listener = (snapshot: RecorderSnapshot) => void
@@ -106,18 +112,16 @@ export class Recorder {
     let recorder: Recorder | null = null
     const fail = (code: RecorderErrorCode) => recorder?.fail(code)
 
-    const pending = {
-      init: null as Uint8Array | null,
-      segments: [] as Parameters<RecordingWriter['writeSegment']>[0][],
-    }
+    // The encoder may emit data before the writer exists; buffer it until then.
+    const pending = { init: null as Uint8Array | null, segments: [] as MediaSegment[] }
     const encoder = await Encoder.create({
       canvas: compositor.canvas,
       size: compositor.size,
       fps: options.fps,
       audioTrack: audio?.track ?? null,
-      onInit: (data) => (recorder ? recorder.writer.writeInit(data) : (pending.init = data)),
+      onInit: (data) => (recorder ? recorder.persistInit(data) : (pending.init = data)),
       onSegment: (segment) =>
-        recorder ? recorder.writer.writeSegment(segment) : pending.segments.push(segment),
+        recorder ? recorder.persistSegment(segment) : pending.segments.push(segment),
       onError: () => fail('encoding_failed'),
     })
     const writer = await RecordingWriter.open(options.store, {
@@ -130,12 +134,31 @@ export class Recorder {
       segmentCount: 0,
       durationMs: 0,
     })
-    if (pending.init) writer.writeInit(pending.init)
-    pending.segments.forEach((s) => writer.writeSegment(s))
-
     recorder = new Recorder(options, compositor, encoder, writer, audio)
+    if (pending.init) recorder.persistInit(pending.init)
+    pending.segments.forEach((segment) => recorder?.persistSegment(segment))
     recorder.begin(screenTrack ?? null)
     return recorder
+  }
+
+  private mediaSegmentCount = 0
+
+  private persistInit(data: Uint8Array): void {
+    void this.writer.writeInit(data).then((stored) => {
+      if (stored) this.options.onSegmentStored?.({ kind: 'init', index: 0, startMs: 0 })
+    })
+  }
+
+  private persistSegment(segment: MediaSegment): void {
+    this.mediaSegmentCount = Math.max(this.mediaSegmentCount, segment.index + 1)
+    void this.writer.writeSegment(segment).then((stored) => {
+      if (!stored) return
+      this.options.onSegmentStored?.({
+        kind: 'media',
+        index: segment.index,
+        startMs: Math.round(segment.startTime * 1000),
+      })
+    })
   }
 
   get id(): string {
@@ -225,7 +248,12 @@ export class Recorder {
       }
       this.phaseOverride = 'finished'
       this.publish()
-      return { id: this.id, durationMs, mimeType: this.encoder.info.mimeType }
+      return {
+        id: this.id,
+        durationMs,
+        mimeType: this.encoder.info.mimeType,
+        segmentCount: this.mediaSegmentCount,
+      }
     })()
     return this.finishing
   }

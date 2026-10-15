@@ -25,12 +25,14 @@ export class RecordingWriter {
     return this.failure
   }
 
-  writeInit(data: Uint8Array): void {
-    this.enqueue(() => this.store.writeInit(this.id, data))
+  /** Queues the write; resolves true once persisted, false if storage failed. */
+  writeInit(data: Uint8Array): Promise<boolean> {
+    return this.enqueue(() => this.store.writeInit(this.id, data))
   }
 
-  writeSegment(segment: MediaSegment): void {
-    this.enqueue(async () => {
+  /** Queues the write; resolves true once persisted, false if storage failed. */
+  writeSegment(segment: MediaSegment): Promise<boolean> {
+    return this.enqueue(async () => {
       await this.store.writeSegment(this.id, segment.index, segment.data)
       this.segmentCount += 1
       await this.store.updateManifest(this.id, { segmentCount: this.segmentCount })
@@ -57,15 +59,19 @@ export class RecordingWriter {
     await this.store.delete(this.id)
   }
 
-  private enqueue(task: () => Promise<void>): void {
-    this.queue = this.queue.then(async () => {
-      if (this.failure) return
+  private enqueue(task: () => Promise<void>): Promise<boolean> {
+    const done = this.queue.then(async () => {
+      if (this.failure) return false
       try {
         await task()
+        return true
       } catch (error) {
         this.failure = error
+        return false
       }
     })
+    this.queue = done.then(() => undefined)
+    return done
   }
 }
 
