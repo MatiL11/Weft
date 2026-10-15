@@ -1,4 +1,7 @@
 export * from './domain/errors'
+export * from './domain/playlist'
+export * from './domain/video'
 export * from './domain/workspace'
 export * from './ports'
 export * from './application/create-workspace'
+export * from './application/recording'

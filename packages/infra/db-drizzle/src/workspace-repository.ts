@@ -1,6 +1,6 @@
 import type { WorkspaceMembership, WorkspaceRepository, WorkspaceRole } from '@weft/core'
 import type { Workspace } from '@weft/core'
-import { asc, eq } from 'drizzle-orm'
+import { and, asc, eq } from 'drizzle-orm'
 import type { Database } from './client'
 import { workspaceMembers, workspaces } from './schema'
 
@@ -21,6 +21,17 @@ export class DrizzleWorkspaceRepository implements WorkspaceRepository {
       await tx.insert(workspaces).values(workspace)
       await tx.insert(workspaceMembers).values({ workspaceId: workspace.id, userId, role })
     })
+  }
+
+  async roleOf(workspaceId: string, userId: string): Promise<WorkspaceRole | null> {
+    const rows = await this.db
+      .select({ role: workspaceMembers.role })
+      .from(workspaceMembers)
+      .where(
+        and(eq(workspaceMembers.workspaceId, workspaceId), eq(workspaceMembers.userId, userId)),
+      )
+      .limit(1)
+    return (rows[0]?.role as WorkspaceRole | undefined) ?? null
   }
 
   async listForUser(userId: string): Promise<WorkspaceMembership[]> {

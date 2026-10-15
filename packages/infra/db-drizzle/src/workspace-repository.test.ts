@@ -46,6 +46,8 @@ describe('DrizzleWorkspaceRepository (integration)', () => {
     expect(await repo.slugExists('other')).toBe(false)
     expect(await repo.listForUser('user_1')).toEqual([{ workspace: workspace(), role: 'owner' }])
     expect(await repo.listForUser('user_2')).toEqual([])
+    expect(await repo.roleOf('ws_1', 'user_1')).toBe('owner')
+    expect(await repo.roleOf('ws_1', 'user_2')).toBeNull()
   })
 
   it('rolls back the workspace when the membership insert fails', async () => {
