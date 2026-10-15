@@ -8,6 +8,13 @@
       "when": 1792095366225,
       "tag": "0000_outstanding_exodus",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1792101535354,
+      "tag": "0001_secret_mockingbird",
+      "breakpoints": true
     }
   ]
 }

@@ -1,5 +1,15 @@
 import { sql } from 'drizzle-orm'
-import { boolean, check, index, pgTable, primaryKey, text, timestamp } from 'drizzle-orm/pg-core'
+import {
+  bigint,
+  boolean,
+  check,
+  index,
+  integer,
+  pgTable,
+  primaryKey,
+  text,
+  timestamp,
+} from 'drizzle-orm/pg-core'
 
 // ── Auth tables (shape required by Better Auth; property names must match its field names) ──
 
@@ -90,6 +100,50 @@ export const workspaceMembers = pgTable(
     primaryKey({ columns: [t.workspaceId, t.userId] }),
     index().on(t.userId),
     check('workspace_members_role_check', sql`${t.role} in ('owner', 'admin', 'member', 'viewer')`),
+  ],
+)
+
+export const videos = pgTable(
+  'videos',
+  {
+    id: text().primaryKey(),
+    workspaceId: text()
+      .notNull()
+      .references(() => workspaces.id, { onDelete: 'cascade' }),
+    ownerId: text()
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    title: text().notNull(),
+    status: text().notNull(),
+    privacy: text().notNull(),
+    createdAt: timestamp({ withTimezone: true }).notNull(),
+    completedAt: timestamp({ withTimezone: true }),
+    durationMs: integer(),
+  },
+  (t) => [
+    index().on(t.workspaceId, t.createdAt),
+    index().on(t.ownerId),
+    check('videos_status_check', sql`${t.status} in ('recording', 'ready')`),
+    check('videos_privacy_check', sql`${t.privacy} in ('link', 'workspace', 'private')`),
+  ],
+)
+
+export const videoSegments = pgTable(
+  'video_segments',
+  {
+    videoId: text()
+      .notNull()
+      .references(() => videos.id, { onDelete: 'cascade' }),
+    kind: text().notNull(),
+    index: integer().notNull(),
+    startMs: integer().notNull(),
+    byteLength: bigint({ mode: 'number' }).notNull(),
+    sha256: text().notNull(),
+    uploadedAt: timestamp({ withTimezone: true }),
+  },
+  (t) => [
+    primaryKey({ columns: [t.videoId, t.kind, t.index] }),
+    check('video_segments_kind_check', sql`${t.kind} in ('init', 'media')`),
   ],
 )
 
