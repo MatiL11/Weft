@@ -21,6 +21,17 @@ packages/
   infra/*     adapters implementing core ports (Postgres, S3, …)
 ```
 
+## Self-hosting (Docker)
+
+```bash
+cp .env.example .env
+# set BETTER_AUTH_SECRET in .env, e.g. with: openssl rand -base64 48
+docker compose up --build
+```
+
+Open http://localhost:3000, create an account, and you'll land in your personal workspace.
+Use `WEB_PORT=3100 PUBLIC_URL=http://localhost:3100 docker compose up` if port 3000 is taken.
+
 ## Development
 
 Requirements: Node.js 24+, pnpm 11, Docker.

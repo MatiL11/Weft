@@ -17,7 +17,7 @@ export function AuthShell({ children }: { children: ReactNode }) {
             Record your screen and camera, share a link the moment you stop. Open source, and yours to host.
           </p>
         </div>
-        <svg aria-hidden="true" className="absolute -right-24 -bottom-24 h-[28rem] w-[28rem] text-ink/10" viewBox="0 0 200 200">
+        <svg aria-hidden="true" className="pointer-events-none absolute -top-16 -right-20 h-[26rem] w-[26rem] text-ink/10" viewBox="0 0 200 200">
           {Array.from({ length: 9 }, (_, i) => (
             <path key={i} d={`M${20 + i * 20} 0v200`} stroke="currentColor" strokeWidth="6" />
           ))}

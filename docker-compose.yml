@@ -1,0 +1,49 @@
+# Self-hosted Weft. Usage: cp .env.example .env (set BETTER_AUTH_SECRET), then `docker compose up --build`.
+name: weft
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: weft
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-weft}
+      POSTGRES_DB: weft
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U weft -d weft']
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
+
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    environment:
+      DATABASE_URL: postgres://weft:${POSTGRES_PASSWORD:-weft}@postgres:5432/weft
+      BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:?Set BETTER_AUTH_SECRET in .env (openssl rand -base64 48)}
+      PUBLIC_URL: ${PUBLIC_URL:-http://localhost:3000}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+      args:
+        API_INTERNAL_URL: http://api:4000
+    environment:
+      API_INTERNAL_URL: http://api:4000
+    ports:
+      - '${WEB_PORT:-3000}:3000'
+    depends_on:
+      api:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  postgres-data:
