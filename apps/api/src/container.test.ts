@@ -9,11 +9,13 @@ const PUBLIC_URL = 'http://localhost:3000'
 
 describe('personalWorkspaceName', () => {
   it.each([
-    ['Ana García', "Ana's workspace"],
-    ['  Beto  ', "Beto's workspace"],
-    ['   ', 'My workspace'],
-  ])('%j → %j', (input, expected) => {
-    expect(personalWorkspaceName(input)).toBe(expected)
+    ['Ana García', 'en', "Ana's workspace"],
+    ['  Beto  ', 'en', "Beto's workspace"],
+    ['   ', 'en', 'My workspace'],
+    ['Ana García', 'es', 'Espacio de Ana'],
+    ['   ', 'es', 'Mi espacio'],
+  ] as const)('%j (%s) → %j', (input, locale, expected) => {
+    expect(personalWorkspaceName(input, locale)).toBe(expected)
   })
 })
 
@@ -38,15 +40,11 @@ describe('container (integration: signup → personal workspace)', () => {
     await pg?.stop()
   })
 
-  it('creates a personal workspace when a user signs up', async () => {
+  async function signUpAndListWorkspaces(email: string, headers: Record<string, string> = {}) {
     const signUp = await container.app.request('/api/auth/sign-up/email', {
       method: 'POST',
-      headers: { 'content-type': 'application/json', origin: PUBLIC_URL },
-      body: JSON.stringify({
-        name: 'Ana García',
-        email: 'ana@example.com',
-        password: 'supersecret123',
-      }),
+      headers: { 'content-type': 'application/json', origin: PUBLIC_URL, ...headers },
+      body: JSON.stringify({ name: 'Ana García', email, password: 'supersecret123' }),
     })
     expect(signUp.status).toBe(200)
 
@@ -57,16 +55,33 @@ describe('container (integration: signup → personal workspace)', () => {
     expect(cookie).toContain('session_token')
 
     const res = await container.app.request('/api/workspaces', { headers: { cookie } })
-    const body = (await res.json()) as {
+    expect(res.status).toBe(200)
+    return (await res.json()) as {
       data: { workspace: { name: string; slug: string }; role: string }[]
     }
+  }
 
-    expect(res.status).toBe(200)
+  it('creates a personal workspace when a user signs up', async () => {
+    const body = await signUpAndListWorkspaces('ana@example.com')
+
     expect(body.data).toHaveLength(1)
     expect(body.data[0]).toMatchObject({
       workspace: { name: "Ana's workspace", slug: 'ana-s-workspace' },
       role: 'owner',
     })
+  })
+
+  it('names the personal workspace in the language of the request', async () => {
+    const fromBrowser = await signUpAndListWorkspaces('ana.es@example.com', {
+      'accept-language': 'es-AR,es;q=0.9',
+    })
+    const fromCookie = await signUpAndListWorkspaces('ana.cookie@example.com', {
+      'accept-language': 'en',
+      cookie: 'WEFT_LOCALE=es',
+    })
+
+    expect(fromBrowser.data[0]?.workspace.name).toBe('Espacio de Ana')
+    expect(fromCookie.data[0]?.workspace.name).toBe('Espacio de Ana')
   })
 
   it('rejects API requests without a session', async () => {

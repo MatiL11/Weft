@@ -32,9 +32,22 @@ const ALLOWED_PACKAGES = new Map([
 let input = ''
 for await (const chunk of process.stdin) input += chunk
 
+/**
+ * Evaluates a simple SPDX expression: every term of an AND must be allowed, at least one
+ * alternative of an OR must be allowed. Parentheses are flattened (good enough for npm metadata).
+ */
+function isAllowedExpression(expression) {
+  const cleaned = expression.replace(/[()]/g, ' ').trim()
+  return cleaned
+    .split(/\s+OR\s+/)
+    .some((alternative) =>
+      alternative.split(/\s+AND\s+/).every((id) => ALLOWED_LICENSES.has(id.trim())),
+    )
+}
+
 const byLicense = JSON.parse(input)
 const violations = Object.entries(byLicense).flatMap(([license, packages]) =>
-  ALLOWED_LICENSES.has(license)
+  isAllowedExpression(license)
     ? []
     : packages
         .filter((pkg) => !ALLOWED_PACKAGES.has(pkg.name))

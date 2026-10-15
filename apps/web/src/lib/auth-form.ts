@@ -9,21 +9,21 @@ export interface AuthFormValues {
 export const MIN_PASSWORD_LENGTH = 8
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
-/** Client-side validation; the server validates again. Returns field → message. */
-export function validateAuthForm(
-  mode: AuthMode,
-  values: AuthFormValues,
-): Partial<Record<keyof AuthFormValues, string>> {
-  const errors: Partial<Record<keyof AuthFormValues, string>> = {}
+export type ValidationKey = 'nameRequired' | 'emailInvalid' | 'passwordTooShort'
+export type AuthFormErrors = Partial<Record<keyof AuthFormValues, ValidationKey>>
+
+/** Client-side validation; the server validates again. Returns field → message key. */
+export function validateAuthForm(mode: AuthMode, values: AuthFormValues): AuthFormErrors {
+  const errors: AuthFormErrors = {}
 
   if (mode === 'sign-up' && values.name.trim().length === 0) {
-    errors.name = 'Tell us your name.'
+    errors.name = 'nameRequired'
   }
   if (!EMAIL_PATTERN.test(values.email.trim())) {
-    errors.email = 'Enter a valid email address.'
+    errors.email = 'emailInvalid'
   }
   if (values.password.length < MIN_PASSWORD_LENGTH) {
-    errors.password = `Use at least ${MIN_PASSWORD_LENGTH} characters.`
+    errors.password = 'passwordTooShort'
   }
   return errors
 }

@@ -27,26 +27,29 @@ describe('parseWorkspacesResponse', () => {
     })
   })
 
-  it('surfaces the API error message', () => {
+  it('surfaces the API error code', () => {
     expect(
       parseWorkspacesResponse(500, {
         data: null,
         error: { code: 'internal_error', message: 'Something went wrong.' },
       }),
-    ).toEqual({ kind: 'error', message: 'Something went wrong.' })
+    ).toEqual({ kind: 'error', code: 'internal_error' })
   })
 
-  it('falls back to a generic message when a failed response has no error', () => {
+  it('falls back to load_failed when a failed response has no error code', () => {
     expect(parseWorkspacesResponse(502, { data: null, error: null })).toEqual({
       kind: 'error',
-      message: 'Could not load workspaces.',
+      code: 'load_failed',
     })
   })
 
   it.each([null, 'html', { data: [] }, { data: 'nope', error: null }])(
     'rejects malformed body %j',
     (body) => {
-      expect(parseWorkspacesResponse(200, body)).toMatchObject({ kind: 'error' })
+      expect(parseWorkspacesResponse(200, body)).toEqual({
+        kind: 'error',
+        code: 'unexpected_response',
+      })
     },
   )
 })
@@ -84,7 +87,7 @@ describe('fetchWorkspaces', () => {
     )
     expect(await fetchWorkspaces('http://api:4000', '')).toEqual({
       kind: 'error',
-      message: 'The API is unreachable. Is it running?',
+      code: 'unreachable',
     })
   })
 })

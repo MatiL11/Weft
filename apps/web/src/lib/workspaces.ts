@@ -15,7 +15,8 @@ export interface WorkspaceMembership {
 export type WorkspacesResult =
   | { kind: 'ok'; memberships: WorkspaceMembership[] }
   | { kind: 'unauthenticated' }
-  | { kind: 'error'; message: string }
+  /** `code` is a message key under `errors` (an API error code or a client-side condition). */
+  | { kind: 'error'; code: string }
 
 interface Envelope {
   data: unknown
@@ -29,12 +30,11 @@ function isEnvelope(value: unknown): value is Envelope {
 /** Interprets the API response for GET /api/workspaces without trusting its shape. */
 export function parseWorkspacesResponse(status: number, body: unknown): WorkspacesResult {
   if (status === 401) return { kind: 'unauthenticated' }
-  if (!isEnvelope(body)) return { kind: 'error', message: 'Unexpected response from the server.' }
+  if (!isEnvelope(body)) return { kind: 'error', code: 'unexpected_response' }
   if (status !== 200 || body.error) {
-    return { kind: 'error', message: body.error?.message ?? 'Could not load workspaces.' }
+    return { kind: 'error', code: body.error?.code ?? 'load_failed' }
   }
-  if (!Array.isArray(body.data))
-    return { kind: 'error', message: 'Unexpected response from the server.' }
+  if (!Array.isArray(body.data)) return { kind: 'error', code: 'unexpected_response' }
   return { kind: 'ok', memberships: body.data as WorkspaceMembership[] }
 }
 
@@ -50,6 +50,6 @@ export async function fetchWorkspaces(
     const body: unknown = await res.json().catch(() => null)
     return parseWorkspacesResponse(res.status, body)
   } catch {
-    return { kind: 'error', message: 'The API is unreachable. Is it running?' }
+    return { kind: 'error', code: 'unreachable' }
   }
 }

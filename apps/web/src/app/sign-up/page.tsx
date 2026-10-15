@@ -1,15 +1,18 @@
 import type { Metadata } from 'next'
+import { getTranslations } from 'next-intl/server'
 import { AuthForm } from '@/components/auth-form'
 import { AuthShell } from '@/components/auth-shell'
+import { LocaleSwitcher } from '@/components/locale-switcher'
 
-export const metadata: Metadata = { title: 'Create account' }
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations('meta')
+  return { title: t('signUp') }
+}
 
-export default function SignUpPage() {
+export default async function SignUpPage() {
+  const t = await getTranslations('auth')
   return (
-    <AuthShell
-      headline="Say it once, on video."
-      tagline="Record your screen and camera and share a link the moment you stop. Open source and yours to host."
-    >
+    <AuthShell headline={t('headline')} tagline={t('tagline')} toolbar={<LocaleSwitcher />}>
       <AuthForm mode="sign-up" />
     </AuthShell>
   )

@@ -1,7 +1,10 @@
 import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
+import { getTranslations } from 'next-intl/server'
+import { LocaleSwitcher } from '@/components/locale-switcher'
 import { Logo } from '@/components/logo'
 import { SignOutButton } from '@/components/sign-out-button'
+import { errorKey } from '@/lib/error-keys'
 import { fetchWorkspaces, type WorkspaceMembership } from '@/lib/workspaces'
 
 export const dynamic = 'force-dynamic'
@@ -13,20 +16,24 @@ export default async function DashboardPage() {
   const result = await fetchWorkspaces(API_INTERNAL_URL, cookieHeader)
 
   if (result.kind === 'unauthenticated') redirect('/sign-in')
+  const t = await getTranslations()
 
   return (
     <div className="min-h-dvh">
       <header className="sticky top-0 z-10 border-b border-line bg-bg/85 backdrop-blur">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-3 sm:px-10">
           <Logo />
-          <SignOutButton />
+          <div className="flex items-center gap-2">
+            <LocaleSwitcher />
+            <SignOutButton />
+          </div>
         </div>
       </header>
 
       <main className="mx-auto max-w-6xl px-6 pt-12 pb-20 sm:px-10">
         {result.kind === 'error' ? (
           <p role="alert" className="rounded-xl bg-danger-soft px-4 py-3 font-medium text-danger">
-            {result.message}
+            {t(`errors.${errorKey(result.code)}`)}
           </p>
         ) : (
           <WorkspaceOverview memberships={result.memberships} />
@@ -36,11 +43,12 @@ export default async function DashboardPage() {
   )
 }
 
-function WorkspaceOverview({ memberships }: { memberships: WorkspaceMembership[] }) {
+async function WorkspaceOverview({ memberships }: { memberships: WorkspaceMembership[] }) {
+  const t = await getTranslations('dashboard')
   const [current, ...others] = memberships
 
   if (!current) {
-    return <p className="text-muted">You are not part of any workspace yet.</p>
+    return <p className="text-muted">{t('noWorkspace')}</p>
   }
 
   return (
@@ -48,7 +56,7 @@ function WorkspaceOverview({ memberships }: { memberships: WorkspaceMembership[]
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div className="grid gap-1">
           <p className="font-mono text-xs tracking-wider text-muted uppercase">
-            weft/{current.workspace.slug} · {current.role}
+            weft/{current.workspace.slug} · {t(`roles.${current.role}`)}
           </p>
           <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">
             {current.workspace.name}
@@ -65,25 +73,22 @@ function WorkspaceOverview({ memberships }: { memberships: WorkspaceMembership[]
         </div>
         <div className="grid max-w-xl gap-2">
           <h2 id="library-empty-title" className="text-xl font-semibold tracking-tight">
-            Your library is empty
+            {t('libraryEmptyTitle')}
           </h2>
-          <p className="text-muted">
-            Recording arrives in the next release. Every video you record will show up here with its
-            link, views and comments.
-          </p>
+          <p className="text-muted">{t('libraryEmptyBody')}</p>
         </div>
       </section>
 
       {others.length > 0 && (
         <section aria-labelledby="other-workspaces-title" className="grid gap-3">
           <h2 id="other-workspaces-title" className="text-sm font-medium text-muted">
-            Other workspaces
+            {t('otherWorkspaces')}
           </h2>
           <ul className="divide-y divide-line rounded-2xl border border-line bg-surface">
             {others.map((m) => (
               <li key={m.workspace.id} className="flex items-center justify-between px-5 py-3.5">
                 <span className="font-medium">{m.workspace.name}</span>
-                <span className="font-mono text-xs text-muted">{m.role}</span>
+                <span className="font-mono text-xs text-muted">{t(`roles.${m.role}`)}</span>
               </li>
             ))}
           </ul>

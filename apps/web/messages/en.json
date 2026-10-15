@@ -1,0 +1,70 @@
+{
+  "meta": {
+    "description": "Record your screen and camera, share a link instantly.",
+    "signIn": "Sign in",
+    "signUp": "Create account"
+  },
+  "locale": {
+    "label": "Language",
+    "en": "English",
+    "es": "Español"
+  },
+  "auth": {
+    "headline": "Say it once, on video.",
+    "tagline": "Record your screen and camera and share a link the moment you stop. Open source and yours to host.",
+    "signUp": {
+      "title": "Create your account",
+      "subtitle": "Record your screen and share the link the moment you stop.",
+      "submit": "Create account",
+      "switchText": "Already have an account?",
+      "switchLabel": "Sign in"
+    },
+    "signIn": {
+      "title": "Welcome back",
+      "subtitle": "Sign in to record and share.",
+      "submit": "Sign in",
+      "switchText": "New to Weft?",
+      "switchLabel": "Create an account"
+    },
+    "fields": {
+      "name": "Name",
+      "email": "Email",
+      "password": "Password"
+    },
+    "submitting": "One moment…",
+    "validation": {
+      "nameRequired": "Tell us your name.",
+      "emailInvalid": "Enter a valid email address.",
+      "passwordTooShort": "Use at least {min} characters."
+    },
+    "errors": {
+      "USER_ALREADY_EXISTS": "An account with this email already exists. Sign in instead.",
+      "USER_ALREADY_EXISTS_USE_ANOTHER_EMAIL": "An account with this email already exists. Sign in or use another email.",
+      "INVALID_EMAIL_OR_PASSWORD": "The email or password is incorrect.",
+      "INVALID_EMAIL": "Enter a valid email address.",
+      "PASSWORD_TOO_SHORT": "The password is too short.",
+      "PASSWORD_TOO_LONG": "The password is too long.",
+      "generic": "We couldn't complete that. Please try again."
+    }
+  },
+  "dashboard": {
+    "signOut": "Sign out",
+    "noWorkspace": "You are not part of any workspace yet.",
+    "libraryEmptyTitle": "Your library is empty",
+    "libraryEmptyBody": "Recording arrives in the next release. Every video you record will show up here with its link, views and comments.",
+    "otherWorkspaces": "Other workspaces",
+    "roles": {
+      "owner": "owner",
+      "admin": "admin",
+      "member": "member",
+      "viewer": "viewer"
+    }
+  },
+  "errors": {
+    "unreachable": "The server is unreachable. Check that the API is running.",
+    "unexpected_response": "The server sent an unexpected response.",
+    "load_failed": "We couldn't load your workspaces. Please try again.",
+    "internal_error": "Something went wrong on our side. Please try again.",
+    "generic": "Something went wrong. Please try again."
+  }
+}

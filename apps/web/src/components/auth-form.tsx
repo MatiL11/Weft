@@ -2,40 +2,31 @@
 
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
+import { useTranslations } from 'next-intl'
 import { useState, type FormEvent } from 'react'
 import { authClient } from '@/lib/auth-client'
-import { validateAuthForm, type AuthFormValues, type AuthMode } from '@/lib/auth-form'
+import { authErrorKey } from '@/lib/auth-errors'
+import {
+  MIN_PASSWORD_LENGTH,
+  validateAuthForm,
+  type AuthFormErrors,
+  type AuthFormValues,
+  type AuthMode,
+} from '@/lib/auth-form'
 
 interface AuthFormProps {
   mode: AuthMode
 }
 
-type FieldErrors = Partial<Record<keyof AuthFormValues, string>>
-
-const COPY = {
-  'sign-up': {
-    title: 'Create your account',
-    subtitle: 'Record your screen and share the link the moment you stop.',
-    submit: 'Create account',
-    switchText: 'Already have an account?',
-    switchHref: '/sign-in',
-    switchLabel: 'Sign in',
-  },
-  'sign-in': {
-    title: 'Welcome back',
-    subtitle: 'Sign in to record and share.',
-    submit: 'Sign in',
-    switchText: 'New to Weft?',
-    switchHref: '/sign-up',
-    switchLabel: 'Create an account',
-  },
-} as const
+const MODE_KEYS = { 'sign-up': 'signUp', 'sign-in': 'signIn' } as const
+const SWITCH_HREF = { 'sign-up': '/sign-in', 'sign-in': '/sign-up' } as const
 
 export function AuthForm({ mode }: AuthFormProps) {
   const router = useRouter()
-  const copy = COPY[mode]
+  const t = useTranslations('auth')
+  const modeKey = MODE_KEYS[mode]
   const [values, setValues] = useState<AuthFormValues>({ name: '', email: '', password: '' })
-  const [fieldErrors, setFieldErrors] = useState<FieldErrors>({})
+  const [fieldErrors, setFieldErrors] = useState<AuthFormErrors>({})
   const [formError, setFormError] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
 
@@ -61,7 +52,7 @@ export function AuthForm({ mode }: AuthFormProps) {
     setIsSubmitting(false)
 
     if (error) {
-      setFormError(error.message ?? 'Something went wrong. Please try again.')
+      setFormError(t(`errors.${authErrorKey(error.code)}`))
       return
     }
     router.push('/')
@@ -70,37 +61,40 @@ export function AuthForm({ mode }: AuthFormProps) {
 
   return (
     <div className="rise w-full max-w-sm">
-      <h1 className="text-3xl font-semibold tracking-tight">{copy.title}</h1>
-      <p className="mt-2 text-muted">{copy.subtitle}</p>
+      <h1 className="text-3xl font-semibold tracking-tight">{t(`${modeKey}.title`)}</h1>
+      <p className="mt-2 text-muted">{t(`${modeKey}.subtitle`)}</p>
 
       <form onSubmit={handleSubmit} noValidate className="mt-8 grid gap-4">
         {mode === 'sign-up' && (
           <Field
-            label="Name"
+            label={t('fields.name')}
             name="name"
             autoComplete="name"
             value={values.name}
             onChange={update('name')}
-            error={fieldErrors.name}
+            error={fieldErrors.name && t(`validation.${fieldErrors.name}`)}
           />
         )}
         <Field
-          label="Email"
+          label={t('fields.email')}
           name="email"
           type="email"
           autoComplete="email"
           value={values.email}
           onChange={update('email')}
-          error={fieldErrors.email}
+          error={fieldErrors.email && t(`validation.${fieldErrors.email}`)}
         />
         <Field
-          label="Password"
+          label={t('fields.password')}
           name="password"
           type="password"
           autoComplete={mode === 'sign-up' ? 'new-password' : 'current-password'}
           value={values.password}
           onChange={update('password')}
-          error={fieldErrors.password}
+          error={
+            fieldErrors.password &&
+            t(`validation.${fieldErrors.password}`, { min: MIN_PASSWORD_LENGTH })
+          }
         />
 
         {formError && (
@@ -117,17 +111,17 @@ export function AuthForm({ mode }: AuthFormProps) {
           disabled={isSubmitting}
           className="mt-2 h-11 cursor-pointer rounded-xl bg-primary px-5 font-medium text-on-primary transition-[background-color,transform] duration-200 hover:bg-primary-hover active:scale-[0.98] disabled:cursor-wait disabled:opacity-60"
         >
-          {isSubmitting ? 'One moment…' : copy.submit}
+          {isSubmitting ? t('submitting') : t(`${modeKey}.submit`)}
         </button>
       </form>
 
       <p className="mt-6 text-sm text-muted">
-        {copy.switchText}{' '}
+        {t(`${modeKey}.switchText`)}{' '}
         <Link
-          href={copy.switchHref}
+          href={SWITCH_HREF[mode]}
           className="font-medium text-fg underline decoration-accent decoration-2 underline-offset-4 transition-colors hover:text-accent"
         >
-          {copy.switchLabel}
+          {t(`${modeKey}.switchLabel`)}
         </Link>
       </p>
     </div>

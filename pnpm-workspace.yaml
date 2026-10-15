@@ -9,6 +9,8 @@ allowBuilds:
   cpu-features: false
   ssh2: false
   protobufjs: false
+  '@swc/core': false
+  '@parcel/watcher': false
 
 minimumReleaseAgeExclude:
   - '@vitest/coverage-v8@5.0.5'

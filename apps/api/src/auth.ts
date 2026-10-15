@@ -1,3 +1,4 @@
+import { localeFromHeaders, type Locale } from '@weft/i18n'
 import { authSchema, type Database } from '@weft/infra-db'
 import { betterAuth } from 'better-auth'
 import { drizzleAdapter } from 'better-auth/adapters/drizzle'
@@ -5,6 +6,8 @@ import { drizzleAdapter } from 'better-auth/adapters/drizzle'
 export interface CreatedUser {
   id: string
   name: string
+  /** Language negotiated from the sign-up request (locale cookie, then Accept-Language). */
+  locale: Locale
 }
 
 export interface AuthOptions {
@@ -27,8 +30,13 @@ export function createAuth(options: AuthOptions) {
     databaseHooks: {
       user: {
         create: {
-          after: async (user) => {
-            await options.onUserCreated({ id: user.id, name: user.name })
+          after: async (user, context) => {
+            const headers = context?.headers ?? context?.request?.headers
+            await options.onUserCreated({
+              id: user.id,
+              name: user.name,
+              locale: localeFromHeaders(headers),
+            })
           },
         },
       },

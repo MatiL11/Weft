@@ -1,10 +1,12 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
+import { useTranslations } from 'next-intl'
 import { authClient } from '@/lib/auth-client'
 
 export function SignOutButton() {
   const router = useRouter()
+  const t = useTranslations('dashboard')
 
   async function handleSignOut() {
     await authClient.signOut()
@@ -18,7 +20,7 @@ export function SignOutButton() {
       onClick={handleSignOut}
       className="h-9 cursor-pointer rounded-lg px-3 text-sm font-medium text-muted transition-colors hover:bg-surface-sunken hover:text-fg"
     >
-      Sign out
+      {t('signOut')}
     </button>
   )
 }

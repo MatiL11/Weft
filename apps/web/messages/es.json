@@ -1,0 +1,70 @@
+{
+  "meta": {
+    "description": "Graba tu pantalla y tu cámara, y comparte el enlace al instante.",
+    "signIn": "Iniciar sesión",
+    "signUp": "Crear cuenta"
+  },
+  "locale": {
+    "label": "Idioma",
+    "en": "English",
+    "es": "Español"
+  },
+  "auth": {
+    "headline": "Dilo una vez, en video.",
+    "tagline": "Graba tu pantalla y tu cámara, y comparte el enlace en cuanto terminas. Código abierto y alojado donde tú quieras.",
+    "signUp": {
+      "title": "Crea tu cuenta",
+      "subtitle": "Graba tu pantalla y comparte el enlace en cuanto terminas.",
+      "submit": "Crear cuenta",
+      "switchText": "¿Ya tienes una cuenta?",
+      "switchLabel": "Inicia sesión"
+    },
+    "signIn": {
+      "title": "Hola de nuevo",
+      "subtitle": "Inicia sesión para grabar y compartir.",
+      "submit": "Iniciar sesión",
+      "switchText": "¿Eres nuevo en Weft?",
+      "switchLabel": "Crea una cuenta"
+    },
+    "fields": {
+      "name": "Nombre",
+      "email": "Correo electrónico",
+      "password": "Contraseña"
+    },
+    "submitting": "Un momento…",
+    "validation": {
+      "nameRequired": "Escribe tu nombre.",
+      "emailInvalid": "Escribe un correo electrónico válido.",
+      "passwordTooShort": "Usa al menos {min} caracteres."
+    },
+    "errors": {
+      "USER_ALREADY_EXISTS": "Ya existe una cuenta con este correo. Inicia sesión.",
+      "USER_ALREADY_EXISTS_USE_ANOTHER_EMAIL": "Ya existe una cuenta con este correo. Inicia sesión o usa otro correo.",
+      "INVALID_EMAIL_OR_PASSWORD": "El correo o la contraseña no son correctos.",
+      "INVALID_EMAIL": "Escribe un correo electrónico válido.",
+      "PASSWORD_TOO_SHORT": "La contraseña es demasiado corta.",
+      "PASSWORD_TOO_LONG": "La contraseña es demasiado larga.",
+      "generic": "No pudimos completar la acción. Inténtalo de nuevo."
+    }
+  },
+  "dashboard": {
+    "signOut": "Cerrar sesión",
+    "noWorkspace": "Todavía no perteneces a ningún espacio.",
+    "libraryEmptyTitle": "Tu biblioteca está vacía",
+    "libraryEmptyBody": "La grabación llega en la próxima versión. Cada video que grabes aparecerá aquí con su enlace, sus vistas y sus comentarios.",
+    "otherWorkspaces": "Otros espacios",
+    "roles": {
+      "owner": "propietario",
+      "admin": "administrador",
+      "member": "miembro",
+      "viewer": "lector"
+    }
+  },
+  "errors": {
+    "unreachable": "No se puede conectar con el servidor. Verifica que la API esté en ejecución.",
+    "unexpected_response": "El servidor envió una respuesta inesperada.",
+    "load_failed": "No pudimos cargar tus espacios. Inténtalo de nuevo.",
+    "internal_error": "Algo falló de nuestro lado. Inténtalo de nuevo.",
+    "generic": "Algo salió mal. Inténtalo de nuevo."
+  }
+}
