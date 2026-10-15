@@ -4,16 +4,22 @@ import type { Recorder } from '@weft/recorder'
 import { useTranslations } from 'next-intl'
 import { useEffect, useRef, useState, useSyncExternalStore } from 'react'
 import { formatDuration } from '@/lib/recording-format'
+import type { UploadSession } from './record-studio'
+import { ShareLink } from './share-link'
+import { UploadStatus } from './upload-status'
 
 interface SessionPanelProps {
   recorder: Recorder
+  /** Null when the server was unreachable: the recording stays local only. */
+  upload: UploadSession | null
   onStop: () => void
   onDiscard: () => void
 }
 
 /** Live view while recording: composited preview, timer and controls. */
-export function SessionPanel({ recorder, onStop, onDiscard }: SessionPanelProps) {
+export function SessionPanel({ recorder, upload, onStop, onDiscard }: SessionPanelProps) {
   const t = useTranslations('recorder.session')
+  const tShare = useTranslations('recorder.share')
   const snapshot = useSyncExternalStore(
     recorder.subscribe,
     recorder.getSnapshot,
@@ -81,6 +87,7 @@ export function SessionPanel({ recorder, onStop, onDiscard }: SessionPanelProps)
           <span className="hidden text-sm text-muted sm:inline">
             {t('remaining', { time: formatDuration(snapshot.limitMs - snapshot.elapsedMs) })}
           </span>
+          {upload && <UploadStatus queue={upload.queue} />}
         </div>
 
         {isConfirmingDiscard ? (
@@ -135,6 +142,15 @@ export function SessionPanel({ recorder, onStop, onDiscard }: SessionPanelProps)
           </div>
         )}
       </div>
+      {upload ? (
+        <div className="rounded-2xl border border-line bg-surface px-5 py-4">
+          <ShareLink url={upload.shareUrl} hint={tShare('liveHint')} />
+        </div>
+      ) : (
+        <p role="status" className="rounded-xl bg-surface-sunken px-4 py-3 text-sm text-muted">
+          {tShare('offline')}
+        </p>
+      )}
     </div>
   )
 }

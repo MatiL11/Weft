@@ -131,7 +131,12 @@
       "download": "Descargar MP4",
       "again": "Grabar otra",
       "duration": "Duración {time}",
-      "limitReached": "La grabación se detuvo al llegar al límite de {time}."
+      "limitReached": "La grabación se detuvo al llegar al límite de {time}.",
+      "shareTitle": "Tu enlace está listo",
+      "shareSubtitle": "Cualquiera con el enlace puede verlo. Ya lo copiamos en tu portapapeles.",
+      "uploadFailed": "El video no se pudo subir completo, así que el enlace no está listo. Descárgalo para conservar una copia.",
+      "localOnly": "Está guardado solo en este navegador. Descárgalo para conservar una copia.",
+      "openLink": "Abrir"
     },
     "recovery": {
       "title": "Encontramos una grabación sin terminar",
@@ -148,6 +153,28 @@
       "storage_failed": "El navegador se quedó sin espacio de almacenamiento. Libera espacio e inténtalo de nuevo.",
       "unsupported_browser": "Este navegador no puede grabar video. Usa una versión reciente de Chrome, Edge o Firefox.",
       "no_screen_capture": "Este navegador no puede capturar la pantalla. Igual puedes grabar solo con la cámara."
+    },
+    "defaultTitle": "Grabación del {date}",
+    "share": {
+      "label": "Enlace para compartir",
+      "copy": "Copiar enlace",
+      "copied": "Copiado",
+      "liveHint": "Quien tenga el enlace puede verla mientras grabas.",
+      "offline": "No pudimos conectar con el servidor. Esta grabación se guarda solo en este navegador."
+    },
+    "upload": {
+      "uploading": "Subiendo {done} de {total}",
+      "synced": "Subido",
+      "failed": "{count, plural, one {# parte no se pudo} other {# partes no se pudieron}} subir"
     }
+  },
+  "share": {
+    "live": "En vivo",
+    "liveHint": "Grabación en curso. El video crece a medida que se graba.",
+    "recordedOn": "Grabado el {date}",
+    "cta": "Graba el tuyo con Weft",
+    "playerError": "Este video no se puede reproducir ahora. Inténtalo de nuevo en un momento.",
+    "notFoundTitle": "Video no encontrado",
+    "notFoundBody": "No existe o no está compartido contigo."
   }
 }

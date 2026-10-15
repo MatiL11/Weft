@@ -131,7 +131,12 @@
       "download": "Download MP4",
       "again": "Record another",
       "duration": "Length {time}",
-      "limitReached": "Recording stopped at the {time} limit."
+      "limitReached": "Recording stopped at the {time} limit.",
+      "shareTitle": "Your link is ready",
+      "shareSubtitle": "Anyone with the link can watch it. It was copied to your clipboard.",
+      "uploadFailed": "The video couldn't be fully uploaded, so the link isn't ready. Download it to keep a copy.",
+      "localOnly": "It is saved in this browser only. Download it to keep a copy.",
+      "openLink": "Open"
     },
     "recovery": {
       "title": "Unfinished recording found",
@@ -148,6 +153,28 @@
       "storage_failed": "The browser ran out of storage space. Free some space and try again.",
       "unsupported_browser": "This browser can't record video. Use a recent version of Chrome, Edge or Firefox.",
       "no_screen_capture": "This browser can't capture the screen. You can still record with the camera only."
+    },
+    "defaultTitle": "Recording from {date}",
+    "share": {
+      "label": "Share link",
+      "copy": "Copy link",
+      "copied": "Copied",
+      "liveHint": "People with the link can watch while you record.",
+      "offline": "Couldn't reach the server. This recording is saved only in this browser."
+    },
+    "upload": {
+      "uploading": "Uploading {done} of {total}",
+      "synced": "Uploaded",
+      "failed": "{count, plural, one {# part} other {# parts}} couldn't be uploaded"
     }
+  },
+  "share": {
+    "live": "Live",
+    "liveHint": "Recording in progress. The video grows as it is recorded.",
+    "recordedOn": "Recorded {date}",
+    "cta": "Record your own with Weft",
+    "playerError": "This video can't be played right now. Try again in a moment.",
+    "notFoundTitle": "Video not found",
+    "notFoundBody": "It doesn't exist, or it isn't shared with you."
   }
 }

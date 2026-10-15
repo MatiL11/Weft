@@ -236,7 +236,8 @@ export class Recorder {
 
     this.finishing = (async () => {
       this.teardownCapture()
-      const durationMs = elapsedMs(this.session, this.options.now())
+      // Whole milliseconds: the clock is fractional, but durations are stored as integers.
+      const durationMs = Math.round(elapsedMs(this.session, this.options.now()))
       try {
         await this.encoder.finalize()
         await this.writer.complete(durationMs)

@@ -49,6 +49,7 @@ describe('Recorder (real Chromium, WebCodecs + Mediabunny)', () => {
 
     expect(recorder.getSnapshot().phase).toBe('finished')
     expect(result.durationMs).toBeGreaterThan(8_500)
+    expect(Number.isInteger(result.durationMs)).toBe(true)
     const stored = await store.readAll(result.id)
     expect(stored.init.byteLength).toBeGreaterThan(0)
     expect(stored.segments.length).toBeGreaterThanOrEqual(2)
