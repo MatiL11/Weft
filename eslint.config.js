@@ -44,6 +44,28 @@ export default tseslint.config(
     },
   },
   {
+    // The recorder's core is pure logic: no browser adapters, muxer or framework imports.
+    files: ['packages/recorder/src/core/**/*.ts'],
+    ignores: ['packages/recorder/src/core/**/*.test.ts'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              group: ['../browser', '../browser/*'],
+              message: 'recorder core must not depend on browser adapters.',
+            },
+            {
+              group: ['mediabunny', 'react', 'next', 'next/*'],
+              message: 'recorder core must stay framework-free.',
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
     files: ['packages/core/src/**/*.ts'],
     ignores: ['packages/core/src/**/*.test.ts'],
     rules: {
