@@ -157,12 +157,16 @@ Cada fase cierra con tests (≥80 % de cobertura en paquetes de dominio), revisi
 
 ### Fase 1 — Grabador web (2 semanas)
 
-- [ ] Selección de fuentes: pantalla/ventana/pestaña, cámara, micrófono, audio del sistema (si existe)
-- [ ] Compositor canvas con burbuja de cámara (posición y tamaño), modos pantalla+cam / solo pantalla / solo cam
-- [ ] Encoder WebCodecs → segmentos fMP4 4 s (Mediabunny); fallback MediaRecorder
-- [ ] Cuenta regresiva, pausa/reanudar, cancelar, reiniciar; límite de duración configurable
-- [ ] Buffer OPFS y recuperación de grabaciones interrumpidas
+- [x] Selección de fuentes: pantalla/ventana/pestaña, cámara, micrófono, audio de la pestaña/sistema (si el navegador lo expone)
+- [x] Compositor canvas con burbuja de cámara (posición y tamaño), modos pantalla+cam / solo pantalla / solo cam
+- [x] Encoder WebCodecs → segmentos fMP4 ~4 s (Mediabunny; H.264/VP9/AV1 + AAC/Opus según el navegador)
+- [ ] Fallback MediaRecorder para navegadores sin WebCodecs → **pospuesto**: Chrome, Edge, Firefox ≥130 y Safari ≥26 ya tienen WebCodecs; hoy esos navegadores ven un aviso claro
+- [x] Cuenta regresiva, pausa/reanudar, descartar, grabar otra; límite de duración (60 min)
+- [x] Buffer OPFS y recuperación de grabaciones interrumpidas
+- [x] Tests: 47 de núcleo + 8 en Chromium real (validan el MP4 resultante) + E2E manual de `/record`
 - **Hito:** grabar 10 min en Chrome y Firefox sobre CachyOS/Wayland y exportar un archivo local válido.
+  - ✅ Verificado automáticamente en Chromium headless con dispositivos simulados.
+  - ⏳ Pendiente: prueba manual con pantalla, cámara y micrófono reales en Chrome y Firefox sobre Wayland.
 
 ### Fase 2 — Subida en streaming + link instantáneo (1–2 semanas)
 
