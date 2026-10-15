@@ -148,12 +148,12 @@ Cada fase cierra con tests (≥80 % de cobertura en paquetes de dominio), revisi
 
 ### Fase 0 — Fundaciones (1 semana)
 
-- [ ] Monorepo: `apps/{web,api,worker}`, `packages/{core,recorder,ui,shared}`, `packages/infra/*` (ver Clean Architecture)
-- [ ] Regla de dependencias en CI (`core` no importa `infra` ni `apps`)
-- [ ] LICENSE MIT, README, CONTRIBUTING, CI (lint, typecheck, test, license-check)
-- [ ] `docker-compose.yml`: postgres, seaweedfs, api, web, worker, whisper
-- [ ] Drizzle: esquema inicial + migraciones; Better Auth + workspaces
-- **Hito:** `docker compose up` → registrarse → workspace vacío.
+- [x] Monorepo: `apps/{web,api}`, `packages/core`, `packages/infra/db-drizzle` (el resto se crea cuando haga falta)
+- [x] Regla de dependencias en CI (`core` no importa `infra` ni `apps`)
+- [x] LICENSE MIT, README, CONTRIBUTING, CI (format, lint, typecheck, test, license-check, build de imágenes)
+- [x] `docker-compose.yml`: postgres, api, web. **SeaweedFS pasa a la Fase 2, worker a la Fase 3 y whisper a la Fase 4**, que es donde se usan.
+- [x] Drizzle: esquema inicial + migraciones; Better Auth + workspaces
+- **Hito:** `docker compose up` → registrarse → workspace vacío. ✅ (verificado con la stack real en Docker)
 
 ### Fase 1 — Grabador web (2 semanas)
 
