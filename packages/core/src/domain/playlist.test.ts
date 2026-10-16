@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { buildMediaPlaylist, playableSegments } from './playlist'
+import { buildMasterPlaylist, buildMediaPlaylist, playableSegments } from './playlist'
 
 const seg = (index: number, startMs: number) => ({ index, startMs })
 
@@ -83,5 +83,39 @@ describe('buildMediaPlaylist', () => {
   it('uses a sensible target duration for an empty live playlist', () => {
     const text = buildMediaPlaylist({ initUri: 'i', segmentUri: uri, segments: [], ended: false })
     expect(text).toContain('#EXT-X-TARGETDURATION:4')
+  })
+})
+
+describe('buildMasterPlaylist', () => {
+  it('lists each rendition with its bandwidth, resolution and codecs', () => {
+    expect(
+      buildMasterPlaylist([
+        {
+          uri: 'hls/1080p/index.m3u8',
+          width: 1920,
+          height: 1080,
+          bandwidth: 4_000_000,
+          codecs: 'avc1.640028,mp4a.40.2',
+        },
+        {
+          uri: 'hls/720p/index.m3u8',
+          width: 1280,
+          height: 720,
+          bandwidth: 2_000_000,
+          codecs: 'avc1.64001f',
+        },
+      ]),
+    ).toBe(
+      [
+        '#EXTM3U',
+        '#EXT-X-VERSION:7',
+        '#EXT-X-INDEPENDENT-SEGMENTS',
+        '#EXT-X-STREAM-INF:BANDWIDTH=4000000,RESOLUTION=1920x1080,CODECS="avc1.640028,mp4a.40.2"',
+        'hls/1080p/index.m3u8',
+        '#EXT-X-STREAM-INF:BANDWIDTH=2000000,RESOLUTION=1280x720,CODECS="avc1.64001f"',
+        'hls/720p/index.m3u8',
+        '',
+      ].join('\n'),
+    )
   })
 })

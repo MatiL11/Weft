@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { DomainError } from './errors'
 import {
+  accessFor,
   canView,
   createVideo,
   MAX_MEDIA_SEGMENTS,
@@ -39,6 +40,11 @@ describe('createVideo', () => {
       createdAt: NOW,
       completedAt: null,
       durationMs: null,
+      trim: null,
+      passwordHash: null,
+      renderState: 'none',
+      renderVersion: 0,
+      render: null,
     })
   })
 
@@ -101,5 +107,30 @@ describe('canView', () => {
     const v = video({ privacy: 'private' })
     expect(canView(v, { userId: 'user_1', role: 'owner' })).toBe(true)
     expect(canView(v, { userId: 'user_2', role: 'admin' })).toBe(false)
+  })
+})
+
+describe('accessFor', () => {
+  const anonymous = { userId: null, role: null }
+
+  it('always lets the owner in', () => {
+    for (const privacy of ['link', 'workspace', 'password', 'private'] as const) {
+      expect(accessFor(video({ privacy }), { userId: 'user_1', role: null })).toBe('granted')
+    }
+  })
+
+  it('asks for the password until the viewer unlocks the video', () => {
+    const protectedVideo = video({ privacy: 'password' })
+    expect(accessFor(protectedVideo, anonymous)).toBe('password_required')
+    expect(accessFor(protectedVideo, { userId: 'other', role: 'member' })).toBe('password_required')
+    expect(accessFor(protectedVideo, { ...anonymous, unlocked: true })).toBe('granted')
+  })
+
+  it('hides workspace videos from outsiders and private videos from everyone else', () => {
+    expect(accessFor(video({ privacy: 'workspace' }), anonymous)).toBe('hidden')
+    expect(accessFor(video({ privacy: 'workspace' }), { userId: 'm', role: 'viewer' })).toBe(
+      'granted',
+    )
+    expect(accessFor(video({ privacy: 'private' }), { userId: 'm', role: 'admin' })).toBe('hidden')
   })
 })

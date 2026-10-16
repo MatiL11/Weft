@@ -1,9 +1,14 @@
 import { DomainError } from './errors'
+import type { RenderState, TrimRange, VideoRender } from './render'
 import type { WorkspaceRole } from './workspace'
 
 export type VideoStatus = 'recording' | 'ready'
-/** link: anyone with the URL · workspace: members only · private: owner only. */
-export type VideoPrivacy = 'link' | 'workspace' | 'private'
+/**
+ * link: anyone with the URL · workspace: members only · password: anyone with the URL and
+ * the password · private: owner only.
+ */
+export type VideoPrivacy = 'link' | 'workspace' | 'password' | 'private'
+export const VIDEO_PRIVACIES: readonly VideoPrivacy[] = ['link', 'workspace', 'password', 'private']
 export type SegmentKind = 'init' | 'media'
 
 export const VIDEO_TITLE_MAX_LENGTH = 120
@@ -21,7 +26,18 @@ export interface Video {
   readonly privacy: VideoPrivacy
   readonly createdAt: Date
   readonly completedAt: Date | null
+  /** Length of the original recording. */
   readonly durationMs: number | null
+  /** Visible part of the recording (non-destructive); null shows all of it. */
+  readonly trim: TrimRange | null
+  /** Set only while privacy is 'password'. */
+  readonly passwordHash: string | null
+  /** State of the most recently requested render. */
+  readonly renderState: RenderState
+  /** Incremented on every render request; stale render jobs compare against it. */
+  readonly renderVersion: number
+  /** The latest successful render, possibly older than `renderVersion`. */
+  readonly render: VideoRender | null
 }
 
 export interface VideoSegment {
@@ -45,24 +61,33 @@ export interface CreateVideoProps {
   now: Date
 }
 
-export function createVideo(props: CreateVideoProps): Video {
-  const title = props.title.trim()
+export function normalizeTitle(raw: string): string {
+  const title = raw.trim()
   if (title.length === 0 || title.length > VIDEO_TITLE_MAX_LENGTH) {
     throw new DomainError(
       'video.title_invalid',
       `Video title must be between 1 and ${VIDEO_TITLE_MAX_LENGTH} characters.`,
     )
   }
+  return title
+}
+
+export function createVideo(props: CreateVideoProps): Video {
   return {
     id: props.id,
     workspaceId: props.workspaceId,
     ownerId: props.ownerId,
-    title,
+    title: normalizeTitle(props.title),
     status: 'recording',
     privacy: 'link',
     createdAt: props.now,
     completedAt: null,
     durationMs: null,
+    trim: null,
+    passwordHash: null,
+    renderState: 'none',
+    renderVersion: 0,
+    render: null,
   }
 }
 
@@ -119,15 +144,27 @@ export interface Viewer {
   userId: string | null
   /** The viewer's role in the video's workspace, if any. */
   role: WorkspaceRole | null
+  /** Whether the viewer proved they know the video's password. */
+  unlocked?: boolean
+}
+
+export type Access = 'granted' | 'password_required' | 'hidden'
+
+/** What a viewer may do with a video; the owner can always watch their own videos. */
+export function accessFor(video: Video, viewer: Viewer): Access {
+  if (viewer.userId !== null && viewer.userId === video.ownerId) return 'granted'
+  switch (video.privacy) {
+    case 'link':
+      return 'granted'
+    case 'workspace':
+      return viewer.role !== null ? 'granted' : 'hidden'
+    case 'password':
+      return viewer.unlocked ? 'granted' : 'password_required'
+    case 'private':
+      return 'hidden'
+  }
 }
 
 export function canView(video: Video, viewer: Viewer): boolean {
-  switch (video.privacy) {
-    case 'link':
-      return true
-    case 'workspace':
-      return viewer.role !== null
-    case 'private':
-      return viewer.userId === video.ownerId
-  }
+  return accessFor(video, viewer) === 'granted'
 }

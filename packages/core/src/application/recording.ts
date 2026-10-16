@@ -1,7 +1,5 @@
 import { DomainError } from '../domain/errors'
-import { playableSegments, type PlayableSegment } from '../domain/playlist'
 import {
-  canView,
   createVideo,
   segmentKey,
   validateSegmentUpload,
@@ -15,12 +13,13 @@ import type {
   Clock,
   IdGenerator,
   ObjectStorage,
+  RenderQueue,
   VideoRepository,
   WorkspaceRepository,
 } from '../ports'
+import { queueRender } from './rendering'
 
 const UPLOAD_URL_TTL_SECONDS = 10 * 60
-const PLAYBACK_URL_TTL_SECONDS = 60 * 60
 const RECORDING_ROLES: ReadonlySet<WorkspaceRole> = new Set(['owner', 'admin', 'member'])
 const CONTENT_TYPES: Record<SegmentKind, string> = {
   init: 'video/mp4',
@@ -31,13 +30,23 @@ export interface RecordingDeps {
   videos: VideoRepository
   workspaces: WorkspaceRepository
   storage: ObjectStorage
+  renders: RenderQueue
   ids: IdGenerator
   clock: Clock
 }
 
-async function loadVideo(videos: VideoRepository, id: string): Promise<Video> {
+export async function loadVideo(videos: VideoRepository, id: string): Promise<Video> {
   const video = await videos.findById(id)
   if (!video) throw new DomainError('video.not_found', 'Video not found.')
+  return video
+}
+
+/** Loads a video the caller owns. */
+export async function loadOwnVideo(videos: VideoRepository, userId: string, videoId: string) {
+  const video = await loadVideo(videos, videoId)
+  if (video.ownerId !== userId) {
+    throw new DomainError('video.forbidden', 'Only the owner can change this video.')
+  }
   return video
 }
 
@@ -168,7 +177,8 @@ export class CompleteRecording {
       completedAt: this.deps.clock.now(),
     }
     await this.deps.videos.update(completed)
-    return completed
+    await queueRender(this.deps, completed.id)
+    return (await this.deps.videos.findById(completed.id)) ?? completed
   }
 }
 
@@ -177,49 +187,9 @@ export class DeleteVideo {
   constructor(private readonly deps: RecordingDeps) {}
 
   async execute(input: { userId: string; videoId: string }): Promise<void> {
-    const video = await loadVideo(this.deps.videos, input.videoId)
-    if (video.ownerId !== input.userId) {
-      throw new DomainError('video.forbidden', 'Only the owner can delete this video.')
-    }
+    const video = await loadOwnVideo(this.deps.videos, input.userId, input.videoId)
     // Remove the record first so the share link stops working immediately.
     await this.deps.videos.delete(video.id)
     await this.deps.storage.deletePrefix(videoPrefix(video.id))
-  }
-}
-
-export interface Playback {
-  video: Video
-  ended: boolean
-  segments: PlayableSegment[]
-  /** Short-lived URL for the init segment or a media segment. */
-  mediaUrl(kind: SegmentKind, index: number): Promise<string>
-}
-
-export class GetPlayback {
-  constructor(private readonly deps: RecordingDeps) {}
-
-  async execute(input: { viewerId: string | null; videoId: string }): Promise<Playback> {
-    const video = await loadVideo(this.deps.videos, input.videoId)
-    const role = input.viewerId
-      ? await this.deps.workspaces.roleOf(video.workspaceId, input.viewerId)
-      : null
-    // Hidden videos look missing, so their existence is not revealed.
-    if (!canView(video, { userId: input.viewerId, role })) {
-      throw new DomainError('video.not_found', 'Video not found.')
-    }
-
-    const media = (await this.deps.videos.listSegments(video.id)).filter(
-      (s) => s.kind === 'media' && s.uploadedAt,
-    )
-    const ended = video.status === 'ready'
-    return {
-      video,
-      ended,
-      segments: playableSegments(media, { endedAtMs: ended ? video.durationMs : null }),
-      mediaUrl: (kind, index) =>
-        this.deps.storage.presignGet(segmentKey(video.id, kind, index), {
-          expiresInSeconds: PLAYBACK_URL_TTL_SECONDS,
-        }),
-    }
   }
 }

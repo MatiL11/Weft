@@ -1,3 +1,4 @@
+import type { RenderOutput, RenderState, TrimRange, VideoRender } from '../domain/render'
 import type { SegmentKind, Video, VideoSegment } from '../domain/video'
 import type { Workspace, WorkspaceMembership, WorkspaceRole } from '../domain/workspace'
 
@@ -21,7 +22,25 @@ export interface WorkspaceRepository {
 export interface VideoRepository {
   create(video: Video): Promise<void>
   findById(id: string): Promise<Video | null>
+  /** Newest first. */
+  listForWorkspace(workspaceId: string, options: { limit: number }): Promise<Video[]>
+  /**
+   * Saves the owner-editable fields and recording status. Render fields are left alone:
+   * they change only through `requestRender` and `saveRender`, so concurrent edits and
+   * background renders never overwrite each other.
+   */
   update(video: Video): Promise<void>
+  /** Bumps the render version and marks it queued; returns the new version (null if gone). */
+  requestRender(id: string): Promise<number | null>
+  /**
+   * Records progress of a render, only if `version` is still the latest requested one.
+   * Returns false when the render is stale (or the video was deleted).
+   */
+  saveRender(
+    id: string,
+    version: number,
+    update: { state: RenderState; render?: VideoRender },
+  ): Promise<boolean>
   /** Inserts or replaces the expected segment (re-preparing resets its upload state). */
   upsertSegment(segment: VideoSegment): Promise<void>
   findSegment(videoId: string, kind: SegmentKind, index: number): Promise<VideoSegment | null>
@@ -42,9 +61,49 @@ export interface ObjectStorage {
     key: string,
     options: { byteLength: number; sha256: string; contentType: string; expiresInSeconds: number },
   ): Promise<PresignedUpload>
-  presignGet(key: string, options: { expiresInSeconds: number }): Promise<string>
   /** Size of a stored object, or null if it does not exist. */
   head(key: string): Promise<{ byteLength: number } | null>
+  presignGet(
+    key: string,
+    options: { expiresInSeconds: number; downloadFilename?: string },
+  ): Promise<string>
+  /** Contents of a small text object (e.g. a playlist), or null if it does not exist. */
+  readText(key: string): Promise<string | null>
   /** Deletes every object whose key starts with `prefix`. */
   deletePrefix(prefix: string): Promise<void>
+}
+
+export interface RenderJob {
+  videoId: string
+  version: number
+}
+
+/** Hands render jobs to background workers. */
+export interface RenderQueue {
+  enqueue(job: RenderJob): Promise<void>
+}
+
+/** Turns raw recording segments into the files of a render (implemented with ffmpeg). */
+export interface MediaRenderer {
+  render(input: {
+    /** Init segment first, then media segments in order. */
+    sourceKeys: string[]
+    trim: TrimRange | null
+    /** Where the render's files go (see `isRenderAsset` for their names). */
+    outputPrefix: string
+  }): Promise<RenderOutput>
+}
+
+export interface PasswordHasher {
+  hash(password: string): Promise<string>
+  verify(password: string, hash: string): Promise<boolean>
+}
+
+/**
+ * Proof that a viewer entered a video's password. Tokens are bound to the current password,
+ * so changing it locks everyone out again.
+ */
+export interface VideoAccessTokens {
+  issue(video: Video): string
+  verify(video: Video, token: string): boolean
 }

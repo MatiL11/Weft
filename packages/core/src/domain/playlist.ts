@@ -66,3 +66,25 @@ export function buildMediaPlaylist(options: MediaPlaylistOptions): string {
   if (options.ended) lines.push('#EXT-X-ENDLIST')
   return `${lines.join('\n')}\n`
 }
+
+export interface MasterPlaylistEntry {
+  uri: string
+  width: number
+  height: number
+  bandwidth: number
+  codecs: string
+}
+
+/** Multivariant playlist listing the renditions of a finished render. */
+export function buildMasterPlaylist(entries: readonly MasterPlaylistEntry[]): string {
+  const lines = [
+    '#EXTM3U',
+    '#EXT-X-VERSION:7',
+    '#EXT-X-INDEPENDENT-SEGMENTS',
+    ...entries.flatMap((e) => [
+      `#EXT-X-STREAM-INF:BANDWIDTH=${e.bandwidth},RESOLUTION=${e.width}x${e.height},CODECS="${e.codecs}"`,
+      e.uri,
+    ]),
+  ]
+  return `${lines.join('\n')}\n`
+}

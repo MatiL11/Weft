@@ -1,11 +1,17 @@
 // In-memory fakes of core ports, for fast use-case tests in any package.
+import type { RenderOutput, RenderState, TrimRange, VideoRender } from '../domain/render'
 import type { SegmentKind, Video, VideoSegment } from '../domain/video'
 import type { Workspace, WorkspaceMembership, WorkspaceRole } from '../domain/workspace'
 import type {
   Clock,
   IdGenerator,
+  MediaRenderer,
   ObjectStorage,
+  PasswordHasher,
   PresignedUpload,
+  RenderJob,
+  RenderQueue,
+  VideoAccessTokens,
   VideoRepository,
   WorkspaceRepository,
 } from '../ports'
@@ -88,8 +94,41 @@ export class InMemoryVideoRepository implements VideoRepository {
     return this.videos.get(id) ?? null
   }
 
+  async listForWorkspace(workspaceId: string, options: { limit: number }): Promise<Video[]> {
+    return [...this.videos.values()]
+      .filter((v) => v.workspaceId === workspaceId)
+      .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
+      .slice(0, options.limit)
+  }
+
   async update(video: Video): Promise<void> {
-    this.videos.set(video.id, video)
+    const current = this.videos.get(video.id)
+    if (!current) return
+    const { renderState, renderVersion, render } = current
+    this.videos.set(video.id, { ...video, renderState, renderVersion, render })
+  }
+
+  async requestRender(id: string): Promise<number | null> {
+    const video = this.videos.get(id)
+    if (!video) return null
+    const renderVersion = video.renderVersion + 1
+    this.videos.set(id, { ...video, renderVersion, renderState: 'queued' })
+    return renderVersion
+  }
+
+  async saveRender(
+    id: string,
+    version: number,
+    update: { state: RenderState; render?: VideoRender },
+  ): Promise<boolean> {
+    const video = this.videos.get(id)
+    if (!video || video.renderVersion !== version) return false
+    this.videos.set(id, {
+      ...video,
+      renderState: update.state,
+      render: update.render ?? video.render,
+    })
+    return true
   }
 
   async upsertSegment(segment: VideoSegment): Promise<void> {
@@ -121,6 +160,7 @@ export class InMemoryVideoRepository implements VideoRepository {
 /** ObjectStorage fake with deterministic URLs; `simulateUpload` stands in for the browser's PUT. */
 export class FakeObjectStorage implements ObjectStorage {
   private readonly objects = new Map<string, number>()
+  private readonly texts = new Map<string, string>()
 
   constructor(private readonly clock: Clock = { now: () => new Date('2026-10-16T10:00:00Z') }) {}
 
@@ -134,8 +174,13 @@ export class FakeObjectStorage implements ObjectStorage {
     }
   }
 
-  async presignGet(key: string): Promise<string> {
-    return `fake-get://${key}`
+  async presignGet(key: string, options?: { downloadFilename?: string }): Promise<string> {
+    const download = options?.downloadFilename ? `?download=${options.downloadFilename}` : ''
+    return `fake-get://${key}${download}`
+  }
+
+  async readText(key: string): Promise<string | null> {
+    return this.texts.get(key) ?? null
   }
 
   async head(key: string): Promise<{ byteLength: number } | null> {
@@ -147,14 +192,79 @@ export class FakeObjectStorage implements ObjectStorage {
     for (const key of [...this.objects.keys()]) {
       if (key.startsWith(prefix)) this.objects.delete(key)
     }
+    for (const key of [...this.texts.keys()]) {
+      if (key.startsWith(prefix)) this.texts.delete(key)
+    }
   }
 
   simulateUpload(key: string, byteLength: number): void {
     this.objects.set(key, byteLength)
   }
 
+  /** Stores a text object, as a render's playlists would be. */
+  putText(key: string, text: string): void {
+    this.texts.set(key, text)
+    this.objects.set(key, text.length)
+  }
+
   /** Stored object keys, for assertions. */
   keys(): string[] {
     return [...this.objects.keys()]
+  }
+}
+
+/** Records enqueued render jobs; `failing` simulates an unreachable queue. */
+export class FakeRenderQueue implements RenderQueue {
+  readonly jobs: RenderJob[] = []
+  failing = false
+
+  async enqueue(job: RenderJob): Promise<void> {
+    if (this.failing) throw new Error('queue unavailable')
+    this.jobs.push(job)
+  }
+}
+
+export const FAKE_RENDER_OUTPUT: RenderOutput = {
+  durationMs: 6000,
+  renditions: [{ width: 1280, height: 720, bandwidth: 2_000_000, codecs: 'avc1.64001f,mp4a.40.2' }],
+  sprite: { columns: 10, count: 6, intervalMs: 1000, tileWidth: 160, tileHeight: 90 },
+  mp4ByteLength: 123_456,
+}
+
+/** Writes a marker object under the output prefix and returns a fixed output. */
+export class FakeMediaRenderer implements MediaRenderer {
+  readonly calls: { sourceKeys: string[]; trim: TrimRange | null; outputPrefix: string }[] = []
+  error: Error | null = null
+  /** Runs during a render, e.g. to change the video concurrently. */
+  during: (() => Promise<void>) | null = null
+
+  constructor(private readonly storage: FakeObjectStorage) {}
+
+  async render(input: { sourceKeys: string[]; trim: TrimRange | null; outputPrefix: string }) {
+    this.calls.push(input)
+    this.storage.simulateUpload(`${input.outputPrefix}video.mp4`, 1)
+    await this.during?.()
+    if (this.error) throw this.error
+    return FAKE_RENDER_OUTPUT
+  }
+}
+
+export class FakePasswordHasher implements PasswordHasher {
+  async hash(password: string): Promise<string> {
+    return `hashed:${password}`
+  }
+
+  async verify(password: string, hash: string): Promise<boolean> {
+    return hash === `hashed:${password}`
+  }
+}
+
+export class FakeAccessTokens implements VideoAccessTokens {
+  issue(video: Video): string {
+    return `token:${video.id}:${video.passwordHash}`
+  }
+
+  verify(video: Video, token: string): boolean {
+    return token === this.issue(video)
   }
 }

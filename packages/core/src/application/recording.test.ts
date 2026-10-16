@@ -1,65 +1,25 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import {
-  FakeObjectStorage,
-  FixedClock,
-  InMemoryVideoRepository,
-  InMemoryWorkspaceRepository,
-  SequentialIdGenerator,
-} from '../testing'
-import {
   CompleteRecording,
   ConfirmSegmentUpload,
   DeleteVideo,
-  GetPlayback,
   PrepareSegmentUpload,
-  StartRecording,
 } from './recording'
-
-const NOW = new Date('2026-10-16T10:00:00Z')
-const SHA = 'n4bQgYhMfWWaL+qgxVrQFaO/TxsrC4Is0V1sFbDwCgg='
+import { createTestBed, NOW, SHA } from './test-bed'
 
 describe('recording use cases', () => {
-  let videos: InMemoryVideoRepository
-  let workspaces: InMemoryWorkspaceRepository
-  let storage: FakeObjectStorage
-  let deps: ConstructorParameters<typeof StartRecording>[0]
+  let bed: Awaited<ReturnType<typeof createTestBed>>
+  let deps: typeof bed.deps
+  let videos: typeof bed.videos
+  let storage: typeof bed.storage
 
   beforeEach(async () => {
-    videos = new InMemoryVideoRepository()
-    workspaces = new InMemoryWorkspaceRepository()
-    storage = new FakeObjectStorage()
-    deps = {
-      videos,
-      workspaces,
-      storage,
-      ids: new SequentialIdGenerator('vid'),
-      clock: new FixedClock(NOW),
-    }
-    const ws = { id: 'ws_1', name: 'Acme', slug: 'acme', createdAt: NOW }
-    await workspaces.createWithMember(ws, 'owner_1', 'owner')
-    await workspaces.addMember('ws_1', 'member_1', 'member')
-    await workspaces.addMember('ws_1', 'viewer_1', 'viewer')
+    bed = await createTestBed()
+    ;({ deps, videos, storage } = bed)
   })
 
-  async function start(userId = 'owner_1') {
-    return new StartRecording(deps).execute({ userId, workspaceId: 'ws_1', title: 'Demo' })
-  }
-
-  async function upload(videoId: string, kind: 'init' | 'media', index: number, startMs = 0) {
-    const byteLength = 100 + index
-    const prepared = await new PrepareSegmentUpload(deps).execute({
-      userId: 'owner_1',
-      videoId,
-      kind,
-      index,
-      startMs,
-      byteLength,
-      sha256: SHA,
-    })
-    storage.simulateUpload(prepared.key, byteLength)
-    await new ConfirmSegmentUpload(deps).execute({ userId: 'owner_1', videoId, kind, index })
-    return prepared
-  }
+  const start = (userId?: string) => bed.start(userId)
+  const upload = (...args: Parameters<typeof bed.upload>) => bed.upload(...args)
 
   describe('StartRecording', () => {
     it('creates a recording video owned by the caller', async () => {
@@ -194,7 +154,20 @@ describe('recording use cases', () => {
         durationMs: 7500,
         segmentCount: 2,
       })
-      expect(done).toMatchObject({ status: 'ready', durationMs: 7500, completedAt: NOW })
+      expect(done).toMatchObject({
+        status: 'ready',
+        durationMs: 7500,
+        completedAt: NOW,
+        renderState: 'queued',
+        renderVersion: 1,
+      })
+      expect(bed.renders.jobs).toEqual([{ videoId: video.id, version: 1 }])
+    })
+
+    it('stays playable, with a failed render, when the job queue is down', async () => {
+      bed.renders.failing = true
+      const done = await bed.recorded()
+      expect(done).toMatchObject({ status: 'ready', renderState: 'failed' })
     })
 
     it('refuses to complete with missing segments and names them', async () => {
@@ -235,44 +208,6 @@ describe('recording use cases', () => {
           segmentCount: 0,
         }),
       ).rejects.toMatchObject({ code: 'video.segments_missing' })
-    })
-  })
-
-  describe('GetPlayback', () => {
-    it('returns the playable timeline and presigned media URLs', async () => {
-      const video = await start()
-      await upload(video.id, 'init', 0)
-      await upload(video.id, 'media', 0, 0)
-      await upload(video.id, 'media', 1, 4000)
-
-      const live = await new GetPlayback(deps).execute({ viewerId: null, videoId: video.id })
-      expect(live.ended).toBe(false)
-      expect(live.segments.map((s) => s.index)).toEqual([0])
-
-      await new CompleteRecording(deps).execute({
-        userId: 'owner_1',
-        videoId: video.id,
-        durationMs: 6000,
-        segmentCount: 2,
-      })
-      const ended = await new GetPlayback(deps).execute({ viewerId: null, videoId: video.id })
-      expect(ended.ended).toBe(true)
-      expect(ended.segments).toEqual([
-        { index: 0, durationMs: 4000 },
-        { index: 1, durationMs: 2000 },
-      ])
-      expect(await ended.mediaUrl('media', 1)).toBe('fake-get://videos/vid_1/seg-000001.m4s')
-    })
-
-    it('enforces privacy', async () => {
-      const video = await start()
-      await videos.update({ ...video, privacy: 'workspace' })
-      await expect(
-        new GetPlayback(deps).execute({ viewerId: null, videoId: video.id }),
-      ).rejects.toMatchObject({ code: 'video.not_found' })
-      await expect(
-        new GetPlayback(deps).execute({ viewerId: 'viewer_1', videoId: video.id }),
-      ).resolves.toBeDefined()
     })
   })
 
