@@ -33,13 +33,14 @@ jobs:
       # The render worker's tests run real ffmpeg encodes.
       - run: command -v ffmpeg || (sudo apt-get update && sudo apt-get install -y --no-install-recommends ffmpeg)
       # The worker's transcription tests run real whisper.cpp with the tiny model.
-      - uses: actions/cache@v4
+      - uses: actions/cache@v5
         with:
           path: ~/.cache/weft-whisper
           key: whisper-${{ runner.os }}-${{ hashFiles('scripts/setup-whisper.sh') }}
       - run: scripts/setup-whisper.sh ~/.cache/weft-whisper
       # Integration tests start Postgres through Testcontainers (Docker is available on the runner).
-      - run: pnpm test:coverage
+      # One package at a time: video encodes would otherwise starve the recorder's real-time tests.
+      - run: pnpm test:coverage --concurrency=1
         env:
           WHISPER_CLI_PATH: /home/runner/.cache/weft-whisper/whisper-cli
           WHISPER_MODEL_PATH: /home/runner/.cache/weft-whisper/ggml-tiny.bin

@@ -15,5 +15,10 @@
       "outputs": ["coverage/**"]
     }
   },
-  "globalPassThroughEnv": ["CHROMIUM_PATH"]
+  "globalPassThroughEnv": [
+    "CHROMIUM_PATH",
+    "WHISPER_CLI_PATH",
+    "WHISPER_MODEL_PATH",
+    "WHISPER_SAMPLE_WAV"
+  ]
 }
