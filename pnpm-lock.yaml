@@ -119,6 +119,34 @@ importers:
         specifier: ^4.3.3
         version: 4.3.3
 
+  apps/worker:
+    dependencies:
+      '@weft/core':
+        specifier: workspace:*
+        version: link:../../packages/core
+      '@weft/infra-db':
+        specifier: workspace:*
+        version: link:../../packages/infra/db-drizzle
+      '@weft/infra-jobs':
+        specifier: workspace:*
+        version: link:../../packages/infra/jobs-pgboss
+      '@weft/infra-storage':
+        specifier: workspace:*
+        version: link:../../packages/infra/storage-s3
+      pino:
+        specifier: ^10.4.0
+        version: 10.4.0
+      zod:
+        specifier: ^4.6.7
+        version: 4.6.7
+    devDependencies:
+      tsup:
+        specifier: ^9.0.0
+        version: 9.0.0(@swc/core@1.16.18(@swc/helpers@0.5.23))(jiti@2.7.0)(postcss@8.5.30)(tsx@4.23.15)(typescript@6.0.3)(yaml@2.9.1)
+      tsx:
+        specifier: ^4.23.15
+        version: 4.23.15
+
   packages/core: {}
 
   packages/i18n: {}

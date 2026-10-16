@@ -30,6 +30,8 @@ jobs:
       - run: pnpm license:check
       # Recorder tests run in a real headless Chromium with fake camera/microphone devices.
       - run: pnpm --filter @weft/recorder exec playwright install --with-deps chromium
+      # The render worker's tests run real ffmpeg encodes.
+      - run: command -v ffmpeg || (sudo apt-get update && sudo apt-get install -y --no-install-recommends ffmpeg)
       # Integration tests start Postgres through Testcontainers (Docker is available on the runner).
       - run: pnpm test:coverage
 
@@ -39,7 +41,7 @@ jobs:
     needs: check
     strategy:
       matrix:
-        app: [api, web]
+        app: [api, web, worker]
     steps:
       - uses: actions/checkout@v7
       - uses: docker/setup-buildx-action@v4

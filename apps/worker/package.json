@@ -1,0 +1,26 @@
+{
+  "name": "@weft/worker",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch --env-file-if-exists=../../.env src/main.ts",
+    "build": "tsup",
+    "start": "node dist/main.js",
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "vitest run",
+    "test:coverage": "vitest run --coverage"
+  },
+  "dependencies": {
+    "@weft/core": "workspace:*",
+    "@weft/infra-db": "workspace:*",
+    "@weft/infra-jobs": "workspace:*",
+    "@weft/infra-storage": "workspace:*",
+    "pino": "^10.4.0",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "tsup": "^9.0.0",
+    "tsx": "^4.23.15"
+  }
+}
