@@ -1,7 +1,10 @@
 import { createHash } from 'node:crypto'
+import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
 import { GenericContainer, Wait, type StartedTestContainer } from 'testcontainers'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
-import { S3ObjectStorage } from './s3-object-storage'
+import { attachmentDisposition, S3ObjectStorage } from './s3-object-storage'
 
 const ORIGIN = 'http://localhost:3000'
 const CREDENTIALS = { accessKeyId: 'weft-test', secretAccessKey: 'weft-test-secret' }
@@ -130,9 +133,51 @@ describe('S3ObjectStorage (integration, SeaweedFS)', () => {
     })
     await expect(misconfigured.head('videos/a/seg-000000.m4s')).rejects.toThrow()
     await expect(misconfigured.ensureBucket({ corsOrigins: [ORIGIN] })).rejects.toThrow()
+    await expect(misconfigured.readText('videos/a/seg-000000.m4s')).rejects.toThrow()
+  })
+
+  it('moves files between disk and storage, and reads small text objects', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'weft-storage-'))
+    try {
+      await writeFile(join(dir, 'index.m3u8'), '#EXTM3U\n#EXT-X-ENDLIST\n')
+      await storage.uploadFile(
+        'videos/r/720p/index.m3u8',
+        join(dir, 'index.m3u8'),
+        'application/vnd.apple.mpegurl',
+      )
+      expect(await storage.readText('videos/r/720p/index.m3u8')).toBe('#EXTM3U\n#EXT-X-ENDLIST\n')
+      expect(await storage.readText('videos/r/missing.m3u8')).toBeNull()
+
+      await put('videos/r/init.mp4', sample(300))
+      await storage.downloadToFile('videos/r/init.mp4', join(dir, 'init.mp4'))
+      expect(new Uint8Array(await readFile(join(dir, 'init.mp4')))).toEqual(sample(300))
+    } finally {
+      await rm(dir, { recursive: true, force: true })
+    }
+  })
+
+  it('signs download links that save under the given name', async () => {
+    await put('videos/d/video.mp4', sample(64))
+    const url = await storage.presignGet('videos/d/video.mp4', {
+      expiresInSeconds: 60,
+      downloadFilename: 'Demo de ventas.mp4',
+    })
+    const res = await fetch(url)
+    expect(res.headers.get('content-disposition')).toBe(attachmentDisposition('Demo de ventas.mp4'))
   })
 
   it('is idempotent when the bucket already exists', async () => {
     await expect(storage.ensureBucket({ corsOrigins: [ORIGIN] })).resolves.toBeUndefined()
+  })
+})
+
+describe('attachmentDisposition', () => {
+  it('keeps the exact UTF-8 name and an ASCII fallback without quotes or slashes', () => {
+    expect(attachmentDisposition('Reunión "Q4"/final.mp4')).toBe(
+      `attachment; filename="Reuni_n Q4final.mp4"; filename*=UTF-8''Reuni%C3%B3n%20Q4final.mp4`,
+    )
+    expect(attachmentDisposition('""')).toBe(
+      `attachment; filename="download"; filename*=UTF-8''download`,
+    )
   })
 })

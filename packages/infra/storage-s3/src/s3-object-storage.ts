@@ -10,6 +10,10 @@ import {
   S3Client,
   S3ServiceException,
 } from '@aws-sdk/client-s3'
+import { createReadStream, createWriteStream } from 'node:fs'
+import { stat } from 'node:fs/promises'
+import { Readable } from 'node:stream'
+import { pipeline } from 'node:stream/promises'
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner'
 import type { ObjectStorage, PresignedUpload } from '@weft/core'
 
@@ -41,6 +45,14 @@ const isNotFound = (error: unknown) =>
   error instanceof S3ServiceException &&
   (error.$metadata.httpStatusCode === 404 || error.name === 'NotFound')
 
+/** `attachment` header with an ASCII fallback and the exact (UTF-8) name for modern clients. */
+export function attachmentDisposition(filename: string): string {
+  // Only printable characters survive; quotes and slashes would break the header or path.
+  const clean = filename.replace(/[^\p{L}\p{N}\p{P}\p{S} ]|["\\/]/gu, '').trim() || 'download'
+  const ascii = clean.replace(/[^\x20-\x7e]/g, '_')
+  return `attachment; filename="${ascii}"; filename*=UTF-8''${encodeURIComponent(clean)}`
+}
+
 /** ObjectStorage on any S3-compatible service (SeaweedFS, Garage, R2, AWS S3). */
 export class S3ObjectStorage implements ObjectStorage {
   private readonly internal: S3Client
@@ -68,13 +80,52 @@ export class S3ObjectStorage implements ObjectStorage {
     return { url, expiresAt: new Date(Date.now() + options.expiresInSeconds * 1000) }
   }
 
-  presignGet(key: string, options: { expiresInSeconds: number }): Promise<string> {
-    return getSignedUrl(
-      this.signer,
+  presignGet(
+    key: string,
+    options: { expiresInSeconds: number; downloadFilename?: string },
+  ): Promise<string> {
+    const command = new GetObjectCommand({
+      Bucket: this.config.bucket,
+      Key: key,
+      ResponseContentDisposition: options.downloadFilename
+        ? attachmentDisposition(options.downloadFilename)
+        : undefined,
+    })
+    return getSignedUrl(this.signer, command, { expiresIn: options.expiresInSeconds })
+  }
+
+  async readText(key: string): Promise<string | null> {
+    try {
+      const result = await this.internal.send(
+        new GetObjectCommand({ Bucket: this.config.bucket, Key: key }),
+      )
+      return (await result.Body?.transformToString('utf-8')) ?? ''
+    } catch (error) {
+      if (isNotFound(error)) return null
+      throw error
+    }
+  }
+
+  /** Streams an object to a local file (used by the render worker). */
+  async downloadToFile(key: string, filePath: string): Promise<void> {
+    const result = await this.internal.send(
       new GetObjectCommand({ Bucket: this.config.bucket, Key: key }),
-      {
-        expiresIn: options.expiresInSeconds,
-      },
+    )
+    if (!(result.Body instanceof Readable)) throw new Error(`Empty body for ${key}`)
+    await pipeline(result.Body, createWriteStream(filePath))
+  }
+
+  /** Streams a local file into an object (used by the render worker). */
+  async uploadFile(key: string, filePath: string, contentType: string): Promise<void> {
+    const { size } = await stat(filePath)
+    await this.internal.send(
+      new PutObjectCommand({
+        Bucket: this.config.bucket,
+        Key: key,
+        Body: createReadStream(filePath),
+        ContentLength: size,
+        ContentType: contentType,
+      }),
     )
   }
 
