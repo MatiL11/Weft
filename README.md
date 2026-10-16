@@ -3,12 +3,12 @@
 Open-source, self-hostable async video messaging: record your screen and camera,
 get a shareable link instantly, and collect comments and reactions.
 
-> Status: early development (Phase 0 — foundations). See [docs/plan/PLAN.md](docs/plan/PLAN.md).
+> Status: early development (Phase 3 — processing and player done). See [docs/plan/PLAN.md](docs/plan/PLAN.md).
 
 ## Stack
 
 TypeScript monorepo (pnpm + Turborepo) · Next.js web app · Hono API · PostgreSQL + Drizzle ·
-Better Auth · S3-compatible storage · Clean Architecture core.
+Better Auth · S3-compatible storage · pg-boss jobs · ffmpeg render worker · Clean Architecture core.
 
 ## Repository layout
 
@@ -16,6 +16,7 @@ Better Auth · S3-compatible storage · Clean Architecture core.
 apps/
   api/        HTTP API (Hono) — delivery layer
   web/        Next.js web app
+  worker/     background renders with ffmpeg (HLS ladder, MP4, poster, thumbnails)
 packages/
   core/       domain + use cases + ports (framework-free)
   infra/*     adapters implementing core ports (Postgres, S3, …)
@@ -36,9 +37,20 @@ Videos are stored in SeaweedFS (S3-compatible). Browsers upload and stream media
 it through short-lived presigned URLs, so its port (8333 by default) must be reachable by viewers.
 In production, put it behind your domain and set `STORAGE_PUBLIC_URL` (e.g. `https://media.example.com`).
 
+When a recording ends, the `worker` service renders it with ffmpeg: an adaptive HLS ladder
+(1080p/720p), a downloadable MP4, a poster and hover thumbnails. The video is watchable from the
+first second; the render only improves it. Renders run one at a time by default
+(`RENDER_CONCURRENCY`); each one can use every CPU core.
+
+### Embedding
+
+Every video has an embeddable player at `/embed/<id>` (options: `?t=90&autoplay=1&muted=1&hide_title=1`)
+and an [oEmbed](https://oembed.com) endpoint at `/api/oembed?url=<share link>`, so links shared in
+apps that support oEmbed unfurl as players. Only videos shared with "anyone with the link" embed.
+
 ## Development
 
-Requirements: Node.js 24+, pnpm 11, Docker.
+Requirements: Node.js 24+, pnpm 11, Docker, ffmpeg (for the worker and its tests).
 
 ```bash
 pnpm install

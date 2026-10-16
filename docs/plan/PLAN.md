@@ -181,12 +181,15 @@ Cada fase cierra con tests (≥80 % de cobertura en paquetes de dominio), revisi
 
 ### Fase 3 — Procesamiento + reproductor (2 semanas)
 
-- [ ] Worker pg-boss: ensamblado, HLS 720/1080, MP4 faststart, poster, sprite VTT
-- [ ] Página `/share/:id` SSR con OG tags; Video.js 10 + hls.js; velocidades 0.5–2.5×
-- [ ] Embed `/embed/:id` con parámetros (`t`, `autoplay`, `muted`, `hide_title`…)
-- [ ] Trim no destructivo (el reproductor salta rangos) + re-render en background
-- [ ] Privacidad: workspace / link / password / privado
+- [x] Worker pg-boss + ffmpeg: escalera HLS H.264/AAC (1080p/720p según la fuente), MP4 faststart para descargar, póster y sprite de miniaturas. Cada render tiene su versión; los trabajos viejos se descartan solos
+- [x] Página `/v/:id` SSR con Open Graph, Twitter player card y descubrimiento oEmbed. **Reproductor propio sobre hls.js** en lugar de Video.js: controles con velocidades 0.5–2.5×, miniaturas al pasar el mouse, atajos de teclado y pantalla completa
+- [x] Embed `/embed/:id` con parámetros (`t`, `autoplay`, `muted`, `hide_title`); solo los embeds se pueden enmarcar desde otros sitios. Endpoint oEmbed
+- [x] Recorte no destructivo (inicio y fin): el reproductor salta lo recortado al instante y el re-render en segundo plano lo aplica de verdad. El original nunca se modifica, así que se puede deshacer
+- [x] Privacidad: enlace / espacio de trabajo / contraseña / privado. Contraseñas con scrypt, cookie de acceso firmada que se invalida al cambiar la contraseña, límite de intentos por video
+- [x] Panel del dueño (título, privacidad, recorte, estado del procesamiento, enlace y código para insertar, borrar) y biblioteca con pósters
 - **Hito:** video procesado con miniaturas al pasar el mouse, embebible en otro sitio.
+  - ✅ E2E con la stack real en Docker: un video de 12 s queda procesado ~2 s después de detener; un espectador anónimo lo ve en la escalera HLS con miniaturas al pasar el mouse; recortarlo lo oculta al instante y el re-render termina en ~8 s; se reproduce embebido en una página de otro origen; la contraseña bloquea y desbloquea.
+  - Pendiente para más adelante: cortes en el medio del video (hoy solo inicio y fin) y miniaturas en VTT para reproductores de terceros.
 
 ### Fase 4 — Transcripción (1 semana)
 
