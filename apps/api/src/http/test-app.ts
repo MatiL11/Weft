@@ -5,6 +5,7 @@ import {
   PrepareSegmentUpload,
   RenderVideo,
   StartRecording,
+  TranscribeVideo,
   type WorkspaceRepository,
 } from '@weft/core'
 import {
@@ -13,7 +14,9 @@ import {
   FakeObjectStorage,
   FakePasswordHasher,
   FakeRenderQueue,
+  FakeSpeechRecognizer,
   FixedClock,
+  InMemoryTranscriptRepository,
   InMemoryVideoRepository,
   InMemoryWorkspaceRepository,
   SequentialIdGenerator,
@@ -42,6 +45,8 @@ export function buildTestApp(options: TestAppOptions = {}) {
     workspaces,
     storage,
     renders,
+    transcriptions: renders,
+    transcripts: new InMemoryTranscriptRepository(),
     passwords: new FakePasswordHasher(),
     accessTokens: new FakeAccessTokens(),
     ids: new SequentialIdGenerator('vid'),
@@ -145,6 +150,15 @@ export async function withRecordedVideo(ctx: TestApp) {
 export async function runRenders(ctx: TestApp) {
   const render = new RenderVideo({ ...ctx.adapters, renderer: ctx.renderer })
   for (const job of ctx.renders.jobs.splice(0)) await render.execute(job)
+}
+
+/** Runs every queued transcription with a fake recognizer (Spanish when auto-detecting). */
+export async function runTranscriptions(ctx: TestApp) {
+  const transcribe = new TranscribeVideo({
+    ...ctx.adapters,
+    recognizer: new FakeSpeechRecognizer(),
+  })
+  for (const job of ctx.renders.transcriptionJobs.splice(0)) await transcribe.execute(job)
 }
 
 export function sendJson(method: string, body: unknown, headers: Record<string, string> = {}) {

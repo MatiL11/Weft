@@ -6,6 +6,7 @@ import {
   ListVideos,
   PrepareSegmentUpload,
   RequestRender,
+  RequestTranscription,
   StartRecording,
   UnlockVideo,
   UpdateVideo,
@@ -14,6 +15,8 @@ import {
   type ObjectStorage,
   type PasswordHasher,
   type RenderQueue,
+  type TranscriptionQueue,
+  type TranscriptRepository,
   type VideoAccessTokens,
   type VideoRepository,
   type WorkspaceRepository,
@@ -24,6 +27,8 @@ export interface VideoAdapters {
   workspaces: WorkspaceRepository
   storage: ObjectStorage
   renders: RenderQueue
+  transcriptions: TranscriptionQueue
+  transcripts: TranscriptRepository
   passwords: PasswordHasher
   accessTokens: VideoAccessTokens
   ids: IdGenerator
@@ -40,6 +45,7 @@ export function videoUseCases(adapters: VideoAdapters) {
     deleteVideo: new DeleteVideo(adapters),
     updateVideo: new UpdateVideo(adapters),
     requestRender: new RequestRender(adapters),
+    requestTranscription: new RequestTranscription(adapters),
     listVideos: new ListVideos(adapters),
     getPlayback: new GetPlayback(adapters),
     unlockVideo: new UnlockVideo(adapters),

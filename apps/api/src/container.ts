@@ -1,7 +1,18 @@
 import { randomBytes, randomUUID } from 'node:crypto'
-import { CreateWorkspace, type Clock, type IdGenerator, type RenderQueue } from '@weft/core'
+import {
+  CreateWorkspace,
+  type Clock,
+  type IdGenerator,
+  type RenderQueue,
+  type TranscriptionQueue,
+} from '@weft/core'
 import type { Locale } from '@weft/i18n'
-import { connectDatabase, DrizzleVideoRepository, DrizzleWorkspaceRepository } from '@weft/infra-db'
+import {
+  connectDatabase,
+  DrizzleTranscriptRepository,
+  DrizzleVideoRepository,
+  DrizzleWorkspaceRepository,
+} from '@weft/infra-db'
 import { PgBossJobs } from '@weft/infra-jobs'
 import { S3ObjectStorage } from '@weft/infra-storage'
 import type { Hono } from 'hono'
@@ -52,7 +63,7 @@ const UNLOCK_WINDOW_MS = 15 * 60 * 1000
 
 export interface ContainerOverrides {
   /** Replaces the PostgreSQL job queue (e.g. in tests). */
-  renders?: RenderQueue
+  renders?: RenderQueue & TranscriptionQueue
 }
 
 /** Composition root: wires infrastructure adapters into use cases and HTTP delivery. */
@@ -83,6 +94,8 @@ export async function createContainer(
     workspaces,
     storage,
     renders: overrides.renders ?? (jobs as PgBossJobs),
+    transcriptions: overrides.renders ?? (jobs as PgBossJobs),
+    transcripts: new DrizzleTranscriptRepository(database.db),
     passwords: new ScryptPasswordHasher(),
     accessTokens: new HmacVideoAccessTokens(config.BETTER_AUTH_SECRET),
     ids: videoIds,

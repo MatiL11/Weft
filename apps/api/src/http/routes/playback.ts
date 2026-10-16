@@ -1,6 +1,7 @@
 import {
   buildMasterPlaylist,
   buildMediaPlaylist,
+  buildWebVtt,
   DomainError,
   renditionDirectory,
   type GetPlayback,
@@ -58,7 +59,24 @@ export function playbackRoutes(deps: PlaybackRouteDeps): Hono<AppEnv> {
   routes.get('/:id', async (c) => {
     const result = await playback(c)
     const viewerId = c.get('user')?.id ?? null
-    return c.json(ok(presentVideo(result.video, viewerId, { skip: result.skip })))
+    const transcript = await result.transcript()
+    return c.json(ok(presentVideo(result.video, viewerId, { skip: result.skip, transcript })))
+  })
+
+  routes.get('/:id/transcript', async (c) => {
+    const transcript = await (await playback(c)).transcript()
+    if (!transcript) throw assetMissing()
+    c.header('cache-control', 'private, no-cache')
+    return c.json(ok({ language: transcript.language, segments: transcript.segments }))
+  })
+
+  routes.get('/:id/captions.vtt', async (c) => {
+    const transcript = await (await playback(c)).transcript()
+    if (!transcript) throw assetMissing()
+    return c.body(buildWebVtt(transcript.segments), 200, {
+      'content-type': 'text/vtt; charset=utf-8',
+      'cache-control': 'private, no-cache',
+    })
   })
 
   routes.post('/:id/unlock', async (c) => {

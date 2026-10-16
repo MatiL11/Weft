@@ -20,7 +20,7 @@ export function renderAssetPath(video: Video, file: string): string | null {
 export function presentVideo(
   video: Video,
   viewerId: string | null,
-  options: { skip?: TrimRange | null } = {},
+  options: { skip?: TrimRange | null; transcript?: { language: string } | null } = {},
 ) {
   const source = playbackSource(video)
   const isOwner = viewerId === video.ownerId
@@ -45,12 +45,21 @@ export function presentVideo(
       ? { url: renderAssetPath(video, 'sprite.jpg'), ...source.render.sprite }
       : null,
     downloadUrl: rendered ? `${videoPath(video.id)}/download` : null,
+    captions: options.transcript
+      ? {
+          language: options.transcript.language,
+          transcriptUrl: `${videoPath(video.id)}/transcript`,
+          vttUrl: `${videoPath(video.id)}/captions.vtt`,
+        }
+      : null,
     owner: isOwner
       ? {
           renderState: video.renderState,
           recordingDurationMs: video.durationMs,
           trim: video.trim,
           hasPassword: video.passwordHash !== null,
+          transcriptionState: video.transcriptionState,
+          transcriptLanguage: video.transcriptLanguage,
         }
       : null,
   }

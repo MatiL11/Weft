@@ -1,6 +1,7 @@
 import {
   DomainError,
   MAX_MEDIA_SEGMENTS,
+  TRANSCRIPT_LANGUAGES,
   VIDEO_PRIVACIES,
   type CompleteRecording,
   type ConfirmSegmentUpload,
@@ -8,6 +9,7 @@ import {
   type ListVideos,
   type PrepareSegmentUpload,
   type RequestRender,
+  type RequestTranscription,
   type StartRecording,
   type UpdateVideo,
   type WorkspaceRepository,
@@ -28,6 +30,7 @@ export interface VideoRouteDeps {
   deleteVideo: DeleteVideo
   updateVideo: UpdateVideo
   requestRender: RequestRender
+  requestTranscription: RequestTranscription
   listVideos: ListVideos
   /** Public base URL of the web app, used to build share links. */
   publicUrl: string
@@ -53,6 +56,7 @@ const UpdateBody = z
     privacy: z.enum(VIDEO_PRIVACIES),
     password: z.string(),
     trim: z.object({ startMs: z.number().int(), endMs: z.number().int() }).nullable(),
+    transcriptLanguage: z.enum(TRANSCRIPT_LANGUAGES),
   })
   .partial()
 
@@ -151,6 +155,15 @@ export function videoRoutes(deps: VideoRouteDeps): Hono<AppEnv> {
   routes.post('/:id/render', requireUser, async (c) => {
     const user = userId(c)
     const video = await deps.requestRender.execute({ userId: user, videoId: c.req.param('id') })
+    return c.json(ok(presentVideo(video, user)))
+  })
+
+  routes.post('/:id/transcribe', requireUser, async (c) => {
+    const user = userId(c)
+    const video = await deps.requestTranscription.execute({
+      userId: user,
+      videoId: c.req.param('id'),
+    })
     return c.json(ok(presentVideo(video, user)))
   })
 
