@@ -7,6 +7,7 @@ import {
   PrepareSegmentUpload,
   RenderVideo,
   StartRecording,
+  TranscribeVideo,
   UpdateVideo,
   type VideoSegment,
 } from '@weft/core'
@@ -17,12 +18,15 @@ import {
   FakeObjectStorage,
   FakePasswordHasher,
   FakeRenderQueue,
+  FakeSpeechRecognizer,
+  FAKE_TRANSCRIPT_SEGMENTS,
   FixedClock,
   SequentialIdGenerator,
 } from '@weft/core/testing'
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest'
 import { connectDatabase, runMigrations, type DatabaseHandle } from './client'
 import { users, videoSegments, videos, workspaceMembers, workspaces } from './schema'
+import { DrizzleTranscriptRepository } from './transcript-repository'
 import { DrizzleVideoRepository } from './video-repository'
 import { DrizzleWorkspaceRepository } from './workspace-repository'
 
@@ -186,6 +190,9 @@ describe('DrizzleVideoRepository (integration)', () => {
       workspaces: new DrizzleWorkspaceRepository(handle.db),
       storage,
       renders,
+      transcriptions: renders,
+      transcripts: new DrizzleTranscriptRepository(handle.db),
+      recognizer: new FakeSpeechRecognizer(),
       renderer: new FakeMediaRenderer(storage),
       passwords: new FakePasswordHasher(),
       accessTokens: new FakeAccessTokens(),
@@ -242,5 +249,52 @@ describe('DrizzleVideoRepository (integration)', () => {
       kind: 'render',
       render: { ...FAKE_RENDER_OUTPUT, version: 2, trim },
     })
+
+    // The render (the first job went stale) queued a transcription of its timeline.
+    for (const job of renders.transcriptionJobs) await new TranscribeVideo(deps).execute(job)
+    const transcript = await (
+      await new GetPlayback(deps).execute({ viewerId: null, videoId: video.id })
+    ).transcript()
+    expect(transcript).toMatchObject({
+      renderVersion: 2,
+      language: 'es',
+      segments: FAKE_TRANSCRIPT_SEGMENTS,
+    })
+    expect(await repo.findById(video.id)).toMatchObject({
+      transcriptionState: 'ready',
+      transcriptionVersion: 1,
+    })
+  })
+
+  it('versions transcriptions and keeps the language with owner edits', async () => {
+    const video = newVideo()
+    await repo.create(video)
+    expect(await repo.requestTranscription('vid_1')).toBe(1)
+    expect(await repo.requestTranscription('missing')).toBeNull()
+    expect(await repo.saveTranscription('vid_1', 2, 'ready')).toBe(false)
+    expect(await repo.saveTranscription('vid_1', 1, 'processing')).toBe(true)
+    await repo.update({ ...video, transcriptLanguage: 'en', transcriptionState: 'none' })
+    expect(await repo.findById('vid_1')).toMatchObject({
+      transcriptLanguage: 'en',
+      transcriptionState: 'processing',
+      transcriptionVersion: 1,
+    })
+  })
+
+  it("replaces a video's transcript and deletes it with the video", async () => {
+    const transcripts = new DrizzleTranscriptRepository(handle.db)
+    await repo.create(newVideo())
+    const base = {
+      videoId: 'vid_1',
+      renderVersion: 1,
+      language: 'en',
+      segments: FAKE_TRANSCRIPT_SEGMENTS,
+      createdAt: NOW,
+    }
+    await transcripts.save(base)
+    await transcripts.save({ ...base, renderVersion: 2, language: 'es' })
+    expect(await transcripts.find('vid_1')).toEqual({ ...base, renderVersion: 2, language: 'es' })
+    await repo.delete('vid_1')
+    expect(await transcripts.find('vid_1')).toBeNull()
   })
 })

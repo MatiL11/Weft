@@ -1,6 +1,8 @@
 import type {
   RenderState,
   SegmentKind,
+  TranscriptionState,
+  TranscriptLanguage,
   Video,
   VideoPrivacy,
   VideoRender,
@@ -20,11 +22,13 @@ const toVideo = ({ trimStartMs, trimEndMs, ...row }: VideoRow): Video => ({
   status: row.status as VideoStatus,
   privacy: row.privacy as VideoPrivacy,
   renderState: row.renderState as RenderState,
+  transcriptLanguage: row.transcriptLanguage as TranscriptLanguage,
+  transcriptionState: row.transcriptionState as TranscriptionState,
   trim:
     trimStartMs !== null && trimEndMs !== null ? { startMs: trimStartMs, endMs: trimEndMs } : null,
 })
 
-/** Columns owned by the render pipeline; `update` never writes them. */
+/** Columns the owner and recorder change; render and transcription progress is excluded. */
 const editableColumns = (video: Video) => ({
   workspaceId: video.workspaceId,
   ownerId: video.ownerId,
@@ -37,6 +41,7 @@ const editableColumns = (video: Video) => ({
   trimStartMs: video.trim?.startMs ?? null,
   trimEndMs: video.trim?.endMs ?? null,
   passwordHash: video.passwordHash,
+  transcriptLanguage: video.transcriptLanguage,
 })
 
 const toSegment = (row: SegmentRow): VideoSegment => ({ ...row, kind: row.kind as SegmentKind })
@@ -51,6 +56,8 @@ export class DrizzleVideoRepository implements VideoRepository {
       renderState: video.renderState,
       renderVersion: video.renderVersion,
       render: video.render,
+      transcriptionState: video.transcriptionState,
+      transcriptionVersion: video.transcriptionVersion,
     })
   }
 
@@ -91,6 +98,27 @@ export class DrizzleVideoRepository implements VideoRepository {
       .update(videos)
       .set({ renderState: update.state, ...(update.render ? { render: update.render } : {}) })
       .where(and(eq(videos.id, id), eq(videos.renderVersion, version)))
+      .returning({ id: videos.id })
+    return rows.length > 0
+  }
+
+  async requestTranscription(id: string): Promise<number | null> {
+    const [row] = await this.db
+      .update(videos)
+      .set({
+        transcriptionVersion: sql`${videos.transcriptionVersion} + 1`,
+        transcriptionState: 'queued',
+      })
+      .where(eq(videos.id, id))
+      .returning({ version: videos.transcriptionVersion })
+    return row?.version ?? null
+  }
+
+  async saveTranscription(id: string, version: number, state: TranscriptionState) {
+    const rows = await this.db
+      .update(videos)
+      .set({ transcriptionState: state })
+      .where(and(eq(videos.id, id), eq(videos.transcriptionVersion, version)))
       .returning({ id: videos.id })
     return rows.length > 0
   }

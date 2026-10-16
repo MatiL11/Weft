@@ -1,4 +1,4 @@
-import type { VideoRender } from '@weft/core'
+import type { TranscriptSegment, VideoRender } from '@weft/core'
 import { sql } from 'drizzle-orm'
 import {
   bigint,
@@ -127,6 +127,9 @@ export const videos = pgTable(
     renderState: text().notNull().default('none'),
     renderVersion: integer().notNull().default(0),
     render: jsonb().$type<VideoRender>(),
+    transcriptLanguage: text().notNull().default('auto'),
+    transcriptionState: text().notNull().default('none'),
+    transcriptionVersion: integer().notNull().default(0),
   },
   (t) => [
     index().on(t.workspaceId, t.createdAt),
@@ -139,6 +142,10 @@ export const videos = pgTable(
     check(
       'videos_render_state_check',
       sql`${t.renderState} in ('none', 'queued', 'processing', 'ready', 'failed')`,
+    ),
+    check(
+      'videos_transcription_state_check',
+      sql`${t.transcriptionState} in ('none', 'queued', 'processing', 'ready', 'failed', 'no_audio')`,
     ),
     check('videos_trim_check', sql`(${t.trimStartMs} is null) = (${t.trimEndMs} is null)`),
     check(
@@ -166,6 +173,16 @@ export const videoSegments = pgTable(
     check('video_segments_kind_check', sql`${t.kind} in ('init', 'media')`),
   ],
 )
+
+export const transcripts = pgTable('transcripts', {
+  videoId: text()
+    .primaryKey()
+    .references(() => videos.id, { onDelete: 'cascade' }),
+  renderVersion: integer().notNull(),
+  language: text().notNull(),
+  segments: jsonb().$type<TranscriptSegment[]>().notNull(),
+  createdAt: timestamp({ withTimezone: true }).notNull(),
+})
 
 /** Mapping passed to Better Auth's Drizzle adapter (model name → table). */
 export const authSchema = {
