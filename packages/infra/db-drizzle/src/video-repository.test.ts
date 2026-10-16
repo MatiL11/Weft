@@ -5,10 +5,21 @@ import {
   createVideo,
   GetPlayback,
   PrepareSegmentUpload,
+  RenderVideo,
   StartRecording,
+  UpdateVideo,
   type VideoSegment,
 } from '@weft/core'
-import { FakeObjectStorage, FixedClock, SequentialIdGenerator } from '@weft/core/testing'
+import {
+  FAKE_RENDER_OUTPUT,
+  FakeAccessTokens,
+  FakeMediaRenderer,
+  FakeObjectStorage,
+  FakePasswordHasher,
+  FakeRenderQueue,
+  FixedClock,
+  SequentialIdGenerator,
+} from '@weft/core/testing'
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest'
 import { connectDatabase, runMigrations, type DatabaseHandle } from './client'
 import { users, videoSegments, videos, workspaceMembers, workspaces } from './schema'
@@ -71,9 +82,68 @@ describe('DrizzleVideoRepository (integration)', () => {
     expect(await repo.findById('vid_1')).toEqual(video)
     expect(await repo.findById('missing')).toBeNull()
 
-    const ready = { ...video, status: 'ready' as const, durationMs: 8000, completedAt: NOW }
+    const ready = {
+      ...video,
+      status: 'ready' as const,
+      durationMs: 8000,
+      completedAt: NOW,
+      trim: { startMs: 1000, endMs: 7000 },
+      privacy: 'password' as const,
+      passwordHash: 'hash',
+    }
     await repo.update(ready)
     expect(await repo.findById('vid_1')).toEqual(ready)
+  })
+
+  it('versions renders and ignores stale results', async () => {
+    const video = newVideo()
+    await repo.create(video)
+    expect(await repo.requestRender('vid_1')).toBe(1)
+    expect(await repo.requestRender('vid_1')).toBe(2)
+    expect(await repo.requestRender('missing')).toBeNull()
+
+    const render = { ...FAKE_RENDER_OUTPUT, version: 1, trim: null }
+    expect(await repo.saveRender('vid_1', 1, { state: 'ready', render })).toBe(false)
+    expect(await repo.saveRender('vid_1', 2, { state: 'processing' })).toBe(true)
+    expect(
+      await repo.saveRender('vid_1', 2, { state: 'ready', render: { ...render, version: 2 } }),
+    ).toBe(true)
+
+    // Owner edits never overwrite render progress.
+    await repo.update({ ...video, title: 'Renamed' })
+    expect(await repo.findById('vid_1')).toMatchObject({
+      title: 'Renamed',
+      renderState: 'ready',
+      renderVersion: 2,
+      render: { ...render, version: 2 },
+    })
+  })
+
+  it("lists a workspace's videos newest first", async () => {
+    const at = (minutes: number) => new Date(NOW.getTime() + minutes * 60_000)
+    for (const [id, minutes] of [
+      ['a', 0],
+      ['b', 2],
+      ['c', 1],
+    ] as const) {
+      await repo.create(
+        createVideo({ id, workspaceId: 'ws_1', ownerId: 'user_1', title: id, now: at(minutes) }),
+      )
+    }
+    expect((await repo.listForWorkspace('ws_1', { limit: 10 })).map((v) => v.id)).toEqual([
+      'b',
+      'c',
+      'a',
+    ])
+    expect(await repo.listForWorkspace('ws_1', { limit: 1 })).toHaveLength(1)
+    expect(await repo.listForWorkspace('other', { limit: 10 })).toEqual([])
+  })
+
+  it('enforces that a password exists exactly when the video is password protected', async () => {
+    await repo.create(newVideo())
+    await expect(
+      repo.update({ ...newVideo(), privacy: 'password', passwordHash: null }),
+    ).rejects.toThrow()
   })
 
   it('upserts segments, resetting their upload state when re-prepared', async () => {
@@ -110,10 +180,15 @@ describe('DrizzleVideoRepository (integration)', () => {
 
   it('supports the full recording flow through the use cases', async () => {
     const storage = new FakeObjectStorage()
+    const renders = new FakeRenderQueue()
     const deps = {
       videos: repo,
       workspaces: new DrizzleWorkspaceRepository(handle.db),
       storage,
+      renders,
+      renderer: new FakeMediaRenderer(storage),
+      passwords: new FakePasswordHasher(),
+      accessTokens: new FakeAccessTokens(),
       ids: new SequentialIdGenerator('vid'),
       clock: new FixedClock(NOW),
     }
@@ -157,5 +232,15 @@ describe('DrizzleVideoRepository (integration)', () => {
       { index: 0, durationMs: 4000 },
       { index: 1, durationMs: 2000 },
     ])
+
+    // Trim, then let the worker render it.
+    const trim = { startMs: 1000, endMs: 5000 }
+    await new UpdateVideo(deps).execute({ userId: 'user_1', videoId: video.id, trim })
+    for (const job of renders.jobs) await new RenderVideo(deps).execute(job)
+    const rendered = await new GetPlayback(deps).execute({ viewerId: null, videoId: video.id })
+    expect(rendered.source).toEqual({
+      kind: 'render',
+      render: { ...FAKE_RENDER_OUTPUT, version: 2, trim },
+    })
   })
 })

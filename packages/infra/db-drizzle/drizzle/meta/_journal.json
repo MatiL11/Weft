@@ -15,6 +15,13 @@
       "when": 1792101535354,
       "tag": "0001_secret_mockingbird",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1792109084817,
+      "tag": "0002_bumpy_cloak",
+      "breakpoints": true
     }
   ]
 }

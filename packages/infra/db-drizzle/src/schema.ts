@@ -1,3 +1,4 @@
+import type { VideoRender } from '@weft/core'
 import { sql } from 'drizzle-orm'
 import {
   bigint,
@@ -5,6 +6,7 @@ import {
   check,
   index,
   integer,
+  jsonb,
   pgTable,
   primaryKey,
   text,
@@ -119,12 +121,30 @@ export const videos = pgTable(
     createdAt: timestamp({ withTimezone: true }).notNull(),
     completedAt: timestamp({ withTimezone: true }),
     durationMs: integer(),
+    trimStartMs: integer(),
+    trimEndMs: integer(),
+    passwordHash: text(),
+    renderState: text().notNull().default('none'),
+    renderVersion: integer().notNull().default(0),
+    render: jsonb().$type<VideoRender>(),
   },
   (t) => [
     index().on(t.workspaceId, t.createdAt),
     index().on(t.ownerId),
     check('videos_status_check', sql`${t.status} in ('recording', 'ready')`),
-    check('videos_privacy_check', sql`${t.privacy} in ('link', 'workspace', 'private')`),
+    check(
+      'videos_privacy_check',
+      sql`${t.privacy} in ('link', 'workspace', 'password', 'private')`,
+    ),
+    check(
+      'videos_render_state_check',
+      sql`${t.renderState} in ('none', 'queued', 'processing', 'ready', 'failed')`,
+    ),
+    check('videos_trim_check', sql`(${t.trimStartMs} is null) = (${t.trimEndMs} is null)`),
+    check(
+      'videos_password_check',
+      sql`(${t.privacy} = 'password') = (${t.passwordHash} is not null)`,
+    ),
   ],
 )
 

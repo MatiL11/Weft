@@ -1,22 +1,42 @@
 import type {
+  RenderState,
   SegmentKind,
   Video,
   VideoPrivacy,
+  VideoRender,
   VideoRepository,
   VideoSegment,
   VideoStatus,
 } from '@weft/core'
-import { and, eq } from 'drizzle-orm'
+import { and, desc, eq, sql } from 'drizzle-orm'
 import type { Database } from './client'
 import { videoSegments, videos } from './schema'
 
 type VideoRow = typeof videos.$inferSelect
 type SegmentRow = typeof videoSegments.$inferSelect
 
-const toVideo = (row: VideoRow): Video => ({
+const toVideo = ({ trimStartMs, trimEndMs, ...row }: VideoRow): Video => ({
   ...row,
   status: row.status as VideoStatus,
   privacy: row.privacy as VideoPrivacy,
+  renderState: row.renderState as RenderState,
+  trim:
+    trimStartMs !== null && trimEndMs !== null ? { startMs: trimStartMs, endMs: trimEndMs } : null,
+})
+
+/** Columns owned by the render pipeline; `update` never writes them. */
+const editableColumns = (video: Video) => ({
+  workspaceId: video.workspaceId,
+  ownerId: video.ownerId,
+  title: video.title,
+  status: video.status,
+  privacy: video.privacy,
+  createdAt: video.createdAt,
+  completedAt: video.completedAt,
+  durationMs: video.durationMs,
+  trimStartMs: video.trim?.startMs ?? null,
+  trimEndMs: video.trim?.endMs ?? null,
+  passwordHash: video.passwordHash,
 })
 
 const toSegment = (row: SegmentRow): VideoSegment => ({ ...row, kind: row.kind as SegmentKind })
@@ -25,7 +45,13 @@ export class DrizzleVideoRepository implements VideoRepository {
   constructor(private readonly db: Database) {}
 
   async create(video: Video): Promise<void> {
-    await this.db.insert(videos).values(video)
+    await this.db.insert(videos).values({
+      id: video.id,
+      ...editableColumns(video),
+      renderState: video.renderState,
+      renderVersion: video.renderVersion,
+      render: video.render,
+    })
   }
 
   async findById(id: string): Promise<Video | null> {
@@ -33,9 +59,40 @@ export class DrizzleVideoRepository implements VideoRepository {
     return row ? toVideo(row) : null
   }
 
+  async listForWorkspace(workspaceId: string, options: { limit: number }): Promise<Video[]> {
+    const rows = await this.db
+      .select()
+      .from(videos)
+      .where(eq(videos.workspaceId, workspaceId))
+      .orderBy(desc(videos.createdAt))
+      .limit(options.limit)
+    return rows.map(toVideo)
+  }
+
   async update(video: Video): Promise<void> {
-    const { id, ...fields } = video
-    await this.db.update(videos).set(fields).where(eq(videos.id, id))
+    await this.db.update(videos).set(editableColumns(video)).where(eq(videos.id, video.id))
+  }
+
+  async requestRender(id: string): Promise<number | null> {
+    const [row] = await this.db
+      .update(videos)
+      .set({ renderVersion: sql`${videos.renderVersion} + 1`, renderState: 'queued' })
+      .where(eq(videos.id, id))
+      .returning({ version: videos.renderVersion })
+    return row?.version ?? null
+  }
+
+  async saveRender(
+    id: string,
+    version: number,
+    update: { state: RenderState; render?: VideoRender },
+  ): Promise<boolean> {
+    const rows = await this.db
+      .update(videos)
+      .set({ renderState: update.state, ...(update.render ? { render: update.render } : {}) })
+      .where(and(eq(videos.id, id), eq(videos.renderVersion, version)))
+      .returning({ id: videos.id })
+    return rows.length > 0
   }
 
   async upsertSegment(segment: VideoSegment): Promise<void> {
