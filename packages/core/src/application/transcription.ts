@@ -61,6 +61,10 @@ export class TranscribeVideo {
       throw error
     }
 
+    if (result === null) {
+      await videos.saveTranscription(video.id, job.version, 'no_audio')
+      return 'no_audio'
+    }
     const current = await videos.findById(video.id)
     if (current?.transcriptionVersion !== job.version) return 'stale'
     await transcripts.save({

@@ -14,10 +14,21 @@ export class ToolError extends Error {
   }
 }
 
-/** Runs a command-line tool (ffmpeg/ffprobe) without a shell and returns its stdout. */
-export function runTool(command: string, args: string[]): Promise<string> {
+/**
+ * Runs a command-line tool (ffmpeg, whisper-cli…) without a shell and returns its stdout.
+ * With `timeoutMs`, a tool that runs longer is killed and the call fails.
+ */
+export function runTool(
+  command: string,
+  args: string[],
+  options: { timeoutMs?: number } = {},
+): Promise<string> {
   return new Promise((resolve, reject) => {
-    const child = spawn(command, args, { stdio: ['ignore', 'pipe', 'pipe'] })
+    const child = spawn(command, args, {
+      stdio: ['ignore', 'pipe', 'pipe'],
+      timeout: options.timeoutMs,
+      killSignal: 'SIGKILL',
+    })
     const stdout: Buffer[] = []
     let stderr = ''
     child.stdout.on('data', (chunk: Buffer) => stdout.push(chunk))

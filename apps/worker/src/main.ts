@@ -84,6 +84,7 @@ void whisperModel().then(async (modelPath) => {
     recognizer: new WhisperSpeechRecognizer({
       storage,
       ffmpeg: config.FFMPEG_PATH,
+      ffprobe: config.FFPROBE_PATH,
       whisperCli: config.WHISPER_CLI_PATH,
       modelPath: async () => modelPath,
       threads: config.WHISPER_THREADS,

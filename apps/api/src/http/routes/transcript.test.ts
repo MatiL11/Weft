@@ -2,6 +2,7 @@ import { FAKE_TRANSCRIPT_SEGMENTS } from '@weft/core/testing'
 import { describe, expect, it } from 'vitest'
 import type { VideoView } from '../presenters'
 import {
+  NOW,
   buildTestApp,
   runRenders,
   runTranscriptions,
@@ -30,8 +31,8 @@ describe('transcript routes', () => {
     const view = (await json(await ctx.app.request(base))).data
     expect(view.captions).toEqual({
       language: 'es',
-      transcriptUrl: `${base}/transcript`,
-      vttUrl: `${base}/captions.vtt`,
+      transcriptUrl: `${base}/transcript?v=1-${NOW.getTime()}`,
+      vttUrl: `${base}/captions.vtt?v=1-${NOW.getTime()}`,
     })
 
     const transcript = await json<{ language: string; segments: unknown[] }>(

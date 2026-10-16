@@ -20,7 +20,10 @@ export function renderAssetPath(video: Video, file: string): string | null {
 export function presentVideo(
   video: Video,
   viewerId: string | null,
-  options: { skip?: TrimRange | null; transcript?: { language: string } | null } = {},
+  options: {
+    skip?: TrimRange | null
+    transcript?: { language: string; renderVersion: number; createdAt: Date } | null
+  } = {},
 ) {
   const source = playbackSource(video)
   const isOwner = viewerId === video.ownerId
@@ -45,13 +48,7 @@ export function presentVideo(
       ? { url: renderAssetPath(video, 'sprite.jpg'), ...source.render.sprite }
       : null,
     downloadUrl: rendered ? `${videoPath(video.id)}/download` : null,
-    captions: options.transcript
-      ? {
-          language: options.transcript.language,
-          transcriptUrl: `${videoPath(video.id)}/transcript`,
-          vttUrl: `${videoPath(video.id)}/captions.vtt`,
-        }
-      : null,
+    captions: options.transcript ? presentCaptions(video.id, options.transcript) : null,
     owner: isOwner
       ? {
           renderState: video.renderState,
@@ -66,3 +63,16 @@ export function presentVideo(
 }
 
 export type VideoView = ReturnType<typeof presentVideo>
+
+/** Caption URLs carry the transcript's version, so a new transcript is never read from cache. */
+function presentCaptions(
+  videoId: string,
+  transcript: { language: string; renderVersion: number; createdAt: Date },
+) {
+  const version = `${transcript.renderVersion}-${transcript.createdAt.getTime()}`
+  return {
+    language: transcript.language,
+    transcriptUrl: `${videoPath(videoId)}/transcript?v=${version}`,
+    vttUrl: `${videoPath(videoId)}/captions.vtt?v=${version}`,
+  }
+}

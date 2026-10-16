@@ -25,8 +25,21 @@ export function activeSegmentIndex(segments: readonly TranscriptSegment[], ms: n
   return -1
 }
 
-/** Lowercase without accents, so "camion" finds "Camión". */
-const fold = (text: string) => text.normalize('NFD').replace(/\p{M}/gu, '').toLowerCase()
+/**
+ * Each character folded for matching: lowercase, without accents ("Camión" → "camion"), and
+ * with Greek final sigma as plain sigma. Search and highlighting share it, so they agree.
+ */
+function foldedChars(text: string): { original: string; folded: string }[] {
+  return [...text.normalize('NFC')].map((original) => ({
+    original,
+    folded: original.normalize('NFD').replace(/\p{M}/gu, '').toLowerCase().replace(/ς/g, 'σ'),
+  }))
+}
+
+const fold = (text: string) =>
+  foldedChars(text)
+    .map((c) => c.folded)
+    .join('')
 
 /** Indices of segments containing the query (accent- and case-insensitive). */
 export function searchSegments(segments: readonly TranscriptSegment[], query: string): number[] {
@@ -37,35 +50,41 @@ export function searchSegments(segments: readonly TranscriptSegment[], query: st
 
 /** Splits text into parts, marking those that match the query, for highlighting. */
 export function highlightParts(text: string, query: string): { text: string; match: boolean }[] {
+  const chars = foldedChars(text)
   const needle = fold(query.trim())
-  if (!needle) return [{ text, match: false }]
-  // Folding can drop marks (é → e), so positions in the folded text are mapped back to the
-  // original characters through a per-character fold.
-  const folded = [...text].map((char) => fold(char))
-  const haystack = folded.join('')
+  if (!needle) return [{ text: chars.map((c) => c.original).join(''), match: false }]
+
+  // Where each character starts in the folded text, to map matches back to characters.
+  const starts: number[] = []
+  let offset = 0
+  for (const c of chars) {
+    starts.push(offset)
+    offset += c.folded.length
+  }
+  const haystack = chars.map((c) => c.folded).join('')
+  const charAt = (position: number) => {
+    const index = starts.findIndex((start) => start >= position)
+    return index === -1 ? chars.length : index
+  }
+  const slice = (from: number, to: number) =>
+    chars
+      .slice(from, to)
+      .map((c) => c.original)
+      .join('')
+
   const parts: { text: string; match: boolean }[] = []
-  const chars = [...text]
-  let position = 0
-  let charIndex = 0
-  const toChar = (offset: number) => {
-    // Advance charIndex until the folded prefix reaches `offset`.
-    while (charIndex < chars.length && position < offset) {
-      position += folded[charIndex]?.length ?? 0
-      charIndex += 1
-    }
-    return charIndex
+  let done = 0
+  for (
+    let at = haystack.indexOf(needle);
+    at !== -1;
+    at = haystack.indexOf(needle, at + needle.length)
+  ) {
+    const from = charAt(at)
+    const to = charAt(at + needle.length)
+    if (from > done) parts.push({ text: slice(done, from), match: false })
+    parts.push({ text: slice(from, to), match: true })
+    done = to
   }
-  let start = 0
-  let from = haystack.indexOf(needle)
-  while (from !== -1) {
-    const matchStart = toChar(from)
-    const matchEnd = toChar(from + needle.length)
-    if (matchStart > start)
-      parts.push({ text: chars.slice(start, matchStart).join(''), match: false })
-    parts.push({ text: chars.slice(matchStart, matchEnd).join(''), match: true })
-    start = matchEnd
-    from = haystack.indexOf(needle, from + needle.length)
-  }
-  if (start < chars.length) parts.push({ text: chars.slice(start).join(''), match: false })
+  if (done < chars.length) parts.push({ text: slice(done, chars.length), match: false })
   return parts
 }

@@ -1,4 +1,4 @@
-import { createHash } from 'node:crypto'
+import { createHash, randomUUID } from 'node:crypto'
 import { createReadStream, createWriteStream } from 'node:fs'
 import { access, mkdir, rename, rm } from 'node:fs/promises'
 import { join } from 'node:path'
@@ -36,7 +36,8 @@ export async function downloadVerified(
   sha256: string,
   fetchImpl: typeof fetch = fetch,
 ): Promise<void> {
-  const partial = `${target}.partial`
+  // Unique, so workers sharing the models volume never write the same file.
+  const partial = `${target}.${randomUUID()}.partial`
   try {
     const response = await fetchImpl(url)
     if (!response.ok || !response.body) {

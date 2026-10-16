@@ -95,14 +95,14 @@ export function TranscriptionSettings({ videoId, state, language }: Transcriptio
             ))}
           </select>
         </div>
-        {(state === 'failed' || state === 'none' || state === 'ready') && (
+        {state !== 'no_audio' && (
           <button
             type="button"
             disabled={isSaving}
             onClick={() => void run(() => requestTranscription(videoId))}
             className="h-10 cursor-pointer rounded-xl border border-line px-4 text-sm font-medium transition-colors hover:border-line-strong disabled:opacity-50"
           >
-            {state === 'ready' ? t('again') : state === 'none' ? t('start') : t('retry')}
+            {state === 'none' ? t('start') : state === 'failed' ? t('retry') : t('again')}
           </button>
         )}
       </div>

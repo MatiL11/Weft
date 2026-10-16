@@ -38,8 +38,11 @@ export interface Transcript {
   readonly createdAt: Date
 }
 
-/** Recognizers label silence and sounds like "[BLANK_AUDIO]" or "(music)"; those aren't speech. */
-const NON_SPEECH = /^[[(*♪].*[\])*♪]$/
+/**
+ * Recognizers label silence and sounds like "[BLANK_AUDIO]", "(música)" or "♪ ♪". A segment that
+ * is only such a label isn't speech; "(laughs) okay, let's start" is.
+ */
+const NON_SPEECH = /^(\[[^[\]]*\]|\([^()]*\)|\*[^*]*\*|[♪\s]+)$/
 
 /** Cleans recognizer output: trimmed text, no non-speech labels, ordered, within the video. */
 export function normalizeSegments(

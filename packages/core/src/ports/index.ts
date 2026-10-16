@@ -121,10 +121,11 @@ export interface TranscriptRepository {
 
 /** Turns a stored video's speech into timed text (implemented with whisper.cpp). */
 export interface SpeechRecognizer {
+  /** null when the video has no sound to transcribe. */
   transcribe(input: {
     mediaKey: string
     language: TranscriptLanguage
-  }): Promise<{ language: string; segments: TranscriptSegment[] }>
+  }): Promise<{ language: string; segments: TranscriptSegment[] } | null>
 }
 
 export interface PasswordHasher {

@@ -51,6 +51,7 @@ printf '{"result":{"language":"en"},"transcription":[{"offsets":{"from":0,"to":1
     const recognizer = new WhisperSpeechRecognizer({
       storage,
       ffmpeg: 'ffmpeg',
+      ffprobe: 'ffprobe',
       whisperCli: stub,
       modelPath: async () => '/models/ggml-base.bin',
       threads: 2,
@@ -71,6 +72,32 @@ printf '{"result":{"language":"en"},"transcription":[{"offsets":{"from":0,"to":1
     expect((await readdir(root)).filter((f) => !before.includes(f))).toEqual(['args.txt'])
   })
 
+  it('reports videos without sound instead of transcribing them', async () => {
+    // prettier-ignore
+    await runTool('ffmpeg', [
+      '-loglevel', 'error', '-f', 'lavfi', '-i', 'color=c=black:s=320x240:d=1',
+      '-c:v', 'libx264', join(root, 'silent.mp4'),
+    ])
+    const recognizer = new WhisperSpeechRecognizer({
+      storage,
+      ffmpeg: 'ffmpeg',
+      ffprobe: 'ffprobe',
+      whisperCli: 'whisper-cli-is-never-called',
+      modelPath: async () => 'unused',
+      threads: 1,
+      workDir: root,
+    })
+    await expect(
+      recognizer.transcribe({ mediaKey: 'silent.mp4', language: 'auto' }),
+    ).resolves.toBeNull()
+  })
+
+  it('stops tools that run past their time limit', async () => {
+    await expect(runTool('sleep', ['5'], { timeoutMs: 100 })).rejects.toMatchObject({
+      name: 'ToolError',
+    })
+  })
+
   it.skipIf(!WHISPER_CLI || !WHISPER_MODEL || !SAMPLE_WAV)(
     'transcribes real speech with whisper.cpp',
     async () => {
@@ -84,12 +111,14 @@ printf '{"result":{"language":"en"},"transcription":[{"offsets":{"from":0,"to":1
       const recognizer = new WhisperSpeechRecognizer({
         storage,
         ffmpeg: 'ffmpeg',
+        ffprobe: 'ffprobe',
         whisperCli: WHISPER_CLI as string,
         modelPath: async () => WHISPER_MODEL as string,
         threads: 4,
         workDir: root,
       })
       const result = await recognizer.transcribe({ mediaKey: 'speech.mp4', language: 'auto' })
+      if (!result) throw new Error('expected speech')
       expect(result.language).toBe('en')
       const text = result.segments
         .map((s) => s.text)

@@ -20,6 +20,7 @@ describe('transcripts', () => {
           { startMs: 9000, endMs: 9000, text: 'empty' },
           { startMs: 9500, endMs: 12_000, text: 'past the end' },
           { startMs: 9000, endMs: 9500, text: '   ' },
+          { startMs: 9600, endMs: 9700, text: "(laughs) okay, let's start (pause)" },
         ],
         10_000,
       ),
@@ -27,6 +28,7 @@ describe('transcripts', () => {
       { startMs: 0, endMs: 3000, text: 'First line.' },
       { startMs: 4000, endMs: 6500, text: 'second line' },
       { startMs: 9500, endMs: 10_000, text: 'past the end' },
+      { startMs: 9600, endMs: 9700, text: "(laughs) okay, let's start (pause)" },
     ])
   })
 

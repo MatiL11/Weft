@@ -45,7 +45,8 @@ first second; the render only improves it. Renders run one at a time by default
 Each render is then transcribed on your server with [whisper.cpp](https://github.com/ggml-org/whisper.cpp):
 viewers get captions and a searchable transcript. The speech model (`WHISPER_MODEL`: `tiny`, `base`
 — the default —, `small` or `medium`) is downloaded once on the worker's first start and verified
-against its published checksum. Bigger models are more accurate but slower.
+against its published checksum. Bigger models are more accurate but slower. On x86-64 the worker
+image uses AVX2; on older CPUs build it with `--build-arg WHISPER_AVX2=OFF`.
 
 ### Embedding
 

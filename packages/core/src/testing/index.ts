@@ -283,10 +283,13 @@ export const FAKE_TRANSCRIPT_SEGMENTS: TranscriptSegment[] = [
 export class FakeSpeechRecognizer implements SpeechRecognizer {
   readonly calls: { mediaKey: string; language: TranscriptLanguage }[] = []
   error: Error | null = null
+  /** Simulates a video without sound. */
+  silent = false
 
   async transcribe(input: { mediaKey: string; language: TranscriptLanguage }) {
     this.calls.push(input)
     if (this.error) throw this.error
+    if (this.silent) return null
     return {
       language: input.language === 'auto' ? 'es' : input.language,
       segments: FAKE_TRANSCRIPT_SEGMENTS,

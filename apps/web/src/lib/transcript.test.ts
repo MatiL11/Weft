@@ -34,4 +34,15 @@ describe('transcript helpers', () => {
     expect(highlightParts('Hola', 'xyz')).toEqual([{ text: 'Hola', match: false }])
     expect(highlightParts('ola', 'ola')).toEqual([{ text: 'ola', match: true }])
   })
+
+  it('handles decomposed accents and Greek final sigma', () => {
+    // "café" written as e + combining accent.
+    expect(highlightParts('un cafe\u0301 solo', 'café')).toEqual([
+      { text: 'un ', match: false },
+      { text: 'café', match: true },
+      { text: ' solo', match: false },
+    ])
+    expect(searchSegments([{ startMs: 0, endMs: 1, text: 'ΟΔΟΣ' }], 'οδος')).toEqual([0])
+    expect(highlightParts('ΟΔΟΣ', 'οδος')).toEqual([{ text: 'ΟΔΟΣ', match: true }])
+  })
 })

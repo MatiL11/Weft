@@ -116,6 +116,14 @@ describe('transcription', () => {
     await expect(transcribe('missing', 1)).resolves.toBe('stale')
   })
 
+  it('marks old renders that turn out to have no sound', async () => {
+    const video = await bed.recorded()
+    await render(video.id, 1)
+    bed.recognizer.silent = true
+    await expect(transcribe(video.id, 1)).resolves.toBe('no_audio')
+    expect((await bed.videos.findById(video.id))?.transcriptionState).toBe('no_audio')
+  })
+
   it('needs a render before transcribing on request, and survives a queue outage', async () => {
     const video = await bed.recorded()
     await expect(
