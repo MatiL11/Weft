@@ -18,12 +18,14 @@ export function fail(code: string, message: string): ApiResponse<never> {
   return { data: null, error: { code, message } }
 }
 
-export type ErrorStatus = 400 | 403 | 404 | 409 | 500
+export type ErrorStatus = 400 | 401 | 403 | 404 | 409 | 500
 
 /** Domain error codes whose HTTP status is not a plain 400. */
 const STATUS_BY_SUFFIX: [suffix: string, status: ErrorStatus][] = [
   ['.not_found', 404],
   ['.forbidden', 403],
+  ['.password_required', 401],
+  ['.password_incorrect', 403],
   ['.not_recording', 409],
   ['.segments_missing', 409],
 ]

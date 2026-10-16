@@ -1,23 +1,16 @@
 import { randomBytes, randomUUID } from 'node:crypto'
-import {
-  CompleteRecording,
-  ConfirmSegmentUpload,
-  CreateWorkspace,
-  DeleteVideo,
-  GetPlayback,
-  PrepareSegmentUpload,
-  StartRecording,
-  type Clock,
-  type IdGenerator,
-} from '@weft/core'
+import { CreateWorkspace, type Clock, type IdGenerator, type RenderQueue } from '@weft/core'
 import type { Locale } from '@weft/i18n'
 import { connectDatabase, DrizzleVideoRepository, DrizzleWorkspaceRepository } from '@weft/infra-db'
+import { PgBossJobs } from '@weft/infra-jobs'
 import { S3ObjectStorage } from '@weft/infra-storage'
 import type { Hono } from 'hono'
 import type { Logger } from 'pino'
 import { createAuth } from './auth'
 import type { Config } from './config'
 import { createApp } from './http/app'
+import { AttemptLimiter, HmacVideoAccessTokens, ScryptPasswordHasher } from './security'
+import { videoUseCases } from './use-cases'
 
 const systemClock: Clock = { now: () => new Date() }
 const uuidIds: IdGenerator = { next: () => randomUUID() }
@@ -47,9 +40,28 @@ export function personalWorkspaceName(userName: string, locale: Locale): string 
   return firstName ? names.named(firstName) : names.fallback
 }
 
+/** Wrong video passwords allowed per video per window, to slow down guessing. */
+const UNLOCK_ATTEMPTS = 20
+const UNLOCK_WINDOW_MS = 15 * 60 * 1000
+
+export interface ContainerOverrides {
+  /** Replaces the PostgreSQL job queue (e.g. in tests). */
+  renders?: RenderQueue
+}
+
 /** Composition root: wires infrastructure adapters into use cases and HTTP delivery. */
-export function createContainer(config: Config, logger: Logger): Container {
+export async function createContainer(
+  config: Config,
+  logger: Logger,
+  overrides: ContainerOverrides = {},
+): Promise<Container> {
   const database = connectDatabase(config.DATABASE_URL)
+  const jobs = overrides.renders
+    ? null
+    : await PgBossJobs.start({
+        connectionString: config.DATABASE_URL,
+        onError: (error) => logger.error({ err: error }, 'job queue error'),
+      })
   const workspaces = new DrizzleWorkspaceRepository(database.db)
   const createWorkspace = new CreateWorkspace({ workspaces, ids: uuidIds, clock: systemClock })
   const storage = new S3ObjectStorage({
@@ -60,13 +72,16 @@ export function createContainer(config: Config, logger: Logger): Container {
     accessKeyId: config.S3_ACCESS_KEY_ID,
     secretAccessKey: config.S3_SECRET_ACCESS_KEY,
   })
-  const recording = {
+  const useCases = videoUseCases({
     videos: new DrizzleVideoRepository(database.db),
     workspaces,
     storage,
+    renders: overrides.renders ?? (jobs as PgBossJobs),
+    passwords: new ScryptPasswordHasher(),
+    accessTokens: new HmacVideoAccessTokens(config.BETTER_AUTH_SECRET),
     ids: videoIds,
     clock: systemClock,
-  }
+  })
 
   const auth = createAuth({
     db: database.db,
@@ -88,15 +103,18 @@ export function createContainer(config: Config, logger: Logger): Container {
     },
     workspaces,
     createWorkspace,
-    startRecording: new StartRecording(recording),
-    prepareSegmentUpload: new PrepareSegmentUpload(recording),
-    confirmSegmentUpload: new ConfirmSegmentUpload(recording),
-    completeRecording: new CompleteRecording(recording),
-    deleteVideo: new DeleteVideo(recording),
-    getPlayback: new GetPlayback(recording),
+    ...useCases,
+    unlockLimiter: new AttemptLimiter(UNLOCK_ATTEMPTS, UNLOCK_WINDOW_MS),
     publicUrl: config.PUBLIC_URL,
     logger,
   })
 
-  return { app: app as unknown as Hono, storage, close: database.close }
+  return {
+    app: app as unknown as Hono,
+    storage,
+    close: async () => {
+      await jobs?.stop()
+      await database.close()
+    },
+  }
 }

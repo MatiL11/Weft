@@ -1,20 +1,23 @@
 import {
-  buildMediaPlaylist,
   DomainError,
   MAX_MEDIA_SEGMENTS,
+  VIDEO_PRIVACIES,
   type CompleteRecording,
   type ConfirmSegmentUpload,
   type DeleteVideo,
-  type GetPlayback,
+  type ListVideos,
   type PrepareSegmentUpload,
+  type RequestRender,
   type StartRecording,
-  type Video,
+  type UpdateVideo,
   type WorkspaceRepository,
 } from '@weft/core'
-import { Hono, type Context } from 'hono'
+import { Hono } from 'hono'
 import { z } from 'zod'
 import { currentUser, requireUser, type AppEnv } from '../context'
-import { fail, ok } from '../envelope'
+import { ok } from '../envelope'
+import { presentVideo, shareUrl } from '../presenters'
+import { invalid, parseJson } from '../validation'
 
 export interface VideoRouteDeps {
   workspaces: WorkspaceRepository
@@ -23,7 +26,9 @@ export interface VideoRouteDeps {
   confirmSegmentUpload: ConfirmSegmentUpload
   completeRecording: CompleteRecording
   deleteVideo: DeleteVideo
-  getPlayback: GetPlayback
+  updateVideo: UpdateVideo
+  requestRender: RequestRender
+  listVideos: ListVideos
   /** Public base URL of the web app, used to build share links. */
   publicUrl: string
 }
@@ -42,133 +47,109 @@ const CompleteBody = z.object({
   durationMs: z.number().int().nonnegative(),
   segmentCount: z.number().int().nonnegative().max(MAX_MEDIA_SEGMENTS),
 })
+const UpdateBody = z
+  .object({
+    title: z.string(),
+    privacy: z.enum(VIDEO_PRIVACIES),
+    password: z.string(),
+    trim: z.object({ startMs: z.number().int(), endMs: z.number().int() }).nullable(),
+  })
+  .partial()
 
-/** Presigned media URLs live for an hour; redirects may be cached for a few minutes. */
-const MEDIA_REDIRECT_CACHE = 'private, max-age=300'
-
-async function parse<T extends z.ZodType>(c: Context, schema: T): Promise<z.infer<T> | null> {
-  const result = schema.safeParse(await c.req.json().catch(() => null))
-  return result.success ? result.data : null
+/** The caller's first (personal) workspace, used when a request names none. */
+async function defaultWorkspaceId(workspaces: WorkspaceRepository, userId: string) {
+  const id = (await workspaces.listForUser(userId))[0]?.workspace.id
+  if (!id) throw new DomainError('workspace.forbidden', 'You have no workspace.')
+  return id
 }
 
-const invalid = (c: Context) => c.json(fail('validation_error', 'Invalid request body.'), 400)
-
-export function shareUrl(publicUrl: string, videoId: string): string {
-  return `${publicUrl.replace(/\/$/, '')}/v/${videoId}`
-}
-
-function videoSummary(video: Video, viewerId: string | null) {
-  return {
-    id: video.id,
-    title: video.title,
-    status: video.status,
-    privacy: video.privacy,
-    durationMs: video.durationMs,
-    createdAt: video.createdAt,
-    isOwner: viewerId === video.ownerId,
-  }
-}
-
+/** Recording, uploading and managing one's videos. */
 export function videoRoutes(deps: VideoRouteDeps): Hono<AppEnv> {
+  // requireUser goes on each route: middleware on this sub-app would also cover the
+  // anonymous playback routes mounted under the same prefix.
   const routes = new Hono<AppEnv>()
+  const userId = (c: { get: (key: 'user') => AppEnv['Variables']['user'] }) =>
+    currentUser(c.get('user')).id
 
-  // ── Owner: recording and uploading ──
-  routes.post('/', requireUser, async (c) => {
-    const body = await parse(c, StartBody)
-    if (!body) return invalid(c)
-    const userId = currentUser(c.get('user')).id
-    // Default to the user's first (personal) workspace.
+  routes.get('/', requireUser, async (c) => {
+    const user = userId(c)
     const workspaceId =
-      body.workspaceId ?? (await deps.workspaces.listForUser(userId))[0]?.workspace.id
-    if (!workspaceId) throw new DomainError('workspace.forbidden', 'You have no workspace.')
+      c.req.query('workspaceId') ?? (await defaultWorkspaceId(deps.workspaces, user))
+    const videos = await deps.listVideos.execute({ userId: user, workspaceId })
+    return c.json(ok(videos.map((video) => presentVideo(video, user))))
+  })
 
-    const video = await deps.startRecording.execute({ userId, workspaceId, title: body.title })
+  routes.post('/', requireUser, async (c) => {
+    const body = await parseJson(c, StartBody)
+    if (!body) return invalid(c)
+    const user = userId(c)
+    const workspaceId = body.workspaceId ?? (await defaultWorkspaceId(deps.workspaces, user))
+    const video = await deps.startRecording.execute({
+      userId: user,
+      workspaceId,
+      title: body.title,
+    })
     return c.json(
-      ok({ video: videoSummary(video, userId), shareUrl: shareUrl(deps.publicUrl, video.id) }),
+      ok({ video: presentVideo(video, user), shareUrl: shareUrl(deps.publicUrl, video.id) }),
       201,
     )
   })
 
   routes.post('/:id/segments', requireUser, async (c) => {
-    const body = await parse(c, SegmentBody)
+    const body = await parseJson(c, SegmentBody)
     if (!body) return invalid(c)
     const prepared = await deps.prepareSegmentUpload.execute({
       ...body,
-      userId: currentUser(c.get('user')).id,
+      userId: userId(c),
       videoId: c.req.param('id'),
     })
     return c.json(ok({ url: prepared.url, expiresAt: prepared.expiresAt }))
   })
 
   routes.post('/:id/segments/confirm', requireUser, async (c) => {
-    const body = await parse(c, ConfirmBody)
+    const body = await parseJson(c, ConfirmBody)
     if (!body) return invalid(c)
     await deps.confirmSegmentUpload.execute({
       ...body,
-      userId: currentUser(c.get('user')).id,
+      userId: userId(c),
       videoId: c.req.param('id'),
     })
     return c.json(ok({ confirmed: true }))
   })
 
   routes.post('/:id/complete', requireUser, async (c) => {
-    const body = await parse(c, CompleteBody)
+    const body = await parseJson(c, CompleteBody)
     if (!body) return invalid(c)
-    const userId = currentUser(c.get('user')).id
+    const user = userId(c)
     const video = await deps.completeRecording.execute({
       ...body,
-      userId,
+      userId: user,
       videoId: c.req.param('id'),
     })
-    return c.json(ok(videoSummary(video, userId)))
+    return c.json(ok(presentVideo(video, user)))
+  })
+
+  routes.patch('/:id', requireUser, async (c) => {
+    const body = await parseJson(c, UpdateBody)
+    if (!body) return invalid(c)
+    const user = userId(c)
+    const video = await deps.updateVideo.execute({
+      ...body,
+      userId: user,
+      videoId: c.req.param('id'),
+    })
+    return c.json(ok(presentVideo(video, user)))
+  })
+
+  routes.post('/:id/render', requireUser, async (c) => {
+    const user = userId(c)
+    const video = await deps.requestRender.execute({ userId: user, videoId: c.req.param('id') })
+    return c.json(ok(presentVideo(video, user)))
   })
 
   routes.delete('/:id', requireUser, async (c) => {
-    await deps.deleteVideo.execute({
-      userId: currentUser(c.get('user')).id,
-      videoId: c.req.param('id'),
-    })
+    await deps.deleteVideo.execute({ userId: userId(c), videoId: c.req.param('id') })
     return c.json(ok({ deleted: true }))
-  })
-
-  // ── Viewers (anonymous allowed; privacy enforced by GetPlayback) ──
-  const playback = (c: Context<AppEnv>) =>
-    deps.getPlayback.execute({
-      viewerId: c.get('user')?.id ?? null,
-      videoId: c.req.param('id') ?? '',
-    })
-
-  routes.get('/:id', async (c) => {
-    const result = await playback(c)
-    return c.json(ok(videoSummary(result.video, c.get('user')?.id ?? null)))
-  })
-
-  routes.get('/:id/playlist.m3u8', async (c) => {
-    const result = await playback(c)
-    const body = buildMediaPlaylist({
-      initUri: 'media/init',
-      segmentUri: (index) => `media/${index}`,
-      segments: result.segments,
-      ended: result.ended,
-    })
-    return c.body(body, 200, {
-      'content-type': 'application/vnd.apple.mpegurl',
-      // Live playlists change every few seconds; finished ones are stable.
-      'cache-control': result.ended ? 'private, max-age=60' : 'no-store',
-    })
-  })
-
-  routes.get('/:id/media/:segment', async (c) => {
-    const segment = c.req.param('segment')
-    const isInit = segment === 'init'
-    const index = Number(segment)
-    if (!isInit && !(Number.isInteger(index) && index >= 0)) {
-      return c.json(fail('validation_error', 'Unknown media segment.'), 400)
-    }
-    const result = await playback(c)
-    const url = await result.mediaUrl(isInit ? 'init' : 'media', isInit ? 0 : index)
-    c.header('cache-control', MEDIA_REDIRECT_CACHE)
-    return c.redirect(url, 302)
   })
 
   return routes

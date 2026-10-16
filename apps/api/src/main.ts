@@ -15,7 +15,7 @@ if (config.RUN_MIGRATIONS) {
 const STORAGE_READY_ATTEMPTS = 30
 const STORAGE_RETRY_MS = 1000
 
-const container = createContainer(config, logger)
+const container = await createContainer(config, logger)
 
 // Object storage may still be starting (e.g. in docker compose); retry for a while.
 for (let attempt = 1; ; attempt++) {

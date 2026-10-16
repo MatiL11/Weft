@@ -5,6 +5,8 @@ import { secureHeaders } from 'hono/secure-headers'
 import type { Logger } from 'pino'
 import type { AppEnv, SessionUser } from './context'
 import { fail, ok, toErrorResponse } from './envelope'
+import { oembedRoutes } from './routes/oembed'
+import { playbackRoutes, type PlaybackRouteDeps } from './routes/playback'
 import { videoRoutes, type VideoRouteDeps } from './routes/videos'
 import { workspaceRoutes, type WorkspaceRouteDeps } from './routes/workspaces'
 
@@ -12,7 +14,7 @@ export type { SessionUser } from './context'
 
 const JSON_BODY_LIMIT_BYTES = 64 * 1024
 
-export interface AppDeps extends WorkspaceRouteDeps, VideoRouteDeps {
+export interface AppDeps extends WorkspaceRouteDeps, VideoRouteDeps, PlaybackRouteDeps {
   /** Better Auth request handler mounted under /api/auth. */
   authHandler: (request: Request) => Promise<Response>
   getSessionUser: (headers: Headers) => Promise<SessionUser | null>
@@ -46,6 +48,8 @@ export function createApp(deps: AppDeps): Hono<AppEnv> {
   })
   api.route('/workspaces', workspaceRoutes(deps))
   api.route('/videos', videoRoutes(deps))
+  api.route('/videos', playbackRoutes(deps))
+  api.route('/oembed', oembedRoutes(deps))
 
   app.route('/api', api)
   return app

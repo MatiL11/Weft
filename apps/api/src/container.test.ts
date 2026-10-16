@@ -37,7 +37,7 @@ describe('container (integration: signup → personal workspace)', () => {
       S3_ACCESS_KEY_ID: 'unused',
       S3_SECRET_ACCESS_KEY: 'unused-secret',
     })
-    container = createContainer(config, pino({ level: 'silent' }))
+    container = await createContainer(config, pino({ level: 'silent' }))
   })
 
   afterAll(async () => {

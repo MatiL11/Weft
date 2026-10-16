@@ -10,8 +10,8 @@ RUN pnpm install --frozen-lockfile --filter "@weft/worker..." \
 
 FROM node:24-alpine AS runtime
 # ffmpeg is a separate program the worker runs; it is not linked into Weft.
-RUN apk add --no-cache ffmpeg
-ENV NODE_ENV=production WORK_DIR=/tmp
+RUN apk add --no-cache ffmpeg && mkdir /scratch && chown node:node /scratch
+ENV NODE_ENV=production WORK_DIR=/scratch
 WORKDIR /app
 COPY --from=build --chown=node:node /out ./
 USER node
