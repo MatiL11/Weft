@@ -18,6 +18,7 @@ import {
   toVisibleTime,
   visibleWindow,
 } from '@/lib/player-timeline'
+import { activeSegmentIndex, type TranscriptSegment } from '@/lib/transcript'
 import type { ThumbnailSprite, TrimRange } from '@/lib/video-summary'
 import { PlayerIcon } from './icons'
 import { SeekBar } from './seek-bar'
@@ -44,10 +45,17 @@ export interface VideoPlayerProps {
   startAt?: number
   /** Fill the parent (embeds) instead of a rounded 16:9 frame. */
   fill?: boolean
+  /** Timed text shown as captions (on the visible timeline). */
+  captions?: readonly TranscriptSegment[] | null
+  /** Reports the playback position (visible seconds) a few times per second. */
+  onTimeChange?: (visibleSeconds: number) => void
   ref?: Ref<PlayerHandle>
 }
 
 const RATE_KEY = 'weft.playbackRate'
+const CAPTIONS_KEY = 'weft.captions'
+/** onTimeChange fires when the position crosses a quarter of a second. */
+const TIME_REPORTS_PER_SECOND = 4
 const CONTROLS_IDLE_MS = 2500
 const SEEK_STEP_SECONDS = 5
 const LONG_SEEK_STEP_SECONDS = 10
@@ -74,6 +82,14 @@ function readRate(): number {
   }
 }
 
+function readCaptionsOn(): boolean {
+  try {
+    return localStorage.getItem(CAPTIONS_KEY) === 'on'
+  } catch {
+    return false
+  }
+}
+
 function bufferedEndAt(video: HTMLVideoElement): number {
   for (let i = 0; i < video.buffered.length; i++) {
     if (video.buffered.start(i) <= video.currentTime + 0.5) return video.buffered.end(i)
@@ -91,6 +107,8 @@ export function VideoPlayer({
   muted: startMuted = false,
   startAt = 0,
   fill = false,
+  captions = null,
+  onTimeChange,
   ref,
 }: VideoPlayerProps) {
   const t = useTranslations('player')
@@ -107,6 +125,7 @@ export function VideoPlayer({
     waiting: false,
   })
   const [rate, setRate] = useState(1)
+  const [captionsOn, setCaptionsOn] = useState(false)
   const [hasStarted, setHasStarted] = useState(false)
   const [isFullscreen, setIsFullscreen] = useState(false)
   const [isIdle, setIsIdle] = useState(false)
@@ -152,6 +171,7 @@ export function VideoPlayer({
 
   useEffect(() => {
     setRate(readRate())
+    setCaptionsOn(readCaptionsOn())
     const onFullscreenChange = () =>
       setIsFullscreen(document.fullscreenElement === containerRef.current)
     document.addEventListener('fullscreenchange', onFullscreenChange)
@@ -161,6 +181,13 @@ export function VideoPlayer({
   useEffect(() => {
     if (videoRef.current) videoRef.current.playbackRate = rate
   }, [rate])
+
+  const onTimeChangeRef = useRef(onTimeChange)
+  onTimeChangeRef.current = onTimeChange
+  const timeTick = Math.floor(visibleTime * TIME_REPORTS_PER_SECOND)
+  useEffect(() => {
+    onTimeChangeRef.current?.(timeTick / TIME_REPORTS_PER_SECOND)
+  }, [timeTick])
 
   const seek = useCallback((visibleSeconds: number) => {
     const video = videoRef.current
@@ -206,6 +233,17 @@ export function VideoPlayer({
     } catch {
       // Private mode: the choice just isn't remembered.
     }
+  }
+
+  function toggleCaptions() {
+    setCaptionsOn((on) => {
+      try {
+        localStorage.setItem(CAPTIONS_KEY, on ? 'off' : 'on')
+      } catch {
+        // Private mode: the choice just isn't remembered.
+      }
+      return !on
+    })
   }
 
   function setVolume(volume: number) {
@@ -257,6 +295,7 @@ export function VideoPlayer({
       ArrowUp: () => setVolume(state.volume + VOLUME_STEP),
       ArrowDown: () => setVolume(state.volume - VOLUME_STEP),
       m: toggleMute,
+      c: () => captions && toggleCaptions(),
       f: () => void toggleFullscreen(),
     }
     const action = actions[event.key]
@@ -267,6 +306,8 @@ export function VideoPlayer({
   }
 
   const showControls = !state.playing || !isIdle
+  const cueIndex = captions && captionsOn ? activeSegmentIndex(captions, visibleTime * 1000) : -1
+  const cue = cueIndex >= 0 ? captions?.[cueIndex] : undefined
   const frame = fill
     ? 'h-full w-full'
     : 'aspect-video w-full overflow-hidden rounded-2xl border border-line'
@@ -362,6 +403,26 @@ export function VideoPlayer({
             {formatClock(visibleDuration)}
           </span>
           <div className="ml-auto flex items-center gap-1">
+            {captions && (
+              <button
+                type="button"
+                onClick={toggleCaptions}
+                aria-pressed={captionsOn}
+                aria-label={t('captions')}
+                title={t('captions')}
+                className="grid h-9 cursor-pointer place-items-center rounded-lg px-2 transition-colors hover:bg-white/15"
+              >
+                <span
+                  className={`rounded border-[1.5px] px-1 font-mono text-[0.625rem] leading-4 font-semibold ${
+                    captionsOn
+                      ? 'border-accent bg-accent text-on-accent'
+                      : 'border-white/80 text-white/90'
+                  }`}
+                >
+                  CC
+                </span>
+              </button>
+            )}
             <SpeedMenu rate={rate} onChange={changeRate} />
             <ControlButton
               label={isFullscreen ? t('exitFullscreen') : t('fullscreen')}
@@ -372,6 +433,23 @@ export function VideoPlayer({
           </div>
         </div>
       </div>
+
+      {cue && (
+        <div
+          className={`pointer-events-none absolute inset-x-0 flex justify-center px-6 transition-[bottom] duration-300 ${
+            showControls && hasStarted ? 'bottom-20' : 'bottom-6'
+          }`}
+        >
+          <p
+            aria-live="off"
+            className={`max-w-[80%] rounded-md bg-black/75 px-2.5 py-1 text-center leading-snug text-balance text-white ${
+              isFullscreen ? 'text-2xl' : 'text-sm sm:text-lg'
+            }`}
+          >
+            {cue.text}
+          </p>
+        </div>
+      )}
 
       {hasError && (
         <div className="absolute inset-0 grid place-items-center bg-black/75 p-6 text-center">

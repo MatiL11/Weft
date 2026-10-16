@@ -206,7 +206,8 @@
     "speedMenu": "Playback speed",
     "seek": "Seek",
     "position": "{time} of {total}",
-    "error": "This video can't be played right now. Try again in a moment."
+    "error": "This video can't be played right now. Try again in a moment.",
+    "captions": "Captions (c)"
   },
   "video": {
     "password": {
@@ -305,7 +306,31 @@
         "cancel": "Cancel",
         "deleting": "Deleting…",
         "error": "Couldn't delete the video. Try again."
+      },
+      "transcription": {
+        "title": "Transcript",
+        "description": "Captions and a searchable transcript, generated on this server.",
+        "language": "Spoken language",
+        "auto": "Detect automatically",
+        "retry": "Try again",
+        "start": "Transcribe",
+        "again": "Transcribe again",
+        "error": "Couldn't change the transcription. Try again.",
+        "states": {
+          "none": "Not transcribed",
+          "queued": "Waiting",
+          "processing": "Transcribing…",
+          "ready": "Ready",
+          "failed": "Failed",
+          "no_audio": "No sound"
+        }
       }
+    },
+    "transcript": {
+      "title": "Transcript",
+      "search": "Search the transcript",
+      "matches": "{count, plural, =0 {No matches} one {# match} other {# matches}}",
+      "empty": "No speech was found in this video."
     }
   }
 }

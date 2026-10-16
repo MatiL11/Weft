@@ -3,8 +3,10 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import {
   createUploadApi,
   deleteVideo,
+  fetchTranscript,
   fetchVideo,
   requestRender,
+  requestTranscription,
   startVideo,
   unlockVideo,
   updateVideo,
@@ -98,6 +100,8 @@ describe('video management calls', () => {
       okJson({ id: 'v 1' }),
       okJson({ id: 'v 1' }),
       okJson({ unlocked: true }),
+      okJson({ id: 'v 1' }),
+      okJson({ language: 'es', segments: [] }),
     )
     await expect(updateVideo('v 1', { title: 'New', trim: null })).resolves.toMatchObject({
       title: 'New',
@@ -105,6 +109,11 @@ describe('video management calls', () => {
     await requestRender('v 1')
     await fetchVideo('v 1')
     await unlockVideo('v 1', 'secret')
+    await requestTranscription('v 1')
+    await expect(fetchTranscript('/api/videos/v1/transcript')).resolves.toEqual({
+      language: 'es',
+      segments: [],
+    })
 
     const calls = fetch.mock.calls as unknown as [string, RequestInit][]
     expect(calls.map(([url, init]) => [init.method, url])).toEqual([
@@ -112,6 +121,8 @@ describe('video management calls', () => {
       ['POST', '/api/videos/v%201/render'],
       ['GET', '/api/videos/v%201'],
       ['POST', '/api/videos/v%201/unlock'],
+      ['POST', '/api/videos/v%201/transcribe'],
+      ['GET', '/api/videos/v1/transcript'],
     ])
     expect(calls[0]?.[1].body).toBe(JSON.stringify({ title: 'New', trim: null }))
     expect(calls[3]?.[1].body).toBe(JSON.stringify({ password: 'secret' }))

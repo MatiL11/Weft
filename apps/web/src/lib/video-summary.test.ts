@@ -13,6 +13,7 @@ const SUMMARY: VideoView = {
   posterUrl: '/api/videos/abc/r/1/poster.jpg',
   thumbnails: null,
   downloadUrl: '/api/videos/abc/download',
+  captions: null,
   owner: null,
 }
 

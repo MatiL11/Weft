@@ -1,6 +1,6 @@
 import type { Metadata } from 'next'
 import { getTranslations } from 'next-intl/server'
-import { VideoPlayer } from '@/components/player/video-player'
+import { EmbedPlayer } from '@/components/player/embed-player'
 import { loadVideo } from '@/lib/load-video'
 import { parseEmbedOptions } from '@/lib/share-meta'
 
@@ -57,13 +57,8 @@ export default async function EmbedPage({ params, searchParams }: EmbedPageProps
   const { video } = result
   return (
     <main className="relative h-dvh bg-[#0d0c0f]">
-      <VideoPlayer
-        fill
-        playlistUrl={video.playback.playlistUrl}
-        isLive={video.status === 'recording'}
-        skip={video.playback.skip}
-        posterUrl={video.posterUrl}
-        thumbnails={video.thumbnails}
+      <EmbedPlayer
+        video={video}
         autoPlay={options.autoplay}
         muted={options.muted}
         startAt={options.startAt}

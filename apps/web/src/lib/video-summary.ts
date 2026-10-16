@@ -1,6 +1,9 @@
 export type VideoPrivacy = 'link' | 'workspace' | 'password' | 'private'
 export const VIDEO_PRIVACIES: readonly VideoPrivacy[] = ['link', 'workspace', 'password', 'private']
 export type RenderState = 'none' | 'queued' | 'processing' | 'ready' | 'failed'
+export type TranscriptionState = RenderState | 'no_audio'
+export const TRANSCRIPT_LANGUAGES = ['auto', 'en', 'es', 'pt', 'fr', 'de', 'it'] as const
+export type TranscriptLanguage = (typeof TRANSCRIPT_LANGUAGES)[number]
 
 export interface TrimRange {
   startMs: number
@@ -35,11 +38,15 @@ export interface VideoView {
   posterUrl: string | null
   thumbnails: ThumbnailSprite | null
   downloadUrl: string | null
+  /** Present once the current render has a transcript. */
+  captions: { language: string; transcriptUrl: string; vttUrl: string } | null
   owner: {
     renderState: RenderState
     recordingDurationMs: number | null
     trim: TrimRange | null
     hasPassword: boolean
+    transcriptionState: TranscriptionState
+    transcriptLanguage: TranscriptLanguage
   } | null
 }
 

@@ -2,16 +2,19 @@
 
 import Link from 'next/link'
 import { useFormatter, useTranslations } from 'next-intl'
-import { useRef } from 'react'
+import { useRef, useState } from 'react'
 import { formatDuration } from '@/lib/recording-format'
 import type { VideoView } from '@/lib/video-summary'
 import { CopyField } from '../ui/copy-field'
+import { useTranscript } from '../player/use-transcript'
 import { VideoPlayer, type PlayerHandle } from '../player/video-player'
 import { DeleteVideo } from './delete-video'
 import { OwnerCard } from './owner-card'
 import { PrivacyForm } from './privacy-form'
 import { RenderStatus } from './render-status'
 import { TitleEditor } from './title-editor'
+import { TranscriptPanel } from './transcript-panel'
+import { TranscriptionSettings } from './transcription-settings'
 import { TrimEditor } from './trim-editor'
 
 interface VideoStageProps {
@@ -31,19 +34,42 @@ export function VideoStage({ video, shareUrl, embedCode, startAt }: VideoStagePr
   const { playback } = video
   // A new render or trim changes what the playlist serves, so start a fresh player.
   const playerKey = `${playback.processed}-${playback.skip?.startMs}-${playback.skip?.endMs}-${video.posterUrl}`
+  const transcript = useTranscript(video.captions?.transcriptUrl)
+  const [currentMs, setCurrentMs] = useState(0)
+
+  const player = (
+    <VideoPlayer
+      key={playerKey}
+      ref={playerRef}
+      playlistUrl={playback.playlistUrl}
+      isLive={isLive}
+      skip={playback.skip}
+      posterUrl={video.posterUrl}
+      thumbnails={video.thumbnails}
+      startAt={startAt}
+      captions={transcript?.segments}
+      onTimeChange={(seconds) => setCurrentMs(seconds * 1000)}
+    />
+  )
 
   return (
     <div className="grid gap-6">
-      <VideoPlayer
-        key={playerKey}
-        ref={playerRef}
-        playlistUrl={playback.playlistUrl}
-        isLive={isLive}
-        skip={playback.skip}
-        posterUrl={video.posterUrl}
-        thumbnails={video.thumbnails}
-        startAt={startAt}
-      />
+      {transcript && video.captions ? (
+        <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_21rem]">
+          {player}
+          {/* Out of the flow, so the row is as tall as the player and the list scrolls. */}
+          <div className="relative h-96 lg:h-auto">
+            <TranscriptPanel
+              transcript={transcript}
+              currentMs={currentMs}
+              vttUrl={video.captions.vttUrl}
+              onSeek={(ms) => playerRef.current?.seek(ms / 1000)}
+            />
+          </div>
+        </div>
+      ) : (
+        player
+      )}
 
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div className="grid min-w-0 flex-1 gap-1.5">
@@ -138,6 +164,13 @@ function OwnerTools({ video, owner, shareUrl, embedCode, playerTimeMs }: OwnerTo
             trim={owner.trim}
             thumbnails={filmstrip}
             playerTimeMs={playerTimeMs}
+          />
+        )}
+        {video.playback.processed && (
+          <TranscriptionSettings
+            videoId={video.id}
+            state={owner.transcriptionState}
+            language={owner.transcriptLanguage}
           />
         )}
       </div>

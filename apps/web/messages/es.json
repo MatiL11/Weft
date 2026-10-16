@@ -206,7 +206,8 @@
     "speedMenu": "Velocidad de reproducción",
     "seek": "Buscar",
     "position": "{time} de {total}",
-    "error": "Este video no se puede reproducir ahora. Inténtalo de nuevo en un momento."
+    "error": "Este video no se puede reproducir ahora. Inténtalo de nuevo en un momento.",
+    "captions": "Subtítulos (c)"
   },
   "video": {
     "password": {
@@ -305,7 +306,31 @@
         "cancel": "Cancelar",
         "deleting": "Eliminando…",
         "error": "No se pudo eliminar el video. Inténtalo de nuevo."
+      },
+      "transcription": {
+        "title": "Transcripción",
+        "description": "Subtítulos y una transcripción con búsqueda, generados en este servidor.",
+        "language": "Idioma hablado",
+        "auto": "Detectar automáticamente",
+        "retry": "Reintentar",
+        "start": "Transcribir",
+        "again": "Transcribir de nuevo",
+        "error": "No se pudo cambiar la transcripción. Inténtalo de nuevo.",
+        "states": {
+          "none": "Sin transcribir",
+          "queued": "En espera",
+          "processing": "Transcribiendo…",
+          "ready": "Lista",
+          "failed": "Falló",
+          "no_audio": "Sin sonido"
+        }
       }
+    },
+    "transcript": {
+      "title": "Transcripción",
+      "search": "Buscar en la transcripción",
+      "matches": "{count, plural, =0 {Sin resultados} one {# resultado} other {# resultados}}",
+      "empty": "No se encontró habla en este video."
     }
   }
 }

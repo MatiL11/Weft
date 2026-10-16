@@ -1,5 +1,6 @@
 import { UploadError, type UploadApi } from '@weft/recorder/core'
-import type { TrimRange, VideoPrivacy, VideoView } from './video-summary'
+import type { TranscriptView } from './transcript'
+import type { TranscriptLanguage, TrimRange, VideoPrivacy, VideoView } from './video-summary'
 
 /** UploadError that also carries the API's error code (e.g. "video.segments_missing"). */
 export class VideoApiError extends UploadError {
@@ -72,6 +73,7 @@ export interface VideoChanges {
   privacy?: VideoPrivacy
   password?: string
   trim?: TrimRange | null
+  transcriptLanguage?: TranscriptLanguage
 }
 
 /** Owner edits; a new trim queues a re-render. */
@@ -91,4 +93,14 @@ export function fetchVideo(videoId: string): Promise<VideoView> {
 /** Sends a viewer's password; on success the API sets an access cookie for this video. */
 export async function unlockVideo(videoId: string, password: string): Promise<void> {
   await call(`${videoPath(videoId)}/unlock`, { password })
+}
+
+/** Transcribes the video again (e.g. after a failure). */
+export function requestTranscription(videoId: string): Promise<VideoView> {
+  return call<VideoView>(`${videoPath(videoId)}/transcribe`)
+}
+
+/** The transcript at a URL the API advertised in `captions.transcriptUrl`. */
+export function fetchTranscript(url: string): Promise<TranscriptView> {
+  return call<TranscriptView>(url, undefined, 'GET')
 }
