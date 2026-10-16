@@ -8,4 +8,6 @@ export default defineConfig({
   clean: true,
   // Workspace packages ship TypeScript sources, so bundle them into the output.
   noExternal: [/^@weft\//],
+  // CommonJS packages must stay external (installed in the image), not bundled into ESM.
+  external: ['pg-boss'],
 })

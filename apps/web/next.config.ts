@@ -10,6 +10,22 @@ const nextConfig: NextConfig = {
   transpilePackages: ['@weft/i18n', '@weft/recorder'],
   // The browser only talks to this origin; /api is proxied to the API server so auth
   // cookies stay first-party.
+  async headers() {
+    return [
+      // Only the embed player may be framed by other sites.
+      {
+        source: '/((?!embed/).*)',
+        headers: [
+          { key: 'X-Frame-Options', value: 'SAMEORIGIN' },
+          { key: 'Content-Security-Policy', value: "frame-ancestors 'self'" },
+        ],
+      },
+      {
+        source: '/embed/:path*',
+        headers: [{ key: 'Content-Security-Policy', value: 'frame-ancestors *' }],
+      },
+    ]
+  },
   async rewrites() {
     return [{ source: '/api/:path*', destination: `${apiInternalUrl}/api/:path*` }]
   },

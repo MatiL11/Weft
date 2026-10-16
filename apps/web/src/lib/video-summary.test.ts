@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { fetchVideoSummary } from './video-summary'
+import { fetchVideoList, fetchVideoSummary, type VideoView } from './video-summary'
 
-const SUMMARY = {
+const SUMMARY: VideoView = {
   id: 'abc',
   title: 'Demo',
   status: 'ready',
@@ -9,6 +9,11 @@ const SUMMARY = {
   durationMs: 6000,
   createdAt: '2026-10-16T10:00:00.000Z',
   isOwner: false,
+  playback: { playlistUrl: '/api/videos/abc/playlist.m3u8', skip: null, processed: true },
+  posterUrl: '/api/videos/abc/r/1/poster.jpg',
+  thumbnails: null,
+  downloadUrl: '/api/videos/abc/download',
+  owner: null,
 }
 
 afterEach(() => vi.unstubAllGlobals())
@@ -37,6 +42,18 @@ describe('fetchVideoSummary', () => {
     expect(await fetchVideoSummary('http://api:4000', 'abc', '')).toEqual({ kind: 'not_found' })
   })
 
+  it('tells password-protected videos apart', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () =>
+        Response.json({ data: null, error: { code: 'video.password_required' } }, { status: 401 }),
+      ),
+    )
+    expect(await fetchVideoSummary('http://api:4000', 'abc', '')).toEqual({
+      kind: 'password_required',
+    })
+  })
+
   it('rejects ids that cannot be video ids without calling the API', async () => {
     const fetch = vi.fn()
     vi.stubGlobal('fetch', fetch)
@@ -57,5 +74,36 @@ describe('fetchVideoSummary', () => {
       vi.fn(async () => Promise.reject(new TypeError('down'))),
     )
     expect(await fetchVideoSummary('http://api:4000', 'abc', '')).toEqual({ kind: 'error' })
+  })
+})
+
+describe('fetchVideoList', () => {
+  it('returns the library, or tells signed-out users apart from failures', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => Response.json({ data: [SUMMARY], error: null })),
+    )
+    expect(await fetchVideoList('http://api:4000', 'session=1')).toEqual({
+      kind: 'ok',
+      videos: [SUMMARY],
+    })
+
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => new Response(null, { status: 401 })),
+    )
+    expect(await fetchVideoList('http://api:4000', '')).toEqual({ kind: 'unauthenticated' })
+
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => new Response('oops', { status: 500 })),
+    )
+    expect(await fetchVideoList('http://api:4000', '')).toEqual({ kind: 'error' })
+
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => Promise.reject(new TypeError('down'))),
+    )
+    expect(await fetchVideoList('http://api:4000', '')).toEqual({ kind: 'error' })
   })
 })

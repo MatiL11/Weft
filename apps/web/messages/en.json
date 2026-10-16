@@ -59,7 +59,13 @@
       "member": "member",
       "viewer": "viewer"
     },
-    "newRecording": "New recording"
+    "newRecording": "New recording",
+    "library": "Library",
+    "videoCount": "{count, plural, one {# video} other {# videos}}",
+    "recording": "Recording",
+    "processing": "Processing",
+    "untitledDuration": "—",
+    "libraryError": "Your videos couldn't be loaded."
   },
   "errors": {
     "unreachable": "The server is unreachable. Check that the API is running.",
@@ -173,8 +179,133 @@
     "liveHint": "Recording in progress. The video grows as it is recorded.",
     "recordedOn": "Recorded {date}",
     "cta": "Record your own with Weft",
-    "playerError": "This video can't be played right now. Try again in a moment.",
     "notFoundTitle": "Video not found",
-    "notFoundBody": "It doesn't exist, or it isn't shared with you."
+    "notFoundBody": "It doesn't exist, or it isn't shared with you.",
+    "protectedTitle": "Password-protected video",
+    "loadError": "This video couldn't be loaded. Try again in a moment.",
+    "embedProtected": "This video is password protected.",
+    "watchOnWeft": "Watch on Weft",
+    "download": "Download",
+    "privacy": {
+      "link": "Anyone with the link",
+      "workspace": "Workspace",
+      "password": "Password",
+      "private": "Only me"
+    }
+  },
+  "player": {
+    "label": "Video player",
+    "play": "Play",
+    "pause": "Pause",
+    "mute": "Mute",
+    "unmute": "Unmute",
+    "volume": "Volume",
+    "fullscreen": "Full screen",
+    "exitFullscreen": "Exit full screen",
+    "speed": "Playback speed: {rate}",
+    "speedMenu": "Playback speed",
+    "seek": "Seek",
+    "position": "{time} of {total}",
+    "error": "This video can't be played right now. Try again in a moment."
+  },
+  "video": {
+    "password": {
+      "title": "This video is password protected",
+      "body": "Enter the password the person who shared it gave you.",
+      "label": "Password",
+      "submit": "Watch video",
+      "checking": "Checking…",
+      "errors": {
+        "incorrect": "That password isn't right.",
+        "tooMany": "Too many attempts. Wait a few minutes and try again.",
+        "generic": "Something went wrong. Try again."
+      }
+    },
+    "owner": {
+      "titleLabel": "Video title",
+      "saveFailed": "The title couldn't be saved.",
+      "share": {
+        "title": "Share",
+        "link": "Link",
+        "embed": "Embed code",
+        "embedHint": "Paste it into any site. Add ?t=30, &autoplay=1 or &hide_title=1 to the URL to customize it.",
+        "embedNeedsLink": "Embeds only play for anyone when the video is shared with anyone who has the link.",
+        "copyCode": "Copy code"
+      },
+      "privacy": {
+        "title": "Who can watch",
+        "description": "You can always watch your own videos.",
+        "options": {
+          "link": {
+            "label": "Anyone with the link",
+            "hint": "No account needed."
+          },
+          "workspace": {
+            "label": "My workspace",
+            "hint": "Members who are signed in."
+          },
+          "password": {
+            "label": "Anyone with the password",
+            "hint": "They'll need the link and the password."
+          },
+          "private": {
+            "label": "Only me",
+            "hint": "Nobody else, not even your workspace."
+          }
+        },
+        "password": "Password",
+        "newPassword": "New password",
+        "keepPassword": "Leave empty to keep the current one",
+        "passwordHint": "At least {min} characters.",
+        "save": "Save",
+        "saving": "Saving…",
+        "saved": "Saved.",
+        "error": "Couldn't save. Try again."
+      },
+      "trim": {
+        "title": "Trim",
+        "description": "Cut the start and end. The original is kept, so you can undo it anytime.",
+        "start": "Start",
+        "end": "End",
+        "startHere": "Start at playhead",
+        "endHere": "End at playhead",
+        "reset": "Reset",
+        "save": "Save trim",
+        "saving": "Saving…",
+        "error": "Couldn't save the trim. Try again."
+      },
+      "render": {
+        "retry": "Try again",
+        "process": "Process",
+        "none": {
+          "title": "Not processed yet",
+          "body": "Process it to add thumbnails, a download and adaptive quality."
+        },
+        "queued": {
+          "title": "Waiting to be processed",
+          "body": "Viewers can already watch it."
+        },
+        "processing": {
+          "title": "Processing…",
+          "body": "Viewers can already watch it; quality and thumbnails arrive in a moment."
+        },
+        "ready": {
+          "title": "Processed",
+          "body": "Adaptive quality, hover thumbnails and download are ready."
+        },
+        "failed": {
+          "title": "Processing failed",
+          "body": "The video still plays as recorded."
+        }
+      },
+      "delete": {
+        "action": "Delete video",
+        "question": "Delete this video for everyone? This can't be undone.",
+        "confirm": "Delete",
+        "cancel": "Cancel",
+        "deleting": "Deleting…",
+        "error": "Couldn't delete the video. Try again."
+      }
+    }
   }
 }

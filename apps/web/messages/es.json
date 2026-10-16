@@ -59,7 +59,13 @@
       "member": "miembro",
       "viewer": "lector"
     },
-    "newRecording": "Nueva grabación"
+    "newRecording": "Nueva grabación",
+    "library": "Biblioteca",
+    "videoCount": "{count, plural, one {# video} other {# videos}}",
+    "recording": "Grabando",
+    "processing": "Procesando",
+    "untitledDuration": "—",
+    "libraryError": "No se pudieron cargar tus videos."
   },
   "errors": {
     "unreachable": "No se puede conectar con el servidor. Verifica que la API esté en ejecución.",
@@ -173,8 +179,133 @@
     "liveHint": "Grabación en curso. El video crece a medida que se graba.",
     "recordedOn": "Grabado el {date}",
     "cta": "Graba el tuyo con Weft",
-    "playerError": "Este video no se puede reproducir ahora. Inténtalo de nuevo en un momento.",
     "notFoundTitle": "Video no encontrado",
-    "notFoundBody": "No existe o no está compartido contigo."
+    "notFoundBody": "No existe o no está compartido contigo.",
+    "protectedTitle": "Video protegido con contraseña",
+    "loadError": "No se pudo cargar este video. Inténtalo de nuevo en un momento.",
+    "embedProtected": "Este video está protegido con contraseña.",
+    "watchOnWeft": "Ver en Weft",
+    "download": "Descargar",
+    "privacy": {
+      "link": "Cualquiera con el enlace",
+      "workspace": "Espacio de trabajo",
+      "password": "Contraseña",
+      "private": "Solo yo"
+    }
+  },
+  "player": {
+    "label": "Reproductor de video",
+    "play": "Reproducir",
+    "pause": "Pausar",
+    "mute": "Silenciar",
+    "unmute": "Activar sonido",
+    "volume": "Volumen",
+    "fullscreen": "Pantalla completa",
+    "exitFullscreen": "Salir de pantalla completa",
+    "speed": "Velocidad: {rate}",
+    "speedMenu": "Velocidad de reproducción",
+    "seek": "Buscar",
+    "position": "{time} de {total}",
+    "error": "Este video no se puede reproducir ahora. Inténtalo de nuevo en un momento."
+  },
+  "video": {
+    "password": {
+      "title": "Este video está protegido",
+      "body": "Escribe la contraseña que te dio quien lo compartió.",
+      "label": "Contraseña",
+      "submit": "Ver video",
+      "checking": "Comprobando…",
+      "errors": {
+        "incorrect": "Esa contraseña no es correcta.",
+        "tooMany": "Demasiados intentos. Espera unos minutos y vuelve a intentarlo.",
+        "generic": "Algo salió mal. Inténtalo de nuevo."
+      }
+    },
+    "owner": {
+      "titleLabel": "Título del video",
+      "saveFailed": "No se pudo guardar el título.",
+      "share": {
+        "title": "Compartir",
+        "link": "Enlace",
+        "embed": "Código para insertar",
+        "embedHint": "Pégalo en cualquier sitio. Agrega ?t=30, &autoplay=1 o &hide_title=1 a la URL para personalizarlo.",
+        "embedNeedsLink": "El video insertado solo se reproduce para todos si lo compartes con cualquiera que tenga el enlace.",
+        "copyCode": "Copiar código"
+      },
+      "privacy": {
+        "title": "Quién puede verlo",
+        "description": "Tú siempre puedes ver tus propios videos.",
+        "options": {
+          "link": {
+            "label": "Cualquiera con el enlace",
+            "hint": "No necesita cuenta."
+          },
+          "workspace": {
+            "label": "Mi espacio de trabajo",
+            "hint": "Miembros con la sesión iniciada."
+          },
+          "password": {
+            "label": "Cualquiera con la contraseña",
+            "hint": "Necesitará el enlace y la contraseña."
+          },
+          "private": {
+            "label": "Solo yo",
+            "hint": "Nadie más, ni siquiera tu espacio de trabajo."
+          }
+        },
+        "password": "Contraseña",
+        "newPassword": "Nueva contraseña",
+        "keepPassword": "Déjala vacía para mantener la actual",
+        "passwordHint": "Al menos {min} caracteres.",
+        "save": "Guardar",
+        "saving": "Guardando…",
+        "saved": "Guardado.",
+        "error": "No se pudo guardar. Inténtalo de nuevo."
+      },
+      "trim": {
+        "title": "Recortar",
+        "description": "Corta el inicio y el final. El original se conserva, así que puedes deshacerlo cuando quieras.",
+        "start": "Inicio",
+        "end": "Fin",
+        "startHere": "Inicio en la posición actual",
+        "endHere": "Fin en la posición actual",
+        "reset": "Restablecer",
+        "save": "Guardar recorte",
+        "saving": "Guardando…",
+        "error": "No se pudo guardar el recorte. Inténtalo de nuevo."
+      },
+      "render": {
+        "retry": "Reintentar",
+        "process": "Procesar",
+        "none": {
+          "title": "Todavía sin procesar",
+          "body": "Procésalo para agregar miniaturas, descarga y calidad adaptable."
+        },
+        "queued": {
+          "title": "En cola para procesar",
+          "body": "Ya se puede ver."
+        },
+        "processing": {
+          "title": "Procesando…",
+          "body": "Ya se puede ver; la calidad y las miniaturas llegan en un momento."
+        },
+        "ready": {
+          "title": "Procesado",
+          "body": "Calidad adaptable, miniaturas al pasar el mouse y descarga listas."
+        },
+        "failed": {
+          "title": "Falló el procesamiento",
+          "body": "El video se sigue viendo tal como se grabó."
+        }
+      },
+      "delete": {
+        "action": "Eliminar video",
+        "question": "¿Eliminar este video para todos? No se puede deshacer.",
+        "confirm": "Eliminar",
+        "cancel": "Cancelar",
+        "deleting": "Eliminando…",
+        "error": "No se pudo eliminar el video. Inténtalo de nuevo."
+      }
+    }
   }
 }

@@ -1,6 +1,14 @@
 import { UploadError } from '@weft/recorder/core'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { createUploadApi, deleteVideo, startVideo } from './video-api'
+import {
+  createUploadApi,
+  deleteVideo,
+  fetchVideo,
+  requestRender,
+  startVideo,
+  unlockVideo,
+  updateVideo,
+} from './video-api'
 
 function mockFetch(...responses: Response[]) {
   const fn = vi.fn(async () => responses.shift() ?? Response.json({}, { status: 500 }))
@@ -80,5 +88,40 @@ describe('deleteVideo', () => {
     const fetch = mockFetch(okJson({ deleted: true }))
     await deleteVideo('v/1')
     expect(fetch).toHaveBeenCalledWith('/api/videos/v%2F1', { method: 'DELETE' })
+  })
+})
+
+describe('video management calls', () => {
+  it('sends edits, render retries, reads and unlocks to the video endpoints', async () => {
+    const fetch = mockFetch(
+      okJson({ id: 'v 1', title: 'New' }),
+      okJson({ id: 'v 1' }),
+      okJson({ id: 'v 1' }),
+      okJson({ unlocked: true }),
+    )
+    await expect(updateVideo('v 1', { title: 'New', trim: null })).resolves.toMatchObject({
+      title: 'New',
+    })
+    await requestRender('v 1')
+    await fetchVideo('v 1')
+    await unlockVideo('v 1', 'secret')
+
+    const calls = fetch.mock.calls as unknown as [string, RequestInit][]
+    expect(calls.map(([url, init]) => [init.method, url])).toEqual([
+      ['PATCH', '/api/videos/v%201'],
+      ['POST', '/api/videos/v%201/render'],
+      ['GET', '/api/videos/v%201'],
+      ['POST', '/api/videos/v%201/unlock'],
+    ])
+    expect(calls[0]?.[1].body).toBe(JSON.stringify({ title: 'New', trim: null }))
+    expect(calls[3]?.[1].body).toBe(JSON.stringify({ password: 'secret' }))
+  })
+
+  it('surfaces wrong passwords as their API code', async () => {
+    mockFetch(errJson('video.password_incorrect', 403))
+    await expect(unlockVideo('v1', 'nope')).rejects.toMatchObject({
+      code: 'video.password_incorrect',
+      retryable: false,
+    })
   })
 })

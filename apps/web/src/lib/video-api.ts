@@ -1,4 +1,5 @@
 import { UploadError, type UploadApi } from '@weft/recorder/core'
+import type { TrimRange, VideoPrivacy, VideoView } from './video-summary'
 
 /** UploadError that also carries the API's error code (e.g. "video.segments_missing"). */
 export class VideoApiError extends UploadError {
@@ -59,7 +60,35 @@ export function createUploadApi(videoId: string): UploadApi {
   }
 }
 
-/** Deletes a video and its media (used when a recording is discarded). */
+/** Deletes a video and its media (e.g. a discarded recording). */
 export async function deleteVideo(videoId: string): Promise<void> {
   await call(`/api/videos/${encodeURIComponent(videoId)}`, undefined, 'DELETE')
+}
+
+const videoPath = (videoId: string) => `/api/videos/${encodeURIComponent(videoId)}`
+
+export interface VideoChanges {
+  title?: string
+  privacy?: VideoPrivacy
+  password?: string
+  trim?: TrimRange | null
+}
+
+/** Owner edits; a new trim queues a re-render. */
+export function updateVideo(videoId: string, changes: VideoChanges): Promise<VideoView> {
+  return call<VideoView>(videoPath(videoId), changes, 'PATCH')
+}
+
+/** Retries processing a finished recording. */
+export function requestRender(videoId: string): Promise<VideoView> {
+  return call<VideoView>(`${videoPath(videoId)}/render`)
+}
+
+export function fetchVideo(videoId: string): Promise<VideoView> {
+  return call<VideoView>(videoPath(videoId), undefined, 'GET')
+}
+
+/** Sends a viewer's password; on success the API sets an access cookie for this video. */
+export async function unlockVideo(videoId: string, password: string): Promise<void> {
+  await call(`${videoPath(videoId)}/unlock`, { password })
 }
