@@ -14,6 +14,10 @@ The recorder's browser tests run in headless Chromium. Either install Playwright
 (`pnpm --filter @weft/recorder exec playwright install chromium`) or point to a local Chromium
 with `CHROMIUM_PATH=/usr/bin/chromium`.
 
+The worker's tests need ffmpeg. Its real speech-recognition test also needs whisper.cpp and is
+skipped otherwise; `scripts/setup-whisper.sh <dir>` builds it and downloads the tiny model (the
+script prints the environment variables to set).
+
 Before opening a PR run:
 
 ```bash

@@ -3,12 +3,12 @@
 Open-source, self-hostable async video messaging: record your screen and camera,
 get a shareable link instantly, and collect comments and reactions.
 
-> Status: early development (Phase 3 — processing and player done). See [docs/plan/PLAN.md](docs/plan/PLAN.md).
+> Status: early development (Phase 4 — transcription done). See [docs/plan/PLAN.md](docs/plan/PLAN.md).
 
 ## Stack
 
 TypeScript monorepo (pnpm + Turborepo) · Next.js web app · Hono API · PostgreSQL + Drizzle ·
-Better Auth · S3-compatible storage · pg-boss jobs · ffmpeg render worker · Clean Architecture core.
+Better Auth · S3-compatible storage · pg-boss jobs · ffmpeg + whisper.cpp worker · Clean Architecture core.
 
 ## Repository layout
 
@@ -16,7 +16,7 @@ Better Auth · S3-compatible storage · pg-boss jobs · ffmpeg render worker · 
 apps/
   api/        HTTP API (Hono) — delivery layer
   web/        Next.js web app
-  worker/     background renders with ffmpeg (HLS ladder, MP4, poster, thumbnails)
+  worker/     background jobs: renders with ffmpeg, transcripts with whisper.cpp
 packages/
   core/       domain + use cases + ports (framework-free)
   infra/*     adapters implementing core ports (Postgres, S3, …)
@@ -41,6 +41,11 @@ When a recording ends, the `worker` service renders it with ffmpeg: an adaptive 
 (1080p/720p), a downloadable MP4, a poster and hover thumbnails. The video is watchable from the
 first second; the render only improves it. Renders run one at a time by default
 (`RENDER_CONCURRENCY`); each one can use every CPU core.
+
+Each render is then transcribed on your server with [whisper.cpp](https://github.com/ggml-org/whisper.cpp):
+viewers get captions and a searchable transcript. The speech model (`WHISPER_MODEL`: `tiny`, `base`
+— the default —, `small` or `medium`) is downloaded once on the worker's first start and verified
+against its published checksum. Bigger models are more accurate but slower.
 
 ### Embedding
 

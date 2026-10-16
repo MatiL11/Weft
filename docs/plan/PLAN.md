@@ -193,9 +193,12 @@ Cada fase cierra con tests (≥80 % de cobertura en paquetes de dominio), revisi
 
 ### Fase 4 — Transcripción (1 semana)
 
-- [ ] Worker whisper.cpp → transcripts (JSON) + captions (VTT); selección de idioma
-- [ ] Panel de transcripción con click-to-seek y búsqueda
+- [x] Worker whisper.cpp (MIT, compilado desde el código en la imagen del worker): cada render se transcribe, así los tiempos siguen el video recortado. Modelo multilingüe `base` por defecto, descargado al primer arranque y verificado contra su SHA-256 publicado
+- [x] Transcripción guardada como segmentos (JSON) y subtítulos WebVTT generados al vuelo; idioma detectado automáticamente o elegido por el dueño (cambiarlo vuelve a transcribir). Los videos sin sonido se marcan y no se transcriben
+- [x] Subtítulos dibujados por el reproductor (botón CC, tecla `c`) y panel de transcripción con búsqueda (sin distinguir mayúsculas ni acentos), resaltado y click para saltar; también en los embeds
 - **Hito:** subtítulos automáticos en español e inglés.
+  - ✅ E2E con la stack real en Docker: grabaciones con voz real en el micrófono (audiolibro de LibriVox en español y el discurso de JFK en inglés, ambos de dominio público). El idioma se detecta solo y los subtítulos están listos ~5 s después de detener; la búsqueda, el click para saltar y los subtítulos en pantalla funcionan.
+  - CI compila whisper.cpp (con caché) y corre una transcripción real con el modelo `tiny`.
 
 ### Fase 5 — Colaboración (2 semanas)
 
