@@ -57,6 +57,17 @@ describe('PgBossJobs (integration)', () => {
     expect(attempts).toBe(3)
     expect(errors).toEqual([])
 
+    // Transcriptions travel on their own queue.
+    const transcriptions: unknown[] = []
+    await worker.workTranscriptions(async (job) => void transcriptions.push(job), {
+      concurrency: 1,
+      pollingIntervalSeconds: 0.5,
+    })
+    await api.enqueueTranscription({ videoId: 'vid_2', version: 1 })
+    await waitFor(() => transcriptions.length === 1)
+    expect(transcriptions).toEqual([{ videoId: 'vid_2', version: 1 }])
+    expect(received).toHaveLength(2)
+
     await api.stop()
     await worker.stop()
   })
