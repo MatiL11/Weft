@@ -18,8 +18,11 @@ import { invalid, parseJson } from '../validation'
 export interface PlaybackRouteDeps {
   getPlayback: GetPlayback
   unlockVideo: UnlockVideo
-  /** Limits password attempts per video. */
-  unlockLimiter: { tryAttempt(key: string): boolean }
+  /** Limits wrong password guesses. */
+  unlockLimiter: {
+    isBlocked(videoId: string, client: string): boolean
+    recordFailure(videoId: string, client: string): void
+  }
   publicUrl: string
 }
 
@@ -31,6 +34,10 @@ const UnlockBody = z.object({ password: z.string().max(1024) })
 
 /** Cookie holding the proof that this browser entered the video's password. */
 export const accessCookieName = (videoId: string) => `weft_access_${videoId}`
+
+/** The client's address as forwarded by the web app's proxy (best effort). */
+const clientOf = (c: Context) =>
+  c.req.header('x-forwarded-for')?.split(',')[0]?.trim() || c.req.header('x-real-ip') || 'unknown'
 
 const assetMissing = () => new DomainError('asset.not_found', 'This file does not exist.')
 
@@ -50,17 +57,26 @@ export function playbackRoutes(deps: PlaybackRouteDeps): Hono<AppEnv> {
 
   routes.get('/:id', async (c) => {
     const result = await playback(c)
-    return c.json(ok(presentVideo(result.video, c.get('user')?.id ?? null)))
+    const viewerId = c.get('user')?.id ?? null
+    return c.json(ok(presentVideo(result.video, viewerId, { skip: result.skip })))
   })
 
   routes.post('/:id/unlock', async (c) => {
     const body = await parseJson(c, UnlockBody)
     if (!body) return invalid(c)
     const videoId = c.req.param('id')
-    if (!deps.unlockLimiter.tryAttempt(videoId)) {
+    const client = clientOf(c)
+    if (deps.unlockLimiter.isBlocked(videoId, client)) {
       return c.json(fail('video.too_many_attempts', 'Too many attempts. Try again later.'), 429)
     }
-    const token = await deps.unlockVideo.execute({ videoId, password: body.password })
+    const token = await deps.unlockVideo
+      .execute({ videoId, password: body.password })
+      .catch((error: unknown) => {
+        if (error instanceof DomainError && error.code === 'video.password_incorrect') {
+          deps.unlockLimiter.recordFailure(videoId, client)
+        }
+        throw error
+      })
     setCookie(c, accessCookieName(videoId), token, {
       path: '/',
       httpOnly: true,

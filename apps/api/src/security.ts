@@ -66,32 +66,60 @@ export class HmacVideoAccessTokens implements VideoAccessTokens {
   }
 }
 
-/** Fixed-window attempt counter, e.g. to slow down password guessing per video. */
-export class AttemptLimiter {
+/** Fixed-window failure counter: blocks a key once it fails too often within the window. */
+export class FailureLimiter {
   private readonly windows = new Map<string, { startedAt: number; count: number }>()
 
   constructor(
-    private readonly maxAttempts: number,
+    private readonly maxFailures: number,
     private readonly windowMs: number,
     private readonly now: () => number = Date.now,
   ) {}
 
-  /** Records an attempt; false once the key has used up its attempts for this window. */
-  tryAttempt(key: string): boolean {
-    const now = this.now()
-    const window = this.windows.get(key)
-    if (!window || now - window.startedAt >= this.windowMs) {
-      this.prune(now)
-      this.windows.set(key, { startedAt: now, count: 1 })
-      return true
-    }
-    window.count += 1
-    return window.count <= this.maxAttempts
+  isBlocked(key: string): boolean {
+    const window = this.current(key)
+    return window !== undefined && window.count >= this.maxFailures
   }
 
-  private prune(now: number) {
+  recordFailure(key: string): void {
+    const window = this.current(key)
+    if (window) {
+      window.count += 1
+      return
+    }
+    this.prune()
+    this.windows.set(key, { startedAt: this.now(), count: 1 })
+  }
+
+  private current(key: string) {
+    const window = this.windows.get(key)
+    return window && this.now() - window.startedAt < this.windowMs ? window : undefined
+  }
+
+  private prune() {
+    const now = this.now()
     for (const [key, window] of this.windows) {
       if (now - window.startedAt >= this.windowMs) this.windows.delete(key)
     }
+  }
+}
+
+/**
+ * Slows down password guessing. Only wrong passwords count: each client gets a few guesses
+ * per video, and every video has a larger overall cap in case clients rotate addresses.
+ */
+export class UnlockLimiter {
+  constructor(
+    private readonly perClient: FailureLimiter,
+    private readonly perVideo: FailureLimiter,
+  ) {}
+
+  isBlocked(videoId: string, client: string): boolean {
+    return this.perClient.isBlocked(`${client} ${videoId}`) || this.perVideo.isBlocked(videoId)
+  }
+
+  recordFailure(videoId: string, client: string): void {
+    this.perClient.recordFailure(`${client} ${videoId}`)
+    this.perVideo.recordFailure(videoId)
   }
 }

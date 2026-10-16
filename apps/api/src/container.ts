@@ -9,7 +9,12 @@ import type { Logger } from 'pino'
 import { createAuth } from './auth'
 import type { Config } from './config'
 import { createApp } from './http/app'
-import { AttemptLimiter, HmacVideoAccessTokens, ScryptPasswordHasher } from './security'
+import {
+  FailureLimiter,
+  HmacVideoAccessTokens,
+  ScryptPasswordHasher,
+  UnlockLimiter,
+} from './security'
 import { videoUseCases } from './use-cases'
 
 const systemClock: Clock = { now: () => new Date() }
@@ -40,8 +45,9 @@ export function personalWorkspaceName(userName: string, locale: Locale): string 
   return firstName ? names.named(firstName) : names.fallback
 }
 
-/** Wrong video passwords allowed per video per window, to slow down guessing. */
-const UNLOCK_ATTEMPTS = 20
+/** Wrong video passwords allowed per window, per client and video and per video overall. */
+const UNLOCK_FAILURES_PER_CLIENT = 10
+const UNLOCK_FAILURES_PER_VIDEO = 200
 const UNLOCK_WINDOW_MS = 15 * 60 * 1000
 
 export interface ContainerOverrides {
@@ -104,7 +110,10 @@ export async function createContainer(
     workspaces,
     createWorkspace,
     ...useCases,
-    unlockLimiter: new AttemptLimiter(UNLOCK_ATTEMPTS, UNLOCK_WINDOW_MS),
+    unlockLimiter: new UnlockLimiter(
+      new FailureLimiter(UNLOCK_FAILURES_PER_CLIENT, UNLOCK_WINDOW_MS),
+      new FailureLimiter(UNLOCK_FAILURES_PER_VIDEO, UNLOCK_WINDOW_MS),
+    ),
     publicUrl: config.PUBLIC_URL,
     logger,
   })

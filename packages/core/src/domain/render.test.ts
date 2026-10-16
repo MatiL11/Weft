@@ -7,6 +7,7 @@ import {
   renditionShortSides,
   renderPrefix,
   sameTrim,
+  trimmedTimeline,
   thumbnailPlan,
   visibleDurationMs,
   type VideoRender,
@@ -109,5 +110,30 @@ describe('render helpers', () => {
     for (const bad of ['../secret', '720p/../../x.m4s', 'init.mp4', '720p/seg-1.m4s', '']) {
       expect(isRenderAsset(bad)).toBe(false)
     }
+  })
+})
+
+describe('trimmedTimeline', () => {
+  const segments = [
+    { index: 0, durationMs: 4000 },
+    { index: 1, durationMs: 4000 },
+    { index: 2, durationMs: 4000 },
+    { index: 3, durationMs: 2000 },
+  ]
+
+  it('keeps everything without a trim', () => {
+    expect(trimmedTimeline(segments, null)).toEqual({ segments, skip: null })
+  })
+
+  it('drops segments outside the trim and rebases the trim on the first kept one', () => {
+    expect(trimmedTimeline(segments, { startMs: 5000, endMs: 9000 })).toEqual({
+      segments: [segments[1], segments[2]],
+      skip: { startMs: 1000, endMs: 5000 },
+    })
+    // Boundaries: a segment ending exactly at the trim start is dropped.
+    expect(trimmedTimeline(segments, { startMs: 4000, endMs: 12_000 }).segments).toEqual([
+      segments[1],
+      segments[2],
+    ])
   })
 })

@@ -1,4 +1,4 @@
-import { playbackSource, visibleDurationMs, type Video } from '@weft/core'
+import { playbackSource, visibleDurationMs, type TrimRange, type Video } from '@weft/core'
 
 /** Base path of a video's API resources; the web app proxies /api to this server. */
 export const videoPath = (videoId: string) => `/api/videos/${videoId}`
@@ -12,10 +12,19 @@ export function renderAssetPath(video: Video, file: string): string | null {
   return video.render ? `${videoPath(video.id)}/r/${video.render.version}/${file}` : null
 }
 
-/** What the API tells clients about a video; owner-only details are omitted for others. */
-export function presentVideo(video: Video, viewerId: string | null) {
+/**
+ * What the API tells clients about a video; owner-only details are omitted for others.
+ * `skip` is the trim relative to the served playlist (see GetPlayback); without it, the trim
+ * on the recording's own timeline is reported.
+ */
+export function presentVideo(
+  video: Video,
+  viewerId: string | null,
+  options: { skip?: TrimRange | null } = {},
+) {
   const source = playbackSource(video)
   const isOwner = viewerId === video.ownerId
+  const rendered = source.kind === 'render'
   return {
     id: video.id,
     title: video.title,
@@ -27,16 +36,15 @@ export function presentVideo(video: Video, viewerId: string | null) {
     playback: {
       playlistUrl: `${videoPath(video.id)}/playlist.m3u8`,
       // While no render matches the trim, players hide what it cuts from the raw recording.
-      skip: source.kind === 'raw' ? source.skip : null,
-      processed: source.kind === 'render',
+      skip: options.skip !== undefined ? options.skip : rendered ? null : source.skip,
+      processed: rendered,
     },
-    posterUrl: renderAssetPath(video, 'poster.jpg'),
-    // Thumbnails only line up with the timeline of the render they came from.
-    thumbnails:
-      source.kind === 'render'
-        ? { url: renderAssetPath(video, 'sprite.jpg'), ...source.render.sprite }
-        : null,
-    downloadUrl: source.kind === 'render' ? `${videoPath(video.id)}/download` : null,
+    // Files of an older render may show trimmed-out footage, so only current ones are shared.
+    posterUrl: rendered ? renderAssetPath(video, 'poster.jpg') : null,
+    thumbnails: rendered
+      ? { url: renderAssetPath(video, 'sprite.jpg'), ...source.render.sprite }
+      : null,
+    downloadUrl: rendered ? `${videoPath(video.id)}/download` : null,
     owner: isOwner
       ? {
           renderState: video.renderState,

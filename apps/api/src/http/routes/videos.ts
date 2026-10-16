@@ -76,7 +76,14 @@ export function videoRoutes(deps: VideoRouteDeps): Hono<AppEnv> {
     const workspaceId =
       c.req.query('workspaceId') ?? (await defaultWorkspaceId(deps.workspaces, user))
     const videos = await deps.listVideos.execute({ userId: user, workspaceId })
-    return c.json(ok(videos.map((video) => presentVideo(video, user))))
+    const views = videos.map((video) => {
+      const view = presentVideo(video, user)
+      // Members still need the password to open others' protected videos, poster included.
+      return video.privacy === 'password' && !view.isOwner
+        ? { ...view, posterUrl: null, thumbnails: null, downloadUrl: null }
+        : view
+    })
+    return c.json(ok(views))
   })
 
   routes.post('/', requireUser, async (c) => {

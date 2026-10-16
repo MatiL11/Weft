@@ -1,6 +1,13 @@
 import { DomainError } from '../domain/errors'
 import { playableSegments, type PlayableSegment } from '../domain/playlist'
-import { isRenderAsset, playbackSource, renderPrefix, type PlaybackSource } from '../domain/render'
+import {
+  isRenderAsset,
+  playbackSource,
+  renderPrefix,
+  trimmedTimeline,
+  type PlaybackSource,
+  type TrimRange,
+} from '../domain/render'
 import { accessFor, segmentKey, type SegmentKind, type Video } from '../domain/video'
 import type {
   ObjectStorage,
@@ -25,8 +32,10 @@ export interface Playback {
   isOwner: boolean
   ended: boolean
   source: PlaybackSource
-  /** Raw segments with known durations (used when the source is raw). */
+  /** Raw segments with known durations (used when the source is raw), minus trimmed ones. */
   segments: PlayableSegment[]
+  /** Trim still to hide while playing `segments`, relative to the first of them. */
+  skip: TrimRange | null
   /** Short-lived URL for a raw init or media segment. */
   mediaUrl(kind: SegmentKind, index: number): Promise<string>
   /** Short-lived URL for a file of the latest render (poster, sprite, MP4, HLS media). */
@@ -61,23 +70,37 @@ export class GetPlayback {
       (s) => s.kind === 'media' && s.uploadedAt,
     )
     const ended = video.status === 'ready'
+    const isOwner = input.viewerId === video.ownerId
+    const source = playbackSource(video)
+    const timeline = trimmedTimeline(
+      playableSegments(media, { endedAtMs: ended ? video.durationMs : null }),
+      source.kind === 'raw' ? source.skip : null,
+    )
+    const missing = () => new DomainError('asset.not_found', 'This file does not exist.')
+    // Viewers only get what the current trim keeps: no raw media once a matching render
+    // exists, and no renders made for an older trim. The owner can reach everything.
+    const servedSegments = new Set(timeline.segments.map((s) => s.index))
+    const canServeRaw = (kind: SegmentKind, index: number) =>
+      isOwner || (source.kind === 'raw' && (kind === 'init' || servedSegments.has(index)))
     const assetKey = (path: string) => {
-      if (!video.render || !isRenderAsset(path)) {
-        throw new DomainError('asset.not_found', 'This file does not exist.')
-      }
+      if (!video.render || !isRenderAsset(path)) throw missing()
+      if (!isOwner && source.kind !== 'render') throw missing()
       return `${renderPrefix(video.id, video.render.version)}${path}`
     }
 
     return {
       video,
-      isOwner: input.viewerId === video.ownerId,
+      isOwner,
       ended,
-      source: playbackSource(video),
-      segments: playableSegments(media, { endedAtMs: ended ? video.durationMs : null }),
-      mediaUrl: (kind, index) =>
-        storage.presignGet(segmentKey(video.id, kind, index), {
+      source,
+      segments: timeline.segments,
+      skip: timeline.skip,
+      mediaUrl: async (kind, index) => {
+        if (!canServeRaw(kind, index)) throw missing()
+        return storage.presignGet(segmentKey(video.id, kind, index), {
           expiresInSeconds: PLAYBACK_URL_TTL_SECONDS,
-        }),
+        })
+      },
       assetUrl: async (path, options) =>
         storage.presignGet(assetKey(path), {
           expiresInSeconds: PLAYBACK_URL_TTL_SECONDS,

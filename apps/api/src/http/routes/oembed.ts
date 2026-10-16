@@ -10,6 +10,7 @@ export interface OEmbedRouteDeps {
 }
 
 const DEFAULT_WIDTH = 960
+const MIN_WIDTH = 200
 const VIDEO_URL = /^\/(?:v|embed)\/([A-Za-z0-9_-]{1,64})\/?$/
 
 /** oEmbed (https://oembed.com) so pasted share links unfurl as players in other apps. */
@@ -41,9 +42,14 @@ export function oembedRoutes(deps: OEmbedRouteDeps): Hono<AppEnv> {
     if (!playback || playback.video.privacy !== 'link') return notFound()
 
     const top = playback.video.render?.renditions[0] ?? { width: 16, height: 9 }
-    const maxWidth = Number(c.req.query('maxwidth')) || DEFAULT_WIDTH
-    const width = Math.min(DEFAULT_WIDTH, maxWidth)
-    const height = Math.round((width * top.height) / top.width)
+    const limit = (name: string) => {
+      const value = Math.floor(Number(c.req.query(name)))
+      return Number.isFinite(value) && value > 0 ? value : Number.POSITIVE_INFINITY
+    }
+    const aspect = top.height / top.width
+    const fitted = Math.min(DEFAULT_WIDTH, limit('maxwidth'), limit('maxheight') / aspect)
+    const width = Math.max(MIN_WIDTH, Math.floor(fitted))
+    const height = Math.round(width * aspect)
     const poster = renderAssetPath(playback.video, 'poster.jpg')
 
     return c.json({

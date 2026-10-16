@@ -80,6 +80,39 @@ describe('playback use cases', () => {
     })
   })
 
+  describe('trims', () => {
+    it('never serves trimmed-out footage to viewers, only to the owner', async () => {
+      const video = await bed.recorded()
+      await new RenderVideo(bed.deps).execute({ videoId: video.id, version: 1 })
+      // Keep 4.5–6 s: only the second segment (4–6 s) remains.
+      await new UpdateVideo(bed.deps).execute({
+        userId: 'owner_1',
+        videoId: video.id,
+        trim: { startMs: 4500, endMs: 6000 },
+      })
+
+      const viewer = await play(video.id)
+      expect(viewer.source.kind).toBe('raw')
+      expect(viewer.segments.map((s) => s.index)).toEqual([1])
+      expect(viewer.skip).toEqual({ startMs: 500, endMs: 2000 })
+      await expect(viewer.mediaUrl('media', 0)).rejects.toMatchObject({ code: 'asset.not_found' })
+      await expect(viewer.mediaUrl('media', 1)).resolves.toContain('seg-000001')
+      await expect(viewer.mediaUrl('init', 0)).resolves.toContain('init.mp4')
+      // The previous render still holds the untrimmed video.
+      await expect(viewer.assetUrl('video.mp4')).rejects.toMatchObject({ code: 'asset.not_found' })
+
+      const owner = await play(video.id, 'owner_1')
+      await expect(owner.mediaUrl('media', 0)).resolves.toContain('seg-000000')
+      await expect(owner.assetUrl('video.mp4')).resolves.toContain('/r1/')
+
+      // Once the trim is rendered, raw media is no longer served to viewers at all.
+      await new RenderVideo(bed.deps).execute({ videoId: video.id, version: 2 })
+      const rendered = await play(video.id)
+      await expect(rendered.mediaUrl('media', 1)).rejects.toMatchObject({ code: 'asset.not_found' })
+      await expect(rendered.assetUrl('video.mp4')).resolves.toContain('/r2/')
+    })
+  })
+
   describe('password-protected videos', () => {
     async function protectedVideo(password = 'open sesame') {
       const video = await bed.recorded()

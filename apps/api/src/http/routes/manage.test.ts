@@ -1,3 +1,4 @@
+import type { InMemoryWorkspaceRepository } from '@weft/core/testing'
 import { describe, expect, it } from 'vitest'
 import type { VideoView } from '../presenters'
 import { buildTestApp, runRenders, sendJson, withRecordedVideo } from '../test-app'
@@ -23,6 +24,22 @@ describe('video management routes', () => {
 
     ctx.actAs(null)
     expect((await ctx.app.request('/api/videos')).status).toBe(401)
+  })
+
+  it("hides other members' password-protected posters in the library", async () => {
+    const { ctx, base } = await setup()
+    await runRenders(ctx)
+    await ctx.app.request(base, sendJson('PATCH', { privacy: 'password', password: 'abcd' }))
+    await (ctx.workspaces as InMemoryWorkspaceRepository).addMember('ws_1', 'member_1', 'member')
+
+    expect(
+      (await json<VideoView[]>(await ctx.app.request('/api/videos'))).data[0]?.posterUrl,
+    ).toContain('poster.jpg')
+    ctx.actAs({ id: 'member_1' })
+    expect((await json<VideoView[]>(await ctx.app.request('/api/videos'))).data[0]).toMatchObject({
+      posterUrl: null,
+      thumbnails: null,
+    })
   })
 
   it('updates title, privacy and trim, and re-renders on a new trim', async () => {

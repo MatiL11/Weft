@@ -26,6 +26,21 @@ describe('oEmbed', () => {
     })
   })
 
+  it('keeps sizes positive and within maxwidth/maxheight', async () => {
+    const ctx = buildTestApp()
+    const video = await withRecordedVideo(ctx)
+    await runRenders(ctx)
+    const size = async (extra: string) => {
+      const body = (await (
+        await ctx.app.request(oembed(`https://weft.test/v/${video.id}`, extra))
+      ).json()) as { width: number; height: number }
+      return [body.width, body.height]
+    }
+    expect(await size('&maxwidth=-100')).toEqual([960, 540])
+    expect(await size('&maxheight=180')).toEqual([320, 180])
+    expect(await size('&maxwidth=50')).toEqual([200, 113])
+  })
+
   it('works before rendering, without a thumbnail', async () => {
     const ctx = buildTestApp()
     const video = await withRecordedVideo(ctx)

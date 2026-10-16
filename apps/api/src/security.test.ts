@@ -1,6 +1,11 @@
 import { createVideo } from '@weft/core'
 import { describe, expect, it } from 'vitest'
-import { AttemptLimiter, HmacVideoAccessTokens, ScryptPasswordHasher } from './security'
+import {
+  FailureLimiter,
+  HmacVideoAccessTokens,
+  ScryptPasswordHasher,
+  UnlockLimiter,
+} from './security'
 
 const video = (passwordHash: string | null) => ({
   ...createVideo({ id: 'vid_1', workspaceId: 'w', ownerId: 'u', title: 'T', now: new Date() }),
@@ -42,17 +47,28 @@ describe('HmacVideoAccessTokens', () => {
   })
 })
 
-describe('AttemptLimiter', () => {
-  it('allows a number of attempts per window, per key', () => {
+describe('UnlockLimiter', () => {
+  it('blocks a client after repeated wrong passwords, and a video after many overall', () => {
     let now = 0
-    const limiter = new AttemptLimiter(2, 1000, () => now)
-    expect([limiter.tryAttempt('a'), limiter.tryAttempt('a'), limiter.tryAttempt('a')]).toEqual([
-      true,
-      true,
-      false,
-    ])
-    expect(limiter.tryAttempt('b')).toBe(true)
+    const clock = () => now
+    const limiter = new UnlockLimiter(
+      new FailureLimiter(2, 1000, clock),
+      new FailureLimiter(3, 1000, clock),
+    )
+
+    limiter.recordFailure('v1', 'a')
+    expect(limiter.isBlocked('v1', 'a')).toBe(false)
+    limiter.recordFailure('v1', 'a')
+    expect(limiter.isBlocked('v1', 'a')).toBe(true)
+    expect(limiter.isBlocked('v1', 'b')).toBe(false)
+    expect(limiter.isBlocked('v2', 'a')).toBe(false)
+
+    limiter.recordFailure('v1', 'b')
+    expect(limiter.isBlocked('v1', 'c')).toBe(true)
+
     now = 1000
-    expect(limiter.tryAttempt('a')).toBe(true)
+    expect(limiter.isBlocked('v1', 'a')).toBe(false)
+    limiter.recordFailure('v2', 'a')
+    expect(limiter.isBlocked('v2', 'a')).toBe(false)
   })
 })

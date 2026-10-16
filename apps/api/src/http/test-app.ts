@@ -19,7 +19,7 @@ import {
   SequentialIdGenerator,
 } from '@weft/core/testing'
 import { vi } from 'vitest'
-import { AttemptLimiter } from '../security'
+import { FailureLimiter, UnlockLimiter } from '../security'
 import { videoUseCases } from '../use-cases'
 import { createApp, type AppDeps, type SessionUser } from './app'
 
@@ -61,7 +61,10 @@ export function buildTestApp(options: TestAppOptions = {}) {
       clock,
     }),
     ...videoUseCases(adapters),
-    unlockLimiter: new AttemptLimiter(3, 60_000),
+    unlockLimiter: new UnlockLimiter(
+      new FailureLimiter(2, 60_000),
+      new FailureLimiter(100, 60_000),
+    ),
     publicUrl: 'https://weft.test',
     logger,
     ...options,

@@ -64,6 +64,30 @@ describe('playback routes', () => {
     expect((await ctx.app.request(`${base}/r/1/1080p/index.m3u8`)).status).toBe(404)
   })
 
+  it('hides the previous render and trimmed-out raw media from viewers after a trim', async () => {
+    const { ctx, video, base } = await setup()
+    await runRenders(ctx)
+    await ctx.app.request(base, sendJson('PATCH', { trim: { startMs: 4500, endMs: 6000 } }))
+    ctx.actAs(null)
+
+    const view = await json(await ctx.app.request(base))
+    expect(view.data).toMatchObject({
+      posterUrl: null,
+      downloadUrl: null,
+      playback: { processed: false, skip: { startMs: 500, endMs: 2000 } },
+    })
+    const playlist = await (await ctx.app.request(`${base}/playlist.m3u8`)).text()
+    expect(playlist).toContain('media/1')
+    expect(playlist).not.toContain('media/0')
+    expect((await ctx.app.request(`${base}/media/0`)).status).toBe(404)
+    expect((await ctx.app.request(`${base}/r/1/video.mp4`)).status).toBe(404)
+    expect((await ctx.app.request(`${base}/r/1/poster.jpg`)).status).toBe(404)
+
+    ctx.actAs({ id: 'user_1' })
+    expect((await ctx.app.request(`${base}/media/0`)).status).toBe(302)
+    expect(video.id).toBe('vid_1')
+  })
+
   it('downloads the rendered MP4 under the video title', async () => {
     const { ctx, video, base } = await setup()
     expect((await ctx.app.request(`${base}/download`)).status).toBe(404)
@@ -97,7 +121,8 @@ describe('playback routes', () => {
     const opened = await ctx.app.request(base, { headers: { cookie: cookie.split(';')[0]! } })
     expect(opened.status).toBe(200)
 
-    // The test app allows 3 attempts per video per minute (invalid bodies don't count).
+    // The test app allows 2 wrong guesses per client and video per minute; right ones and
+    // invalid bodies don't count.
     await ctx.app.request(`${base}/unlock`, postJson({ password: 'guess' }))
     const limited = await ctx.app.request(`${base}/unlock`, postJson({ password: 'abcd' }))
     expect(limited.status).toBe(429)

@@ -127,18 +127,23 @@ describe('video routes', () => {
     expect(ended).toContain('#EXT-X-ENDLIST')
   })
 
-  it('redirects media requests to short-lived storage URLs', async () => {
+  it('redirects media requests to short-lived storage URLs, only for served segments', async () => {
     const ctx = await setup()
     const { video } = await startVideo(ctx)
+    await uploadSegment(ctx, video.id, 'init', 0)
+    await uploadSegment(ctx, video.id, 'media', 0, 0)
+    await uploadSegment(ctx, video.id, 'media', 1, 4000)
     ctx.actAs(null)
 
     const init = await ctx.app.request(`/api/videos/${video.id}/media/init`)
     expect(init.status).toBe(302)
     expect(init.headers.get('location')).toBe(`fake-get://videos/${video.id}/init.mp4`)
 
-    const seg = await ctx.app.request(`/api/videos/${video.id}/media/3`)
-    expect(seg.headers.get('location')).toBe(`fake-get://videos/${video.id}/seg-000003.m4s`)
+    const seg = await ctx.app.request(`/api/videos/${video.id}/media/0`)
+    expect(seg.headers.get('location')).toBe(`fake-get://videos/${video.id}/seg-000000.m4s`)
 
+    // Not in the playlist yet (its duration is unknown while recording).
+    expect((await ctx.app.request(`/api/videos/${video.id}/media/1`)).status).toBe(404)
     expect((await ctx.app.request(`/api/videos/${video.id}/media/-1`)).status).toBe(400)
     expect((await ctx.app.request(`/api/videos/${video.id}/media/abc`)).status).toBe(400)
   })

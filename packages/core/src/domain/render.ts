@@ -4,6 +4,7 @@
  * segments are never modified, so trims can always be changed or undone.
  */
 import { DomainError } from './errors'
+import type { PlayableSegment } from './playlist'
 
 /** none: nothing requested yet (still recording) · failed: the latest attempt gave up. */
 export type RenderState = 'none' | 'queued' | 'processing' | 'ready' | 'failed'
@@ -129,7 +130,7 @@ export function renderPrefix(videoId: string, version: number): string {
 
 /** Files a render contains, relative to its prefix. Anything else is rejected. */
 const RENDER_ASSET =
-  /^(video\.mp4|poster\.jpg|sprite\.jpg|\d{3,4}p\/(index\.m3u8|init\.mp4|seg-\d{5}\.m4s))$/
+  /^(video\.mp4|poster\.jpg|sprite\.jpg|\d{1,4}p\/(index\.m3u8|init\.mp4|seg-\d{5}\.m4s))$/
 
 export function isRenderAsset(path: string): boolean {
   return RENDER_ASSET.test(path)
@@ -137,4 +138,30 @@ export function isRenderAsset(path: string): boolean {
 
 export function renditionDirectory(rendition: { width: number; height: number }): string {
   return `${Math.min(rendition.width, rendition.height)}p`
+}
+
+/**
+ * The raw segments a trim keeps, for playing a trim that has not been rendered yet. Segments
+ * entirely outside the trim are never served, and the trim is returned relative to the first
+ * kept segment (where the playlist, and so the player's timeline, now starts).
+ */
+export function trimmedTimeline(
+  segments: readonly PlayableSegment[],
+  trim: TrimRange | null,
+): { segments: PlayableSegment[]; skip: TrimRange | null } {
+  if (!trim) return { segments: [...segments], skip: null }
+  let startMs = 0
+  const timed = segments.map((segment) => {
+    const entry = { segment, startMs }
+    startMs += segment.durationMs
+    return entry
+  })
+  const kept = timed.filter(
+    (t) => t.startMs < trim.endMs && t.startMs + t.segment.durationMs > trim.startMs,
+  )
+  const offset = kept[0]?.startMs ?? 0
+  return {
+    segments: kept.map((t) => t.segment),
+    skip: { startMs: trim.startMs - offset, endMs: trim.endMs - offset },
+  }
 }
