@@ -45,6 +45,9 @@ describe('createVideo', () => {
       renderState: 'none',
       renderVersion: 0,
       render: null,
+      transcriptLanguage: 'auto',
+      transcriptionState: 'none',
+      transcriptionVersion: 0,
     })
   })
 

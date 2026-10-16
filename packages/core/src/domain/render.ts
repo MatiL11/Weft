@@ -41,6 +41,8 @@ export interface VideoRender {
   readonly renditions: readonly Rendition[]
   readonly sprite: ThumbnailSprite
   readonly mp4ByteLength: number
+  /** Whether there is sound to transcribe (absent on renders made before it was tracked). */
+  readonly hasAudio?: boolean
 }
 
 /** What the worker produces; the use case adds the version and trim. */

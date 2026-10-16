@@ -1,15 +1,24 @@
 import { DomainError } from '../domain/errors'
 import { normalizeTrim, sameTrim, type TrimRange } from '../domain/render'
+import { validateTranscriptLanguage, type TranscriptLanguage } from '../domain/transcript'
 import { normalizeTitle, type Video, type VideoPrivacy } from '../domain/video'
-import type { PasswordHasher, RenderQueue, VideoRepository, WorkspaceRepository } from '../ports'
+import type {
+  PasswordHasher,
+  RenderQueue,
+  TranscriptionQueue,
+  VideoRepository,
+  WorkspaceRepository,
+} from '../ports'
 import { validatePassword } from './playback'
 import { loadOwnVideo, loadVideo } from './recording'
 import { queueRender } from './rendering'
+import { queueTranscription } from './transcription'
 
 export interface ManagementDeps {
   videos: VideoRepository
   workspaces: WorkspaceRepository
   renders: RenderQueue
+  transcriptions: TranscriptionQueue
   passwords: PasswordHasher
 }
 
@@ -20,6 +29,8 @@ export interface VideoChanges {
   password?: string
   /** null removes the trim. */
   trim?: TrimRange | null
+  /** Spoken language for the transcript; changing it transcribes again. */
+  transcriptLanguage?: TranscriptLanguage
 }
 
 /** Owner edits: title, privacy (with password) and trim. A new trim triggers a re-render. */
@@ -32,9 +43,25 @@ export class UpdateVideo {
     const privacy = input.privacy ?? video.privacy
     const passwordHash = await this.passwordHashFor(video, privacy, input.password)
     const trim = input.trim === undefined ? video.trim : this.validTrim(video, input.trim)
+    const transcriptLanguage =
+      input.transcriptLanguage === undefined
+        ? video.transcriptLanguage
+        : validateTranscriptLanguage(input.transcriptLanguage)
 
-    await this.deps.videos.update({ ...video, title, privacy, passwordHash, trim })
-    if (!sameTrim(trim, video.trim)) await queueRender(this.deps, video.id)
+    await this.deps.videos.update({
+      ...video,
+      title,
+      privacy,
+      passwordHash,
+      trim,
+      transcriptLanguage,
+    })
+    if (!sameTrim(trim, video.trim)) {
+      // The new render will queue its own transcription.
+      await queueRender(this.deps, video.id)
+    } else if (transcriptLanguage !== video.transcriptLanguage && video.render) {
+      await queueTranscription(this.deps, video.id)
+    }
     return loadVideo(this.deps.videos, video.id)
   }
 
@@ -66,6 +93,20 @@ export class RequestRender {
       throw new DomainError('video.not_ready', 'Only finished recordings can be processed.')
     }
     await queueRender(this.deps, video.id)
+    return loadVideo(this.deps.videos, video.id)
+  }
+}
+
+/** Transcribes the current render again (e.g. after a failure). Owner only. */
+export class RequestTranscription {
+  constructor(private readonly deps: ManagementDeps) {}
+
+  async execute(input: { userId: string; videoId: string }): Promise<Video> {
+    const video = await loadOwnVideo(this.deps.videos, input.userId, input.videoId)
+    if (!video.render) {
+      throw new DomainError('video.not_ready', 'Videos are transcribed once they are processed.')
+    }
+    await queueTranscription(this.deps, video.id)
     return loadVideo(this.deps.videos, video.id)
   }
 }

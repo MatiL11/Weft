@@ -1,4 +1,10 @@
 import type { RenderOutput, RenderState, TrimRange, VideoRender } from '../domain/render'
+import type {
+  Transcript,
+  TranscriptionState,
+  TranscriptLanguage,
+  TranscriptSegment,
+} from '../domain/transcript'
 import type { SegmentKind, Video, VideoSegment } from '../domain/video'
 import type { Workspace, WorkspaceMembership, WorkspaceRole } from '../domain/workspace'
 
@@ -25,9 +31,9 @@ export interface VideoRepository {
   /** Newest first. */
   listForWorkspace(workspaceId: string, options: { limit: number }): Promise<Video[]>
   /**
-   * Saves the owner-editable fields and recording status. Render fields are left alone:
-   * they change only through `requestRender` and `saveRender`, so concurrent edits and
-   * background renders never overwrite each other.
+   * Saves the owner-editable fields and recording status. Render and transcription progress
+   * is left alone: it changes only through `requestRender`/`saveRender` and
+   * `requestTranscription`/`saveTranscription`, so edits and background jobs never collide.
    */
   update(video: Video): Promise<void>
   /** Bumps the render version and marks it queued; returns the new version (null if gone). */
@@ -41,6 +47,10 @@ export interface VideoRepository {
     version: number,
     update: { state: RenderState; render?: VideoRender },
   ): Promise<boolean>
+  /** Bumps the transcription version and marks it queued; returns it (null if gone). */
+  requestTranscription(id: string): Promise<number | null>
+  /** Records transcription progress if `version` is still the latest; false when stale. */
+  saveTranscription(id: string, version: number, state: TranscriptionState): Promise<boolean>
   /** Inserts or replaces the expected segment (re-preparing resets its upload state). */
   upsertSegment(segment: VideoSegment): Promise<void>
   findSegment(videoId: string, kind: SegmentKind, index: number): Promise<VideoSegment | null>
@@ -92,6 +102,29 @@ export interface MediaRenderer {
     /** Where the render's files go (see `isRenderAsset` for their names). */
     outputPrefix: string
   }): Promise<RenderOutput>
+}
+
+export interface TranscriptionJob {
+  videoId: string
+  version: number
+}
+
+export interface TranscriptionQueue {
+  enqueueTranscription(job: TranscriptionJob): Promise<void>
+}
+
+export interface TranscriptRepository {
+  /** Replaces the video's transcript. */
+  save(transcript: Transcript): Promise<void>
+  find(videoId: string): Promise<Transcript | null>
+}
+
+/** Turns a stored video's speech into timed text (implemented with whisper.cpp). */
+export interface SpeechRecognizer {
+  transcribe(input: {
+    mediaKey: string
+    language: TranscriptLanguage
+  }): Promise<{ language: string; segments: TranscriptSegment[] }>
 }
 
 export interface PasswordHasher {

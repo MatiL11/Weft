@@ -8,10 +8,12 @@ import {
   type PlaybackSource,
   type TrimRange,
 } from '../domain/render'
+import type { Transcript } from '../domain/transcript'
 import { accessFor, segmentKey, type SegmentKind, type Video } from '../domain/video'
 import type {
   ObjectStorage,
   PasswordHasher,
+  TranscriptRepository,
   VideoAccessTokens,
   VideoRepository,
   WorkspaceRepository,
@@ -25,6 +27,7 @@ export interface PlaybackDeps {
   workspaces: WorkspaceRepository
   storage: ObjectStorage
   accessTokens: VideoAccessTokens
+  transcripts: TranscriptRepository
 }
 
 export interface Playback {
@@ -42,6 +45,8 @@ export interface Playback {
   assetUrl(path: string, options?: { downloadFilename?: string }): Promise<string>
   /** Contents of a render playlist. */
   readAsset(path: string): Promise<string>
+  /** The transcript of what is playing, if it has one (timestamps follow the render). */
+  transcript(): Promise<Transcript | null>
 }
 
 export interface PlaybackRequest {
@@ -55,7 +60,7 @@ export class GetPlayback {
   constructor(private readonly deps: PlaybackDeps) {}
 
   async execute(input: PlaybackRequest): Promise<Playback> {
-    const { videos, workspaces, storage, accessTokens } = this.deps
+    const { videos, workspaces, storage, accessTokens, transcripts } = this.deps
     const video = await loadVideo(videos, input.videoId)
     const role = input.viewerId ? await workspaces.roleOf(video.workspaceId, input.viewerId) : null
     const unlocked = !!input.accessToken && accessTokens.verify(video, input.accessToken)
@@ -106,6 +111,11 @@ export class GetPlayback {
           expiresInSeconds: PLAYBACK_URL_TTL_SECONDS,
           ...options,
         }),
+      transcript: async () => {
+        if (source.kind !== 'render') return null
+        const transcript = await transcripts.find(video.id)
+        return transcript?.renderVersion === source.render.version ? transcript : null
+      },
       readAsset: async (path) => {
         const text = await storage.readText(assetKey(path))
         if (text === null) throw new DomainError('asset.not_found', 'This file does not exist.')

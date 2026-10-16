@@ -1,5 +1,11 @@
 // In-memory fakes of core ports, for fast use-case tests in any package.
 import type { RenderOutput, RenderState, TrimRange, VideoRender } from '../domain/render'
+import type {
+  Transcript,
+  TranscriptionState,
+  TranscriptLanguage,
+  TranscriptSegment,
+} from '../domain/transcript'
 import type { SegmentKind, Video, VideoSegment } from '../domain/video'
 import type { Workspace, WorkspaceMembership, WorkspaceRole } from '../domain/workspace'
 import type {
@@ -11,6 +17,10 @@ import type {
   PresignedUpload,
   RenderJob,
   RenderQueue,
+  SpeechRecognizer,
+  TranscriptionJob,
+  TranscriptionQueue,
+  TranscriptRepository,
   VideoAccessTokens,
   VideoRepository,
   WorkspaceRepository,
@@ -104,8 +114,15 @@ export class InMemoryVideoRepository implements VideoRepository {
   async update(video: Video): Promise<void> {
     const current = this.videos.get(video.id)
     if (!current) return
-    const { renderState, renderVersion, render } = current
-    this.videos.set(video.id, { ...video, renderState, renderVersion, render })
+    const { renderState, renderVersion, render, transcriptionState, transcriptionVersion } = current
+    this.videos.set(video.id, {
+      ...video,
+      renderState,
+      renderVersion,
+      render,
+      transcriptionState,
+      transcriptionVersion,
+    })
   }
 
   async requestRender(id: string): Promise<number | null> {
@@ -128,6 +145,21 @@ export class InMemoryVideoRepository implements VideoRepository {
       renderState: update.state,
       render: update.render ?? video.render,
     })
+    return true
+  }
+
+  async requestTranscription(id: string): Promise<number | null> {
+    const video = this.videos.get(id)
+    if (!video) return null
+    const transcriptionVersion = video.transcriptionVersion + 1
+    this.videos.set(id, { ...video, transcriptionVersion, transcriptionState: 'queued' })
+    return transcriptionVersion
+  }
+
+  async saveTranscription(id: string, version: number, state: TranscriptionState) {
+    const video = this.videos.get(id)
+    if (!video || video.transcriptionVersion !== version) return false
+    this.videos.set(id, { ...video, transcriptionState: state })
     return true
   }
 
@@ -213,14 +245,52 @@ export class FakeObjectStorage implements ObjectStorage {
   }
 }
 
-/** Records enqueued render jobs; `failing` simulates an unreachable queue. */
-export class FakeRenderQueue implements RenderQueue {
+/** Records enqueued render and transcription jobs; `failing` simulates an unreachable queue. */
+export class FakeRenderQueue implements RenderQueue, TranscriptionQueue {
   readonly jobs: RenderJob[] = []
+  readonly transcriptionJobs: TranscriptionJob[] = []
   failing = false
 
   async enqueue(job: RenderJob): Promise<void> {
     if (this.failing) throw new Error('queue unavailable')
     this.jobs.push(job)
+  }
+
+  async enqueueTranscription(job: TranscriptionJob): Promise<void> {
+    if (this.failing) throw new Error('queue unavailable')
+    this.transcriptionJobs.push(job)
+  }
+}
+
+export class InMemoryTranscriptRepository implements TranscriptRepository {
+  private readonly transcripts = new Map<string, Transcript>()
+
+  async save(transcript: Transcript): Promise<void> {
+    this.transcripts.set(transcript.videoId, transcript)
+  }
+
+  async find(videoId: string): Promise<Transcript | null> {
+    return this.transcripts.get(videoId) ?? null
+  }
+}
+
+export const FAKE_TRANSCRIPT_SEGMENTS: TranscriptSegment[] = [
+  { startMs: 0, endMs: 2500, text: 'Hola a todos.' },
+  { startMs: 2500, endMs: 5000, text: 'Esta es la demo.' },
+]
+
+/** Returns a fixed transcript in the requested language ('es' when auto-detecting). */
+export class FakeSpeechRecognizer implements SpeechRecognizer {
+  readonly calls: { mediaKey: string; language: TranscriptLanguage }[] = []
+  error: Error | null = null
+
+  async transcribe(input: { mediaKey: string; language: TranscriptLanguage }) {
+    this.calls.push(input)
+    if (this.error) throw this.error
+    return {
+      language: input.language === 'auto' ? 'es' : input.language,
+      segments: FAKE_TRANSCRIPT_SEGMENTS,
+    }
   }
 }
 
@@ -229,6 +299,7 @@ export const FAKE_RENDER_OUTPUT: RenderOutput = {
   renditions: [{ width: 1280, height: 720, bandwidth: 2_000_000, codecs: 'avc1.64001f,mp4a.40.2' }],
   sprite: { columns: 10, count: 6, intervalMs: 1000, tileWidth: 160, tileHeight: 90 },
   mp4ByteLength: 123_456,
+  hasAudio: true,
 }
 
 /** Writes a marker object under the output prefix and returns a fixed output. */

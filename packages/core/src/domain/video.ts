@@ -1,5 +1,6 @@
 import { DomainError } from './errors'
 import type { RenderState, TrimRange, VideoRender } from './render'
+import type { TranscriptionState, TranscriptLanguage } from './transcript'
 import type { WorkspaceRole } from './workspace'
 
 export type VideoStatus = 'recording' | 'ready'
@@ -38,6 +39,12 @@ export interface Video {
   readonly renderVersion: number
   /** The latest successful render, possibly older than `renderVersion`. */
   readonly render: VideoRender | null
+  /** Language to transcribe in ('auto' detects it). */
+  readonly transcriptLanguage: TranscriptLanguage
+  /** State of the most recently requested transcription. */
+  readonly transcriptionState: TranscriptionState
+  /** Incremented on every transcription request; stale jobs compare against it. */
+  readonly transcriptionVersion: number
 }
 
 export interface VideoSegment {
@@ -88,6 +95,9 @@ export function createVideo(props: CreateVideoProps): Video {
     renderState: 'none',
     renderVersion: 0,
     render: null,
+    transcriptLanguage: 'auto',
+    transcriptionState: 'none',
+    transcriptionVersion: 0,
   }
 }
 

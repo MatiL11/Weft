@@ -5,8 +5,10 @@ import type {
   ObjectStorage,
   RenderJob,
   RenderQueue,
+  TranscriptionQueue,
   VideoRepository,
 } from '../ports'
+import { queueTranscription } from './transcription'
 
 /**
  * Requests a new render of the video. If the queue is unreachable the video stays playable
@@ -29,6 +31,7 @@ export interface RenderDeps {
   videos: VideoRepository
   storage: ObjectStorage
   renderer: MediaRenderer
+  transcriptions: TranscriptionQueue
 }
 
 export type RenderResult = 'rendered' | 'stale'
@@ -71,6 +74,8 @@ export class RenderVideo {
     if (video.render && video.render.version !== job.version) {
       await storage.deletePrefix(renderPrefix(video.id, video.render.version))
     }
+    // The new render has its own timeline, so its speech is transcribed again.
+    await queueTranscription(this.deps, video.id)
     return 'rendered'
   }
 }
