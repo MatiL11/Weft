@@ -14,6 +14,10 @@ describe('loadConfig', () => {
       FFMPEG_PATH: 'ffmpeg',
       FFPROBE_PATH: 'ffprobe',
       RENDER_CONCURRENCY: 1,
+      WHISPER_CLI_PATH: 'whisper-cli',
+      WHISPER_MODEL: 'base',
+      WHISPER_MODELS_DIR: '/models',
+      TRANSCRIBE_CONCURRENCY: 1,
       S3_BUCKET: 'weft',
       LOG_LEVEL: 'info',
     })

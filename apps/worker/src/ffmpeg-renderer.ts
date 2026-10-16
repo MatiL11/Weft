@@ -152,6 +152,7 @@ export class FfmpegMediaRenderer implements MediaRenderer {
         tileHeight: tileHeight(mp4Info, THUMBNAIL_WIDTH),
       },
       mp4ByteLength: (await stat(mp4)).size,
+      hasAudio: mp4Info.hasAudio,
     }
   }
 

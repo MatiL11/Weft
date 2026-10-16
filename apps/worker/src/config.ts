@@ -1,4 +1,4 @@
-import { tmpdir } from 'node:os'
+import { availableParallelism, tmpdir } from 'node:os'
 import { z } from 'zod'
 
 const ConfigSchema = z.object({
@@ -14,6 +14,19 @@ const ConfigSchema = z.object({
   FFPROBE_PATH: z.string().min(1).default('ffprobe'),
   /** Renders processed in parallel by this worker; each one can use every CPU core. */
   RENDER_CONCURRENCY: z.coerce.number().int().min(1).max(8).default(1),
+  WHISPER_CLI_PATH: z.string().min(1).default('whisper-cli'),
+  /** Multilingual model downloaded on first start (verified against its published checksum). */
+  WHISPER_MODEL: z.enum(['tiny', 'base', 'small', 'medium']).default('base'),
+  WHISPER_MODELS_DIR: z.string().min(1).default('/models'),
+  /** Use your own model file instead of downloading one. */
+  WHISPER_MODEL_PATH: z.string().min(1).optional(),
+  WHISPER_THREADS: z.coerce
+    .number()
+    .int()
+    .min(1)
+    .max(64)
+    .default(Math.min(8, availableParallelism())),
+  TRANSCRIBE_CONCURRENCY: z.coerce.number().int().min(1).max(8).default(1),
   /** Scratch space for renders (needs roughly 3× the size of the largest recording). */
   WORK_DIR: z.string().min(1).default(tmpdir()),
   LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace']).default('info'),
