@@ -56,20 +56,31 @@ export interface PlaybackRequest {
   accessToken?: string | null
 }
 
+/** Loads a video the viewer may watch; fails as if it didn't exist when it is hidden. */
+export async function loadViewableVideo(
+  deps: Pick<PlaybackDeps, 'videos' | 'workspaces' | 'accessTokens'>,
+  input: PlaybackRequest,
+): Promise<Video> {
+  const video = await loadVideo(deps.videos, input.videoId)
+  const role = input.viewerId
+    ? await deps.workspaces.roleOf(video.workspaceId, input.viewerId)
+    : null
+  const unlocked = !!input.accessToken && deps.accessTokens.verify(video, input.accessToken)
+  const access = accessFor(video, { userId: input.viewerId, role, unlocked })
+  if (access === 'password_required') {
+    throw new DomainError('video.password_required', 'This video is password protected.')
+  }
+  // Hidden videos look missing, so their existence is not revealed.
+  if (access === 'hidden') throw new DomainError('video.not_found', 'Video not found.')
+  return video
+}
+
 export class GetPlayback {
   constructor(private readonly deps: PlaybackDeps) {}
 
   async execute(input: PlaybackRequest): Promise<Playback> {
-    const { videos, workspaces, storage, accessTokens, transcripts } = this.deps
-    const video = await loadVideo(videos, input.videoId)
-    const role = input.viewerId ? await workspaces.roleOf(video.workspaceId, input.viewerId) : null
-    const unlocked = !!input.accessToken && accessTokens.verify(video, input.accessToken)
-    const access = accessFor(video, { userId: input.viewerId, role, unlocked })
-    if (access === 'password_required') {
-      throw new DomainError('video.password_required', 'This video is password protected.')
-    }
-    // Hidden videos look missing, so their existence is not revealed.
-    if (access === 'hidden') throw new DomainError('video.not_found', 'Video not found.')
+    const { videos, storage, transcripts } = this.deps
+    const video = await loadViewableVideo(this.deps, input)
 
     const media = (await videos.listSegments(video.id)).filter(
       (s) => s.kind === 'media' && s.uploadedAt,

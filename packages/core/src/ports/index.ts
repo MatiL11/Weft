@@ -1,3 +1,4 @@
+import type { Comment, CommentWithAuthor, Reaction } from '../domain/collaboration'
 import type { RenderOutput, RenderState, TrimRange, VideoRender } from '../domain/render'
 import type {
   Transcript,
@@ -140,4 +141,28 @@ export interface PasswordHasher {
 export interface VideoAccessTokens {
   issue(video: Video): string
   verify(video: Video, token: string): boolean
+}
+
+export interface CommentRepository {
+  create(comment: Comment): Promise<void>
+  update(comment: Comment): Promise<void>
+  findById(id: string): Promise<CommentWithAuthor | null>
+  /** Oldest first. */
+  listForVideo(videoId: string): Promise<CommentWithAuthor[]>
+}
+
+export interface ReactionRepository {
+  create(reaction: Reaction): Promise<void>
+  /** The most recent `limit` reactions, oldest first. */
+  listForVideo(videoId: string, options: { limit: number }): Promise<Reaction[]>
+}
+
+/** Something happened on a video that people watching it should see right away. */
+export type VideoEvent =
+  | { type: 'comment.created' | 'comment.updated'; videoId: string; comment: CommentWithAuthor }
+  | { type: 'comment.deleted'; videoId: string; commentId: string }
+  | { type: 'reaction.created'; videoId: string; reaction: Reaction }
+
+export interface VideoEventPublisher {
+  publish(event: VideoEvent): Promise<void>
 }

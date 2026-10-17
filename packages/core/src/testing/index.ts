@@ -1,4 +1,5 @@
 // In-memory fakes of core ports, for fast use-case tests in any package.
+import type { Comment, CommentWithAuthor, Reaction } from '../domain/collaboration'
 import type { RenderOutput, RenderState, TrimRange, VideoRender } from '../domain/render'
 import type {
   Transcript,
@@ -10,6 +11,10 @@ import type { SegmentKind, Video, VideoSegment } from '../domain/video'
 import type { Workspace, WorkspaceMembership, WorkspaceRole } from '../domain/workspace'
 import type {
   Clock,
+  CommentRepository,
+  ReactionRepository,
+  VideoEvent,
+  VideoEventPublisher,
   IdGenerator,
   MediaRenderer,
   ObjectStorage,
@@ -340,5 +345,58 @@ export class FakeAccessTokens implements VideoAccessTokens {
 
   verify(video: Video, token: string): boolean {
     return token === this.issue(video)
+  }
+}
+
+/** Comments in memory; author names come from the given user directory. */
+export class InMemoryCommentRepository implements CommentRepository {
+  private readonly comments = new Map<string, Comment>()
+
+  constructor(private readonly userNames: Record<string, string> = {}) {}
+
+  async create(comment: Comment): Promise<void> {
+    this.comments.set(comment.id, comment)
+  }
+
+  async update(comment: Comment): Promise<void> {
+    this.comments.set(comment.id, comment)
+  }
+
+  async findById(id: string): Promise<CommentWithAuthor | null> {
+    const comment = this.comments.get(id)
+    return comment ? this.withAuthor(comment) : null
+  }
+
+  async listForVideo(videoId: string): Promise<CommentWithAuthor[]> {
+    return [...this.comments.values()]
+      .filter((c) => c.videoId === videoId)
+      .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime())
+      .map((c) => this.withAuthor(c))
+  }
+
+  private withAuthor(comment: Comment): CommentWithAuthor {
+    const name = this.userNames[comment.authorId] ?? comment.authorId
+    return { ...comment, author: { id: comment.authorId, name } }
+  }
+}
+
+export class InMemoryReactionRepository implements ReactionRepository {
+  private reactions: readonly Reaction[] = []
+
+  async create(reaction: Reaction): Promise<void> {
+    this.reactions = [...this.reactions, reaction]
+  }
+
+  async listForVideo(videoId: string, options: { limit: number }): Promise<Reaction[]> {
+    return this.reactions.filter((r) => r.videoId === videoId).slice(-options.limit)
+  }
+}
+
+/** Keeps every published event, for assertions. */
+export class RecordingEventPublisher implements VideoEventPublisher {
+  readonly events: VideoEvent[] = []
+
+  async publish(event: VideoEvent): Promise<void> {
+    this.events.push(event)
   }
 }
