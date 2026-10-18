@@ -135,10 +135,16 @@ describe('DrizzleVideoRepository (integration)', () => {
       )
     }
     expect(
-      (await repo.listForWorkspace('ws_1', { limit: 10, trashed: false })).map((v) => v.id),
+      (await repo.listForWorkspace('ws_1', { limit: 10, trashed: false, viewerId: 'user_1' })).map(
+        (v) => v.id,
+      ),
     ).toEqual(['b', 'c', 'a'])
-    expect(await repo.listForWorkspace('ws_1', { limit: 1, trashed: false })).toHaveLength(1)
-    expect(await repo.listForWorkspace('other', { limit: 10, trashed: false })).toEqual([])
+    expect(
+      await repo.listForWorkspace('ws_1', { limit: 1, trashed: false, viewerId: 'user_1' }),
+    ).toHaveLength(1)
+    expect(
+      await repo.listForWorkspace('other', { limit: 10, trashed: false, viewerId: 'user_1' }),
+    ).toEqual([])
   })
 
   it('enforces that a password exists exactly when the video is password protected', async () => {

@@ -90,6 +90,8 @@ export function buildTestApp(options: TestAppOptions = {}) {
     }),
     ...videoUseCases(adapters),
     reactionLimiter: new HitLimiter(3, 60_000),
+    commentLimiter: new HitLimiter(100, 60_000),
+    inviteLimiter: new HitLimiter(100, 60_000),
     videoEvents: events,
     heartbeatMs: 50,
     unlockLimiter: new UnlockLimiter(

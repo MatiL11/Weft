@@ -149,6 +149,21 @@ describe('discussion routes', () => {
     ])
   })
 
+  it('ends the stream when the viewer loses access', async () => {
+    const { ctx, base } = await setup()
+    ctx.actAs({ id: 'user_2' })
+    const stream = await ctx.app.request(`${base}/events`)
+    const reader = stream.body!.getReader()
+    await reader.read()
+    ctx.actAs({ id: 'user_1' })
+    await ctx.app.request(base, sendJson('PATCH', { privacy: 'private' }))
+    // The next heartbeat (50 ms in the test app) re-checks access and closes the stream.
+    const deadline = Date.now() + 2000
+    let done = false
+    while (!done && Date.now() < deadline) done = (await reader.read()).done
+    expect(done).toBe(true)
+  })
+
   it('keeps hidden videos hidden', async () => {
     const { ctx, base } = await setup()
     await ctx.app.request(base, sendJson('PATCH', { privacy: 'private' }))

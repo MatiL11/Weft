@@ -31,6 +31,8 @@ export interface WorkspaceRouteDeps {
   removeMember: RemoveMember
   getInvitation: GetInvitation
   acceptInvitation: AcceptInvitation
+  /** Limits invitations per account. */
+  inviteLimiter: { tryHit(key: string): boolean }
   listFolders: ListFolders
   createFolder: CreateFolder
   renameFolder: RenameFolder
@@ -113,6 +115,9 @@ export function workspaceRoutes(deps: WorkspaceRouteDeps): Hono<AppEnv> {
   routes.post('/:id/invitations', async (c) => {
     const body = await parseJson(c, InviteBody)
     if (!body) return invalid(c)
+    if (!deps.inviteLimiter.tryHit(userId(c))) {
+      return c.json(fail('invitation.too_many', 'Too many invitations. Try again later.'), 429)
+    }
     const { invitation, token } = await deps.inviteMember.execute({
       userId: userId(c),
       workspaceId: c.req.param('id'),

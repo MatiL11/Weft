@@ -11,6 +11,10 @@ describe('safeNextPath', () => {
     ['//evil.example', '/'],
     ['/\\evil.example', '/'],
     ['javascript:alert(1)', '/'],
+    ['/\t/evil.example', '/'],
+    ['/%09/evil.example', '/%09/evil.example'],
+    ['/\n/evil.example', '/'],
+    ['/a\\b', '/'],
   ])('%j → %j', (raw, expected) => {
     expect(safeNextPath(raw)).toBe(expected)
   })

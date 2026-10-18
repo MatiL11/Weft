@@ -109,11 +109,16 @@ export interface VideoRepository {
 
 export interface VideoListFilter {
   limit: number
+  /**
+   * Who is looking: only their own videos in the trash, others' private videos never, and
+   * transcripts of others' password-protected videos are not searched.
+   */
+  viewerId: string
   /** Trashed videos only, or only those not in the trash. */
   trashed: boolean
   /** A folder, null for the top level, or undefined for every folder. */
   folderId?: string | null
-  /** Matches the title or the transcript, ignoring case and accents. */
+  /** Matches the title or the current transcript, ignoring case and accents. */
   search?: string
 }
 

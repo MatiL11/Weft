@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { applyEvent, type Discussion, type DiscussionEvent } from '@/lib/discussion'
 import { fetchDiscussion } from '@/lib/video-api'
 
@@ -23,17 +23,28 @@ export interface LiveDiscussion {
 export function useDiscussion(videoId: string): LiveDiscussion {
   const [discussion, setDiscussion] = useState<Discussion | null>(null)
   const [incoming, setIncoming] = useState<{ id: string; emoji: string }[]>([])
+  /** Which load is the latest, and the events seen since it started. */
+  const loads = useRef({ latest: 0, eventsSince: [] as DiscussionEvent[] })
 
   const apply = useCallback((event: DiscussionEvent) => {
+    loads.current.eventsSince.push(event)
     setDiscussion((current) => (current ? applyEvent(current, event) : current))
   }, [])
 
   useEffect(() => {
     let cancelled = false
-    const load = () =>
-      fetchDiscussion(videoId)
-        .then((data) => !cancelled && setDiscussion(data))
+    const load = () => {
+      const id = ++loads.current.latest
+      loads.current.eventsSince = []
+      return fetchDiscussion(videoId)
+        .then((data) => {
+          // An older load finishing late must not undo a newer one, and events that arrived
+          // while this one was in flight are applied on top of it (applying twice is harmless).
+          if (cancelled || id !== loads.current.latest) return
+          setDiscussion(loads.current.eventsSince.reduce(applyEvent, data))
+        })
         .catch(() => {})
+    }
 
     const source = new EventSource(`/api/videos/${encodeURIComponent(videoId)}/events`)
     // 'ready' also fires after a reconnect: reload to catch up on anything missed meanwhile.

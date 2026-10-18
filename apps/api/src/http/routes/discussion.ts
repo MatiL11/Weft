@@ -15,7 +15,7 @@ import type { AppEnv } from '../context'
 import { fail, ok } from '../envelope'
 import { presentComment, presentReaction } from '../presenters'
 import { invalid, parseJson } from '../validation'
-import { accessCookieName, clientOf } from './playback'
+import { accessCookieName } from './playback'
 
 export interface DiscussionRouteDeps {
   authorizeViewer: AuthorizeViewer
@@ -24,24 +24,36 @@ export interface DiscussionRouteDeps {
   editComment: EditComment
   deleteComment: DeleteComment
   addReaction: AddReaction
-  /** Limits reactions per client and video. */
+  /** Limits reactions per viewer (account or address) and video. */
   reactionLimiter: { tryHit(key: string): boolean }
+  /** Limits comments per account. */
+  commentLimiter: { tryHit(key: string): boolean }
   videoEvents: {
     subscribe(videoId: string, listener: (event: VideoEvent) => void): Promise<() => void>
   }
-  /** How often idle event streams send a keep-alive. */
+  /** How often event streams send a keep-alive and re-check access. */
   heartbeatMs?: number
+  /** Longest an event stream stays open. */
+  maxStreamMs?: number
 }
+
+/** Recordings are capped well below a day; this keeps timestamps within the database's range. */
+const MAX_TIMESTAMP_MS = 24 * 60 * 60 * 1000
 
 const CommentBody = z.object({
   body: z.string().max(10_000),
-  timestampMs: z.number().nonnegative().nullable().optional(),
+  timestampMs: z.number().nonnegative().max(MAX_TIMESTAMP_MS).nullable().optional(),
   parentId: z.string().min(1).max(64).nullable().optional(),
 })
 const EditBody = z.object({ body: z.string().max(10_000) })
-const ReactionBody = z.object({ emoji: z.string().max(16), timestampMs: z.number().nonnegative() })
+const ReactionBody = z.object({
+  emoji: z.string().max(16),
+  timestampMs: z.number().nonnegative().max(MAX_TIMESTAMP_MS),
+})
 
 const DEFAULT_HEARTBEAT_MS = 25_000
+/** Streams are closed after this long; the browser reconnects on its own. */
+const MAX_STREAM_MS = 30 * 60 * 1000
 
 /** Comments, reactions and their live updates. Privacy is enforced by the use cases. */
 export function discussionRoutes(deps: DiscussionRouteDeps): Hono<AppEnv> {
@@ -73,6 +85,9 @@ export function discussionRoutes(deps: DiscussionRouteDeps): Hono<AppEnv> {
     const body = await parseJson(c, CommentBody)
     if (!body) return invalid(c)
     const request = viewer(c)
+    if (request.viewerId && !deps.commentLimiter.tryHit(request.viewerId)) {
+      return c.json(fail('comment.too_many', 'Slow down a little.'), 429)
+    }
     const comment = await deps.addComment.execute({ ...request, ...body })
     const video = await deps.authorizeViewer.execute(request)
     return c.json(ok(presentComment(comment, video)), 201)
@@ -100,7 +115,8 @@ export function discussionRoutes(deps: DiscussionRouteDeps): Hono<AppEnv> {
     const body = await parseJson(c, ReactionBody)
     if (!body) return invalid(c)
     const request = viewer(c)
-    if (!deps.reactionLimiter.tryHit(`${clientOf(c)} ${request.videoId}`)) {
+    const who = request.viewerId ?? c.get('clientIp')
+    if (!deps.reactionLimiter.tryHit(`${who} ${request.videoId}`)) {
       return c.json(fail('reaction.too_many', 'Slow down a little.'), 429)
     }
     const reaction = await deps.addReaction.execute({ ...request, ...body })
@@ -109,9 +125,14 @@ export function discussionRoutes(deps: DiscussionRouteDeps): Hono<AppEnv> {
   })
 
   // Server-sent events: new, edited and deleted comments and new reactions, as they happen.
+  // Access is checked again on every heartbeat, so people who lose access stop receiving
+  // events, and streams end after a while (browsers reconnect, checking access anew).
   routes.get('/:id/events', async (c) => {
-    const video = await deps.authorizeViewer.execute(viewer(c))
+    const request = viewer(c)
+    let video = await deps.authorizeViewer.execute(request)
     const response = streamSSE(c, async (stream) => {
+      const ended = new Promise<void>((resolve) => stream.onAbort(resolve))
+      if (stream.aborted) return
       const send = (event: VideoEvent) => {
         const data =
           event.type === 'comment.deleted'
@@ -122,14 +143,25 @@ export function discussionRoutes(deps: DiscussionRouteDeps): Hono<AppEnv> {
         void stream.writeSSE({ event: event.type, data: JSON.stringify(data) })
       }
       const unsubscribe = await deps.videoEvents.subscribe(video.id, send)
-      await stream.writeSSE({ event: 'ready', data: '{}' })
-      const heartbeat = setInterval(
-        () => void stream.write(': keep-alive\n\n'),
-        deps.heartbeatMs ?? DEFAULT_HEARTBEAT_MS,
-      )
-      await new Promise<void>((resolve) => stream.onAbort(resolve))
-      clearInterval(heartbeat)
-      unsubscribe()
+      const heartbeat = setInterval(() => {
+        deps.authorizeViewer
+          .execute(request)
+          .then((current) => {
+            // Picks up trims and privacy changes for later events.
+            video = current
+            return stream.write(': keep-alive\n\n')
+          })
+          .catch(() => stream.abort())
+      }, deps.heartbeatMs ?? DEFAULT_HEARTBEAT_MS)
+      const lifetime = setTimeout(() => stream.abort(), deps.maxStreamMs ?? MAX_STREAM_MS)
+      try {
+        if (!stream.aborted) await stream.writeSSE({ event: 'ready', data: '{}' })
+        await ended
+      } finally {
+        clearInterval(heartbeat)
+        clearTimeout(lifetime)
+        unsubscribe()
+      }
     })
     // Proxies must neither compress nor buffer the stream, or events would arrive late.
     response.headers.set('cache-control', 'no-cache, no-transform')

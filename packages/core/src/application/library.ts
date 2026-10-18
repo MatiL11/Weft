@@ -65,22 +65,22 @@ export class ListVideos {
     const trashed = input.trashed ?? false
     const videos = await this.deps.videos.listForWorkspace(input.workspaceId, {
       limit: LIST_LIMIT,
+      viewerId: input.userId,
       trashed,
       folderId: search || trashed ? undefined : input.folderId,
       search,
     })
-    const visible = videos.filter((v) =>
-      trashed ? v.ownerId === input.userId : v.privacy !== 'private' || v.ownerId === input.userId,
-    )
     return Promise.all(
-      visible.map(async (video) => ({
+      videos.map(async (video) => ({
         video,
-        match: search ? await this.matchIn(video, search) : null,
+        match: search ? await this.matchIn(video, search, input.userId) : null,
       })),
     )
   }
 
-  private async matchIn(video: Video, search: string) {
+  private async matchIn(video: Video, search: string, viewerId: string) {
+    // Others' password-protected videos never reveal what they say.
+    if (video.privacy === 'password' && video.ownerId !== viewerId) return null
     const transcript = await this.deps.transcripts.find(video.id)
     return transcript && transcript.renderVersion === video.render?.version
       ? findMatchingSegment(transcript.segments, search)
@@ -201,12 +201,23 @@ const PURGE_BATCH = 100
 export class PurgeTrash {
   constructor(private readonly deps: Pick<LibraryDeps, 'videos' | 'storage' | 'clock'>) {}
 
+  /** Purges everything that is due, in batches; returns how many videos were deleted. */
   async execute(): Promise<number> {
+    let total = 0
+    for (;;) {
+      const purged = await this.purgeBatch()
+      total += purged
+      if (purged < PURGE_BATCH) return total
+    }
+  }
+
+  private async purgeBatch(): Promise<number> {
     const cutoff = new Date(this.deps.clock.now().getTime() - TRASH_RETENTION_MS)
     const expired = await this.deps.videos.listTrashedBefore(cutoff, { limit: PURGE_BATCH })
+    // Files first: if that fails the row stays, and the next run tries again.
     for (const video of expired) {
-      await this.deps.videos.delete(video.id)
       await this.deps.storage.deletePrefix(videoPrefix(video.id))
+      await this.deps.videos.delete(video.id)
     }
     return expired.length
   }

@@ -17,6 +17,8 @@ const ConfigSchema = z.object({
   S3_ACCESS_KEY_ID: z.string().min(1),
   S3_SECRET_ACCESS_KEY: z.string().min(8),
   MIGRATIONS_DIR: z.string().optional(),
+  /** Proxies in front of the API that add to X-Forwarded-For: 1 for the bundled web app. */
+  TRUSTED_PROXY_HOPS: z.coerce.number().int().min(0).max(10).default(1),
   LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace']).default('info'),
 })
 

@@ -1,6 +1,7 @@
 import { PostgreSqlContainer, type StartedPostgreSqlContainer } from '@testcontainers/postgresql'
 import type { RenderJob } from '@weft/core'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
+import { PgBoss } from 'pg-boss'
 import { PgBossJobs } from './pgboss-jobs'
 
 const waitFor = async (condition: () => boolean, timeoutMs = 20_000) => {
@@ -91,6 +92,11 @@ describe('PgBossJobs (integration)', () => {
       expect.arrayContaining([comment, { kind: 'invitation', invitationId: 'i', token: 't' }]),
     )
     expect(notified).toHaveLength(2)
+    // Handled notifications (which may hold invite links) don't stay around for a week.
+    const inspector = new PgBoss(container.getConnectionUri())
+    await inspector.start()
+    expect((await inspector.getQueue('notification'))?.deleteAfterSeconds).toBe(60)
+    await inspector.stop({ graceful: false })
 
     await api.stop()
     await worker.stop()

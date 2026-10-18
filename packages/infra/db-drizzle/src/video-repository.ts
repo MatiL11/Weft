@@ -11,7 +11,7 @@ import type {
   VideoStatus,
 } from '@weft/core'
 import type { VideoListFilter } from '@weft/core'
-import { and, desc, eq, isNotNull, isNull, lt, or, sql, type SQL } from 'drizzle-orm'
+import { and, desc, eq, isNotNull, isNull, lt, ne, or, sql, type SQL } from 'drizzle-orm'
 import type { Database } from './client'
 import { transcripts, videoSegments, videos } from './schema'
 
@@ -77,9 +77,12 @@ export class DrizzleVideoRepository implements VideoRepository {
   }
 
   async listForWorkspace(workspaceId: string, filter: VideoListFilter): Promise<Video[]> {
+    const isOwn = eq(videos.ownerId, filter.viewerId)
     const conditions = [
       eq(videos.workspaceId, workspaceId),
-      filter.trashed ? isNotNull(videos.trashedAt) : isNull(videos.trashedAt),
+      filter.trashed
+        ? and(isNotNull(videos.trashedAt), isOwn)
+        : and(isNull(videos.trashedAt), or(ne(videos.privacy, 'private'), isOwn)),
     ]
     if (filter.folderId !== undefined) {
       conditions.push(
@@ -95,7 +98,15 @@ export class DrizzleVideoRepository implements VideoRepository {
     const rows = await this.db
       .select({ video: videos })
       .from(videos)
-      .leftJoin(transcripts, eq(transcripts.videoId, videos.id))
+      // Only the current render's transcript, and never others' password-protected ones.
+      .leftJoin(
+        transcripts,
+        and(
+          eq(transcripts.videoId, videos.id),
+          sql`${transcripts.renderVersion} = (${videos.render} ->> 'version')::int`,
+          or(ne(videos.privacy, 'password'), isOwn),
+        ),
+      )
       .where(and(...conditions))
       .orderBy(desc(videos.createdAt))
       .limit(filter.limit)

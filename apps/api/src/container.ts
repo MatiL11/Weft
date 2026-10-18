@@ -71,6 +71,8 @@ const UNLOCK_FAILURES_PER_VIDEO = 200
 const UNLOCK_WINDOW_MS = 15 * 60 * 1000
 /** Reactions each viewer may send per video and minute. */
 const REACTIONS_PER_MINUTE = 30
+const COMMENTS_PER_MINUTE = 20
+const INVITATIONS_PER_HOUR = 20
 
 export interface ContainerOverrides {
   /** Replaces the PostgreSQL job queue (e.g. in tests). */
@@ -153,6 +155,9 @@ export async function createContainer(
       new FailureLimiter(UNLOCK_FAILURES_PER_VIDEO, UNLOCK_WINDOW_MS),
     ),
     reactionLimiter: new HitLimiter(REACTIONS_PER_MINUTE, 60_000),
+    commentLimiter: new HitLimiter(COMMENTS_PER_MINUTE, 60_000),
+    inviteLimiter: new HitLimiter(INVITATIONS_PER_HOUR, 60 * 60_000),
+    trustedProxyHops: config.TRUSTED_PROXY_HOPS,
     videoEvents,
     publicUrl: config.PUBLIC_URL,
     logger,

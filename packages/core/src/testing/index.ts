@@ -199,12 +199,18 @@ export class InMemoryVideoRepository implements VideoRepository {
     return [...this.videos.values()]
       .filter((v) => v.workspaceId === workspaceId)
       .filter((v) => (v.trashedAt !== null) === filter.trashed)
+      .filter((v) =>
+        filter.trashed
+          ? v.ownerId === filter.viewerId
+          : v.privacy !== 'private' || v.ownerId === filter.viewerId,
+      )
       .filter((v) => filter.folderId === undefined || v.folderId === filter.folderId)
       .filter(
         (v) =>
           !needle ||
           foldForSearch(v.title).includes(needle) ||
-          foldForSearch(this.transcriptText(v.id)).includes(needle),
+          ((v.privacy !== 'password' || v.ownerId === filter.viewerId) &&
+            foldForSearch(this.transcriptText(v.id)).includes(needle)),
       )
       .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
       .slice(0, filter.limit)

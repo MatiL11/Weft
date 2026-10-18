@@ -30,10 +30,14 @@ const ConfigSchema = z.object({
   /** Public URL of the web app, for links in emails. */
   PUBLIC_URL: z.url().default('http://localhost:3000'),
   /** SMTP server for emails, e.g. smtp://user:pass@smtp.example.com:587; unset disables email. */
-  SMTP_URL: z
-    .string()
-    .regex(/^smtps?:\/\//, 'must start with smtp:// or smtps://')
-    .optional(),
+  // Compose passes unset variables as '', which means "not configured" here.
+  SMTP_URL: z.preprocess(
+    (value) => (value === '' ? undefined : value),
+    z
+      .string()
+      .regex(/^smtps?:\/\//, 'must start with smtp:// or smtps://')
+      .optional(),
+  ),
   MAIL_FROM: z.string().min(3).default('Weft <weft@localhost>'),
   /** Scratch space for renders (needs roughly 3× the size of the largest recording). */
   WORK_DIR: z.string().min(1).default(tmpdir()),

@@ -28,6 +28,8 @@ describe('loadConfig', () => {
       'smtps://u:p@mail.example.com:465',
     )
     expect(() => loadConfig({ ...VALID, SMTP_URL: 'http://mail' })).toThrow(/SMTP_URL/)
+    // docker compose passes unset variables as empty strings.
+    expect(loadConfig({ ...VALID, SMTP_URL: '' }).SMTP_URL).toBeUndefined()
   })
 
   it('reports every invalid variable', () => {

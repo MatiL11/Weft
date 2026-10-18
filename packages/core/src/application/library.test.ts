@@ -14,6 +14,7 @@ import { GetPlayback } from './playback'
 import { RenderVideo } from './rendering'
 import { createTestBed, NOW } from './test-bed'
 import { TranscribeVideo } from './transcription'
+import { UpdateVideo } from './video-management'
 
 describe('library', () => {
   let bed: Awaited<ReturnType<typeof createTestBed>>
@@ -105,6 +106,25 @@ describe('library', () => {
     const byTitle = await list('owner_1', { search: 'demo' })
     expect(byTitle).toHaveLength(1)
     expect(await list('owner_1', { search: 'nothing like this' })).toEqual([])
+
+    // Others can't learn what a password-protected video says.
+    await new UpdateVideo(bed.deps).execute({
+      userId: 'owner_1',
+      videoId: video.id,
+      privacy: 'password',
+      password: 'abcd',
+    })
+    expect(await list('member_1', { search: 'Esta es la demo' })).toEqual([])
+    expect(await list('owner_1', { search: 'Esta es la demo' })).toHaveLength(1)
+  })
+
+  it("filters others' private videos before the limit", async () => {
+    for (let i = 0; i < 3; i++) {
+      const hidden = await bed.start('member_1')
+      await bed.videos.update({ ...hidden, privacy: 'private' })
+    }
+    const mine = await bed.start('owner_1')
+    expect(await ids('owner_1')).toEqual([mine.id])
   })
 
   it('moves videos to the trash, where only their owner sees them, and back', async () => {
@@ -143,6 +163,7 @@ describe('library', () => {
     await bed.videos.update({ ...recent, trashedAt: new Date(NOW.getTime() - 29 * day) })
 
     expect(await new PurgeTrash(bed.deps).execute()).toBe(1)
+    expect(await new PurgeTrash(bed.deps).execute()).toBe(0)
     expect(await bed.videos.findById(old.id)).toBeNull()
     expect(bed.storage.keys().some((k) => k.includes(`/${old.id}/`))).toBe(false)
     expect(await bed.videos.findById(recent.id)).not.toBeNull()

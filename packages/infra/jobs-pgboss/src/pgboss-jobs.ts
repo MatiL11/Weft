@@ -29,6 +29,8 @@ export interface WorkOptions {
 }
 
 const RETRY_LIMIT = 2
+/** Handled notification jobs are deleted after a minute instead of pg-boss's default week. */
+const NOTIFICATION_RETENTION_SECONDS = 60
 /** A job that runs longer than this is considered stuck and retried. */
 const EXPIRE_SECONDS = 3 * 60 * 60
 
@@ -54,6 +56,10 @@ export class PgBossJobs implements RenderQueue, TranscriptionQueue, Notification
         expireInSeconds: EXPIRE_SECONDS,
       })
     }
+    // Notification jobs can carry invite links: don't keep them once handled.
+    await boss.updateQueue(NOTIFICATION_QUEUE, {
+      deleteAfterSeconds: NOTIFICATION_RETENTION_SECONDS,
+    })
     return new PgBossJobs(boss)
   }
 

@@ -3,7 +3,7 @@ import { bodyLimit } from 'hono/body-limit'
 import { HTTPException } from 'hono/http-exception'
 import { secureHeaders } from 'hono/secure-headers'
 import type { Logger } from 'pino'
-import type { AppEnv, SessionUser } from './context'
+import { clientIpFrom, type AppEnv, type SessionUser } from './context'
 import { fail, ok, toErrorResponse } from './envelope'
 import { discussionRoutes, type DiscussionRouteDeps } from './routes/discussion'
 import { oembedRoutes } from './routes/oembed'
@@ -25,6 +25,8 @@ export interface AppDeps
   /** Better Auth request handler mounted under /api/auth. */
   authHandler: (request: Request) => Promise<Response>
   getSessionUser: (headers: Headers) => Promise<SessionUser | null>
+  /** Proxies in front of the API that append to X-Forwarded-For (the web app is one). */
+  trustedProxyHops?: number
   logger: Pick<Logger, 'error'>
 }
 
@@ -50,6 +52,7 @@ export function createApp(deps: AppDeps): Hono<AppEnv> {
   api.use(bodyLimit({ maxSize: JSON_BODY_LIMIT_BYTES }))
   // Resolve the session once; routes decide whether anonymous access is allowed.
   api.use(async (c, next) => {
+    c.set('clientIp', clientIpFrom(c.req.header('x-forwarded-for'), deps.trustedProxyHops ?? 1))
     c.set('user', await deps.getSessionUser(c.req.raw.headers))
     await next()
   })

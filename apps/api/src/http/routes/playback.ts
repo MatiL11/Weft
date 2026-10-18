@@ -36,10 +36,6 @@ const UnlockBody = z.object({ password: z.string().max(1024) })
 /** Cookie holding the proof that this browser entered the video's password. */
 export const accessCookieName = (videoId: string) => `weft_access_${videoId}`
 
-/** The client's address as forwarded by the web app's proxy (best effort). */
-export const clientOf = (c: Context) =>
-  c.req.header('x-forwarded-for')?.split(',')[0]?.trim() || c.req.header('x-real-ip') || 'unknown'
-
 const assetMissing = () => new DomainError('asset.not_found', 'This file does not exist.')
 
 /** Watching videos. Anonymous access is allowed; GetPlayback enforces privacy. */
@@ -83,7 +79,7 @@ export function playbackRoutes(deps: PlaybackRouteDeps): Hono<AppEnv> {
     const body = await parseJson(c, UnlockBody)
     if (!body) return invalid(c)
     const videoId = c.req.param('id')
-    const client = clientOf(c)
+    const client = c.get('clientIp')
     if (deps.unlockLimiter.isBlocked(videoId, client)) {
       return c.json(fail('video.too_many_attempts', 'Too many attempts. Try again later.'), 429)
     }

@@ -1,5 +1,6 @@
 import { PostgreSqlContainer, type StartedPostgreSqlContainer } from '@testcontainers/postgresql'
 import { createVideo } from '@weft/core'
+import { FAKE_RENDER_OUTPUT } from '@weft/core/testing'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { connectDatabase, runMigrations, type DatabaseHandle } from './client'
 import { DrizzleFolderRepository } from './folder-repository'
@@ -9,6 +10,7 @@ import { DrizzleVideoRepository } from './video-repository'
 import { DrizzleWorkspaceRepository } from './workspace-repository'
 
 const NOW = new Date('2026-10-17T10:00:00.000Z')
+const RENDER = { ...FAKE_RENDER_OUTPUT, version: 1, trim: null }
 const at = (minutes: number) => new Date(NOW.getTime() + minutes * 60_000)
 
 describe('library queries (integration)', () => {
@@ -27,7 +29,10 @@ describe('library queries (integration)', () => {
   })
 
   it('filters by folder and trash, searches titles and transcripts, and finds expired trash', async () => {
-    await handle.db.insert(users).values({ id: 'u1', name: 'Ana', email: 'ana@example.com' })
+    await handle.db.insert(users).values([
+      { id: 'u1', name: 'Ana', email: 'ana@example.com' },
+      { id: 'u2', name: 'Beto', email: 'beto@example.com' },
+    ])
     await new DrizzleWorkspaceRepository(handle.db).createWithMember(
       { id: 'ws', name: 'Acme', slug: 'acme', createdAt: NOW },
       'u1',
@@ -62,6 +67,7 @@ describe('library queries (integration)', () => {
     }
     await repo.update({ ...video('a', 'Planificación Q4', 1), folderId: 'f1' })
     await repo.update({ ...video('c', 'Bug report', 3), trashedAt: at(4) })
+    await repo.saveRender('b', 0, { state: 'ready', render: { ...RENDER, version: 1 } })
     await transcripts.save({
       videoId: 'b',
       renderVersion: 1,
@@ -71,7 +77,9 @@ describe('library queries (integration)', () => {
     })
 
     const list = async (filter: Partial<Parameters<typeof repo.listForWorkspace>[1]>) =>
-      (await repo.listForWorkspace('ws', { limit: 10, trashed: false, ...filter })).map((v) => v.id)
+      (
+        await repo.listForWorkspace('ws', { limit: 10, trashed: false, viewerId: 'u1', ...filter })
+      ).map((v) => v.id)
 
     expect(await list({})).toEqual(['b', 'a'])
     expect(await list({ folderId: 'f1' })).toEqual(['a'])
@@ -79,6 +87,14 @@ describe('library queries (integration)', () => {
     expect(await list({ trashed: true })).toEqual(['c'])
     expect(await list({ search: 'PLANIFICACION' })).toEqual(['a'])
     expect(await list({ search: 'migracion' })).toEqual(['b'])
+    // Someone else doesn't see your trash or your private videos.
+    expect(await list({ trashed: true, viewerId: 'u2' })).toEqual([])
+    await repo.update({ ...video('a', 'Planificación Q4', 1), folderId: 'f1', privacy: 'private' })
+    expect(await list({ viewerId: 'u2' })).toEqual(['b'])
+    // A transcript of an older render isn't searched.
+    await repo.saveRender('b', 0, { state: 'ready', render: { ...RENDER, version: 2 } })
+    expect(await list({ search: 'migracion' })).toEqual([])
+    await repo.saveRender('b', 0, { state: 'ready', render: { ...RENDER, version: 1 } })
     // Wildcards in the query are literal.
     expect(await list({ search: '50%' })).toEqual(['b'])
     expect(await list({ search: '%' })).toEqual(['b'])
