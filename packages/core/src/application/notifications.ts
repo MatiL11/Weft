@@ -71,20 +71,29 @@ export class DeliverNotification {
   constructor(private readonly deps: DeliveryDeps) {}
 
   async execute(notification: Notification): Promise<DeliveryResult> {
-    const prepared =
-      notification.kind === 'invitation'
-        ? await this.invitation(notification.invitationId, notification.token)
-        : await this.comment(
-            notification.recipientId,
-            notification.videoId,
-            notification.commentId,
-            notification.kind,
-          )
+    const prepared = await this.prepare(notification)
     if (!prepared) return 'skipped'
     const { recipient, content } = prepared
     const message = this.deps.templates.render(content, recipient.locale ?? 'en')
     await this.deps.mailer.send({ to: recipient.email, ...message })
     return 'sent'
+  }
+
+  private prepare(notification: Notification) {
+    switch (notification.kind) {
+      case 'invitation':
+        return this.invitation(notification.invitationId, notification.token)
+      case 'view':
+        return this.view(notification.recipientId, notification.videoId, notification.viewerId)
+      case 'comment':
+      case 'reply':
+        return this.comment(
+          notification.recipientId,
+          notification.videoId,
+          notification.commentId,
+          notification.kind,
+        )
+    }
   }
 
   private link(path: string) {
@@ -117,6 +126,29 @@ export class DeliverNotification {
         videoTitle: video.title,
         commentText: comment.body,
         url: this.link(`/v/${video.id}${at === null ? '' : `?t=${Math.floor(at / 1000)}`}`),
+      },
+    }
+  }
+
+  private async view(
+    recipientId: string,
+    videoId: string,
+    viewerId: string,
+  ): Promise<{ recipient: UserProfile; content: NotificationContent } | null> {
+    const [recipient, video, viewer] = await Promise.all([
+      this.deps.users.findById(recipientId),
+      this.deps.videos.findById(videoId),
+      this.deps.users.findById(viewerId),
+    ])
+    if (!recipient || !video || !viewer || video.ownerId !== recipient.id) return null
+    return {
+      recipient,
+      content: {
+        kind: 'view',
+        recipientName: recipient.name,
+        viewerName: viewer.name,
+        videoTitle: video.title,
+        url: this.link(`/v/${video.id}`),
       },
     }
   }

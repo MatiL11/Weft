@@ -16,6 +16,7 @@ import type {
   ObjectStorage,
   TranscriptRepository,
   VideoRepository,
+  ViewRepository,
   WorkspaceRepository,
 } from '../ports'
 import { loadOwnVideo, loadVideo } from './recording'
@@ -25,6 +26,7 @@ export interface LibraryDeps {
   workspaces: WorkspaceRepository
   folders: FolderRepository
   transcripts: TranscriptRepository
+  views: ViewRepository
   storage: ObjectStorage
   ids: IdGenerator
   clock: Clock
@@ -44,6 +46,8 @@ export interface LibraryItem {
   video: Video
   /** Where the search matched in the transcript, if it did. */
   match: TranscriptSegment | null
+  /** Views so far; only for the caller's own videos. */
+  viewCount: number | null
 }
 
 /**
@@ -70,10 +74,15 @@ export class ListVideos {
       folderId: search || trashed ? undefined : input.folderId,
       search,
     })
+    const own = videos.filter((v) => v.ownerId === input.userId).map((v) => v.id)
+    const counts = own.length
+      ? await this.deps.views.countForVideos(own)
+      : new Map<string, number>()
     return Promise.all(
       videos.map(async (video) => ({
         video,
         match: search ? await this.matchIn(video, search, input.userId) : null,
+        viewCount: video.ownerId === input.userId ? (counts.get(video.id) ?? 0) : null,
       })),
     )
   }

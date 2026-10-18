@@ -1,3 +1,4 @@
+import type { View } from '../domain/analytics'
 import type { Comment, CommentWithAuthor, Reaction } from '../domain/collaboration'
 import type { RenderOutput, RenderState, TrimRange, VideoRender } from '../domain/render'
 import type {
@@ -259,4 +260,14 @@ export interface EmailTemplates {
 
 export interface Mailer {
   send(message: EmailMessage): Promise<void>
+}
+
+export interface ViewRepository {
+  create(view: View): Promise<void>
+  update(view: View): Promise<void>
+  findById(id: string): Promise<View | null>
+  /** Most recent first, up to `limit`. */
+  listForVideo(videoId: string, options: { limit: number }): Promise<View[]>
+  /** How many views each video has (videos without views are absent). */
+  countForVideos(videoIds: readonly string[]): Promise<Map<string, number>>
 }

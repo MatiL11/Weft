@@ -1,4 +1,5 @@
 // In-memory fakes of core ports, for fast use-case tests in any package.
+import type { View } from '../domain/analytics'
 import type { Comment, CommentWithAuthor, Reaction } from '../domain/collaboration'
 import type { RenderOutput, RenderState, TrimRange, VideoRender } from '../domain/render'
 import type {
@@ -30,6 +31,7 @@ import type {
   NotificationQueue,
   InvitationRepository,
   VideoListFilter,
+  ViewRepository,
   MediaRenderer,
   SecretTokens,
   UserDirectory,
@@ -625,5 +627,37 @@ export class FakeMailer implements Mailer {
 
   async send(message: EmailMessage): Promise<void> {
     this.outbox.push(message)
+  }
+}
+
+export class InMemoryViewRepository implements ViewRepository {
+  private readonly views = new Map<string, View>()
+
+  async create(view: View): Promise<void> {
+    this.views.set(view.id, view)
+  }
+
+  async update(view: View): Promise<void> {
+    this.views.set(view.id, view)
+  }
+
+  async findById(id: string): Promise<View | null> {
+    return this.views.get(id) ?? null
+  }
+
+  async listForVideo(videoId: string, options: { limit: number }): Promise<View[]> {
+    return [...this.views.values()]
+      .filter((v) => v.videoId === videoId)
+      .sort((a, b) => b.startedAt.getTime() - a.startedAt.getTime())
+      .slice(0, options.limit)
+  }
+
+  async countForVideos(videoIds: readonly string[]): Promise<Map<string, number>> {
+    const counts = new Map<string, number>()
+    for (const view of this.views.values()) {
+      if (videoIds.includes(view.videoId))
+        counts.set(view.videoId, (counts.get(view.videoId) ?? 0) + 1)
+    }
+    return counts
   }
 }
