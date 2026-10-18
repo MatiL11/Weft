@@ -202,13 +202,14 @@ Cada fase cierra con tests (≥80 % de cobertura en paquetes de dominio), revisi
 
 ### Fase 5 — Colaboración (2 semanas)
 
-- [ ] Comentarios con timestamp e hilos; marcadores en la barra de tiempo
-- [ ] Reacciones con emoji en el timeline; anónimas con rate limit
-- [ ] Tiempo real (WS + LISTEN/NOTIFY)
-- [ ] Biblioteca: carpetas, búsqueda por título/transcripción, mover, borrar (papelera)
-- [ ] Workspaces: invitaciones, roles, permisos
-- [ ] Notificaciones por email (nuevo comentario/vista) — SMTP configurable
+- [x] Comentarios con marca de tiempo e hilos (un nivel); editar y borrar (el dueño del video modera); marcadores en la barra de tiempo. Las marcas se guardan sobre la grabación original, así sobreviven a los recortes
+- [x] Reacciones con emoji en el momento del video; también anónimas, con límite por persona y video
+- [x] Tiempo real con **SSE** + PostgreSQL LISTEN/NOTIFY (en lugar de WebSocket: alcanza para empujar eventos y las escrituras van por POST); al reconectar se recarga para no perder nada
+- [x] Biblioteca: carpetas (planas), búsqueda por título y por lo que se dice (con la línea y el momento), mover, papelera con restauración y borrado definitivo automático a los 30 días
+- [x] Workspaces: invitaciones por link de un solo uso (hash, 7 días, solo para el email invitado), roles (propietario, admin, miembro, lector) con reglas para que nadie se eleve, quitar miembros y salir; selector de workspace
+- [x] Emails por SMTP configurable (nuevo comentario, respuesta, invitación), en el idioma de cada persona, con un máximo de uno por persona y video cada 10 minutos. Mailpit opcional para desarrollo. El aviso de "vieron tu video" se suma en la Fase 6, que es la que registra vistas
 - **Hito:** dos usuarios comentan el mismo video y se ven en vivo.
+  - ✅ E2E con la stack real: dos navegadores con usuarios distintos (y un espectador anónimo) ven comentarios, respuestas, ediciones, borrados y reacciones del otro en 50–75 ms.
 
 ### Fase 6 — Analítica básica (1 semana)
 

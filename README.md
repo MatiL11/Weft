@@ -3,7 +3,7 @@
 Open-source, self-hostable async video messaging: record your screen and camera,
 get a shareable link instantly, and collect comments and reactions.
 
-> Status: early development (Phase 4 — transcription done). See [docs/plan/PLAN.md](docs/plan/PLAN.md).
+> Status: early development (Phase 5 — collaboration done). See [docs/plan/PLAN.md](docs/plan/PLAN.md).
 
 ## Stack
 
@@ -47,6 +47,18 @@ viewers get captions and a searchable transcript. The speech model (`WHISPER_MOD
 — the default —, `small` or `medium`) is downloaded once on the worker's first start and verified
 against its published checksum. Bigger models are more accurate but slower. On x86-64 the worker
 image uses AVX2; on older CPUs build it with `--build-arg WHISPER_AVX2=OFF`.
+
+### Collaboration and email
+
+Viewers comment at a moment of the video, reply in threads and react with emoji; everyone
+watching sees it live. Workspace owners and admins invite people by link and manage roles.
+Set `SMTP_URL` (e.g. `smtps://user:pass@smtp.example.com:465`) and `MAIL_FROM` to email people
+about new comments, replies and invitations; to try it locally run
+`docker compose --profile mail up` with `SMTP_URL=smtp://mailpit:1025` and open
+http://localhost:8025.
+
+Library search uses PostgreSQL's `unaccent` extension, which the migrations enable; a managed
+database must allow it.
 
 ### Embedding
 
