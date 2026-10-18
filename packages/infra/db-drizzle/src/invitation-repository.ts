@@ -1,0 +1,82 @@
+import type {
+  InvitableRole,
+  Invitation,
+  InvitationRepository,
+  UserDirectory,
+  UserProfile,
+} from '@weft/core'
+import { and, eq, isNull, sql } from 'drizzle-orm'
+import type { Database } from './client'
+import { invitations, users } from './schema'
+
+const toInvitation = (row: typeof invitations.$inferSelect): Invitation => ({
+  ...row,
+  role: row.role as InvitableRole,
+})
+
+export class DrizzleInvitationRepository implements InvitationRepository {
+  constructor(private readonly db: Database) {}
+
+  async create(invitation: Invitation): Promise<void> {
+    await this.db.insert(invitations).values(invitation)
+  }
+
+  async update(invitation: Invitation): Promise<void> {
+    const { acceptedAt, revokedAt } = invitation
+    await this.db
+      .update(invitations)
+      .set({ acceptedAt, revokedAt })
+      .where(eq(invitations.id, invitation.id))
+  }
+
+  async findById(id: string): Promise<Invitation | null> {
+    const [row] = await this.db.select().from(invitations).where(eq(invitations.id, id)).limit(1)
+    return row ? toInvitation(row) : null
+  }
+
+  async findByTokenHash(tokenHash: string): Promise<Invitation | null> {
+    const [row] = await this.db
+      .select()
+      .from(invitations)
+      .where(eq(invitations.tokenHash, tokenHash))
+      .limit(1)
+    return row ? toInvitation(row) : null
+  }
+
+  async listOpen(workspaceId: string): Promise<Invitation[]> {
+    const rows = await this.db
+      .select()
+      .from(invitations)
+      .where(
+        and(
+          eq(invitations.workspaceId, workspaceId),
+          isNull(invitations.acceptedAt),
+          isNull(invitations.revokedAt),
+        ),
+      )
+      .orderBy(invitations.createdAt)
+    return rows.map(toInvitation)
+  }
+}
+
+/** Accounts, as stored by the auth system. */
+export class DrizzleUserDirectory implements UserDirectory {
+  constructor(private readonly db: Database) {}
+
+  async findById(id: string): Promise<UserProfile | null> {
+    return this.findOne(eq(users.id, id))
+  }
+
+  async findByEmail(email: string): Promise<UserProfile | null> {
+    return this.findOne(sql`lower(${users.email}) = ${email.toLowerCase()}`)
+  }
+
+  private async findOne(condition: ReturnType<typeof eq>) {
+    const [row] = await this.db
+      .select({ id: users.id, name: users.name, email: users.email })
+      .from(users)
+      .where(condition)
+      .limit(1)
+    return row ?? null
+  }
+}

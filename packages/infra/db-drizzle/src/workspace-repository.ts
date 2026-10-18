@@ -1,8 +1,13 @@
-import type { WorkspaceMembership, WorkspaceRepository, WorkspaceRole } from '@weft/core'
-import type { Workspace } from '@weft/core'
-import { and, asc, eq } from 'drizzle-orm'
+import type {
+  Member,
+  Workspace,
+  WorkspaceMembership,
+  WorkspaceRepository,
+  WorkspaceRole,
+} from '@weft/core'
+import { and, asc, eq, sql } from 'drizzle-orm'
 import type { Database } from './client'
-import { workspaceMembers, workspaces } from './schema'
+import { users, workspaceMembers, workspaces } from './schema'
 
 export class DrizzleWorkspaceRepository implements WorkspaceRepository {
   constructor(private readonly db: Database) {}
@@ -43,5 +48,45 @@ export class DrizzleWorkspaceRepository implements WorkspaceRepository {
       .orderBy(asc(workspaces.createdAt))
 
     return rows.map((row) => ({ workspace: row.workspace, role: row.role as WorkspaceRole }))
+  }
+
+  async findById(id: string): Promise<Workspace | null> {
+    const [row] = await this.db.select().from(workspaces).where(eq(workspaces.id, id)).limit(1)
+    return row ?? null
+  }
+
+  async listMembers(workspaceId: string): Promise<Member[]> {
+    const rows = await this.db
+      .select({
+        userId: workspaceMembers.userId,
+        name: users.name,
+        email: users.email,
+        role: workspaceMembers.role,
+        joinedAt: workspaceMembers.createdAt,
+      })
+      .from(workspaceMembers)
+      .innerJoin(users, eq(users.id, workspaceMembers.userId))
+      .where(eq(workspaceMembers.workspaceId, workspaceId))
+      .orderBy(sql`${workspaceMembers.role} = 'owner' desc`, asc(workspaceMembers.createdAt))
+    return rows.map((row) => ({ ...row, role: row.role as WorkspaceRole }))
+  }
+
+  async addMember(workspaceId: string, userId: string, role: WorkspaceRole): Promise<void> {
+    await this.db
+      .insert(workspaceMembers)
+      .values({ workspaceId, userId, role })
+      .onConflictDoNothing()
+  }
+
+  async setRole(workspaceId: string, userId: string, role: WorkspaceRole): Promise<void> {
+    await this.db.update(workspaceMembers).set({ role }).where(this.member(workspaceId, userId))
+  }
+
+  async removeMember(workspaceId: string, userId: string): Promise<void> {
+    await this.db.delete(workspaceMembers).where(this.member(workspaceId, userId))
+  }
+
+  private member(workspaceId: string, userId: string) {
+    return and(eq(workspaceMembers.workspaceId, workspaceId), eq(workspaceMembers.userId, userId))
   }
 }

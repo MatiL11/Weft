@@ -106,6 +106,30 @@ export const workspaceMembers = pgTable(
   ],
 )
 
+export const invitations = pgTable(
+  'invitations',
+  {
+    id: text().primaryKey(),
+    workspaceId: text()
+      .notNull()
+      .references(() => workspaces.id, { onDelete: 'cascade' }),
+    email: text().notNull(),
+    role: text().notNull(),
+    tokenHash: text().notNull().unique(),
+    invitedBy: text()
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    createdAt: timestamp({ withTimezone: true }).notNull(),
+    expiresAt: timestamp({ withTimezone: true }).notNull(),
+    acceptedAt: timestamp({ withTimezone: true }),
+    revokedAt: timestamp({ withTimezone: true }),
+  },
+  (t) => [
+    index().on(t.workspaceId),
+    check('invitations_role_check', sql`${t.role} in ('admin', 'member', 'viewer')`),
+  ],
+)
+
 export const videos = pgTable(
   'videos',
   {
