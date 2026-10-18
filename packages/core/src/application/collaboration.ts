@@ -12,12 +12,14 @@ import type {
   Clock,
   CommentRepository,
   IdGenerator,
+  NotificationQueue,
   ReactionRepository,
   VideoAccessTokens,
   VideoEventPublisher,
   VideoRepository,
   WorkspaceRepository,
 } from '../ports'
+import { notifyAboutComment } from './notifications'
 import { loadViewableVideo, type PlaybackRequest } from './playback'
 
 export interface CollaborationDeps {
@@ -27,6 +29,7 @@ export interface CollaborationDeps {
   comments: CommentRepository
   reactions: ReactionRepository
   events: VideoEventPublisher
+  notifications: NotificationQueue
   ids: IdGenerator
   clock: Clock
 }
@@ -116,6 +119,7 @@ export class AddComment {
     await this.deps.comments.create(comment)
     const created = await loadComment(this.deps.comments, comment.id, video.id)
     await this.deps.events.publish({ type: 'comment.created', videoId: video.id, comment: created })
+    await notifyAboutComment(this.deps, created, video.ownerId)
     return created
   }
 }

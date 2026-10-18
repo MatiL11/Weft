@@ -1,6 +1,9 @@
 // Shared setup for use-case tests: in-memory adapters plus helpers to record a video.
 import {
   FakeAccessTokens,
+  FakeEmailTemplates,
+  FakeMailer,
+  FakeNotificationQueue,
   FakeMediaRenderer,
   FakeObjectStorage,
   FakePasswordHasher,
@@ -34,7 +37,7 @@ export async function createTestBed() {
   const videos = new InMemoryVideoRepository(transcripts.textOf)
   const users = new InMemoryUserDirectory([
     { id: 'owner_1', name: 'Ana', email: 'ana@example.com' },
-    { id: 'member_1', name: 'Beto', email: 'beto@example.com' },
+    { id: 'member_1', name: 'Beto', email: 'beto@example.com', locale: 'es' },
     { id: 'viewer_1', name: 'Caro', email: 'caro@example.com' },
     { id: 'outsider', name: 'Dani', email: 'dani@example.com' },
   ])
@@ -55,6 +58,10 @@ export async function createTestBed() {
     users,
     invitations: new InMemoryInvitationRepository(),
     tokens: new FakeSecretTokens(),
+    notifications: new FakeNotificationQueue(),
+    templates: new FakeEmailTemplates(),
+    mailer: new FakeMailer(),
+    publicUrl: 'https://weft.test',
     recognizer: new FakeSpeechRecognizer(),
     renderer: new FakeMediaRenderer(storage),
     passwords: new FakePasswordHasher(),

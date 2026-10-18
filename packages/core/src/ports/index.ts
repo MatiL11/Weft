@@ -9,6 +9,12 @@ import type {
 import type { SegmentKind, Video, VideoSegment } from '../domain/video'
 import type { Folder } from '../domain/library'
 import type { Invitation, Member } from '../domain/membership'
+import type {
+  EmailLocale,
+  EmailMessage,
+  Notification,
+  NotificationContent,
+} from '../domain/notification'
 import type { Workspace, WorkspaceMembership, WorkspaceRole } from '../domain/workspace'
 
 export interface Clock {
@@ -48,6 +54,8 @@ export interface UserProfile {
   id: string
   name: string
   email: string
+  /** Language for emails; defaults to English. */
+  locale?: EmailLocale
 }
 
 /** Read access to accounts (managed by the auth system). */
@@ -223,4 +231,27 @@ export type VideoEvent =
 
 export interface VideoEventPublisher {
   publish(event: VideoEvent): Promise<void>
+}
+
+export interface NotificationQueue {
+  /**
+   * Queues an email. Notifications with the same `dedupeKey` within `dedupeSeconds` are sent
+   * only once.
+   */
+  notify(
+    notification: Notification,
+    options?: { dedupeKey: string; dedupeSeconds: number },
+  ): Promise<void>
+}
+
+/** Turns a notification into an email in the recipient's language. */
+export interface EmailTemplates {
+  render(
+    content: NotificationContent,
+    locale: EmailLocale,
+  ): { subject: string; text: string; html: string }
+}
+
+export interface Mailer {
+  send(message: EmailMessage): Promise<void>
 }

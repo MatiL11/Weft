@@ -17,6 +17,7 @@ import type {
   Clock,
   IdGenerator,
   InvitationRepository,
+  NotificationQueue,
   SecretTokens,
   UserDirectory,
   WorkspaceRepository,
@@ -27,6 +28,7 @@ export interface MembersDeps {
   invitations: InvitationRepository
   users: UserDirectory
   tokens: SecretTokens
+  notifications: NotificationQueue
   ids: IdGenerator
   clock: Clock
 }
@@ -112,6 +114,15 @@ export class InviteMember {
       revokedAt: null,
     }
     await this.deps.invitations.create(invitation)
+    try {
+      await this.deps.notifications.notify({
+        kind: 'invitation',
+        invitationId: invitation.id,
+        token,
+      })
+    } catch {
+      // The inviter still gets the link to share by hand.
+    }
     return { invitation, token }
   }
 }

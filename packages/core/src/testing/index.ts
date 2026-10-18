@@ -10,6 +10,12 @@ import type {
 import type { SegmentKind, Video, VideoSegment } from '../domain/video'
 import { foldForSearch, type Folder } from '../domain/library'
 import type { Invitation, Member } from '../domain/membership'
+import type {
+  EmailLocale,
+  EmailMessage,
+  Notification,
+  NotificationContent,
+} from '../domain/notification'
 import type { Workspace, WorkspaceMembership, WorkspaceRole } from '../domain/workspace'
 import type {
   Clock,
@@ -18,7 +24,10 @@ import type {
   VideoEvent,
   VideoEventPublisher,
   IdGenerator,
+  EmailTemplates,
   FolderRepository,
+  Mailer,
+  NotificationQueue,
   InvitationRepository,
   VideoListFilter,
   MediaRenderer,
@@ -583,5 +592,32 @@ export class InMemoryFolderRepository implements FolderRepository {
     return [...this.folders.values()]
       .filter((f) => f.workspaceId === workspaceId)
       .sort((a, b) => a.name.localeCompare(b.name))
+  }
+}
+
+/** Records queued notifications, honoring dedupe keys only by recording them. */
+export class FakeNotificationQueue implements NotificationQueue {
+  readonly sent: { notification: Notification; dedupeKey?: string }[] = []
+  failing = false
+
+  async notify(notification: Notification, options?: { dedupeKey: string }): Promise<void> {
+    if (this.failing) throw new Error('queue unavailable')
+    this.sent.push({ notification, dedupeKey: options?.dedupeKey })
+  }
+}
+
+/** Renders a compact, assertable summary instead of real email templates. */
+export class FakeEmailTemplates implements EmailTemplates {
+  render(content: NotificationContent, locale: EmailLocale) {
+    const summary = JSON.stringify({ ...content, locale })
+    return { subject: `${content.kind}:${locale}`, text: summary, html: `<p>${summary}</p>` }
+  }
+}
+
+export class FakeMailer implements Mailer {
+  readonly outbox: EmailMessage[] = []
+
+  async send(message: EmailMessage): Promise<void> {
+    this.outbox.push(message)
   }
 }
