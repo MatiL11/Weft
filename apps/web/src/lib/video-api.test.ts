@@ -1,7 +1,12 @@
 import { UploadError } from '@weft/recorder/core'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import {
+  addComment,
+  addReaction,
   createUploadApi,
+  deleteComment,
+  editComment,
+  fetchDiscussion,
   deleteVideo,
   fetchTranscript,
   fetchVideo,
@@ -134,5 +139,30 @@ describe('video management calls', () => {
       code: 'video.password_incorrect',
       retryable: false,
     })
+  })
+})
+
+describe('discussion calls', () => {
+  it('reads and writes comments and reactions', async () => {
+    const fetch = mockFetch(
+      okJson({ comments: [], reactions: [] }),
+      okJson({ id: 'c1' }, 201),
+      okJson({ id: 'c1' }),
+      okJson({ deleted: true }),
+      okJson({ id: 'r1' }, 201),
+    )
+    await fetchDiscussion('v1')
+    await addComment('v1', { body: 'Hi', timestampMs: 1000 })
+    await editComment('v1', 'c 1', 'Hey')
+    await deleteComment('v1', 'c 1')
+    await addReaction('v1', '🔥', 2000)
+    const calls = fetch.mock.calls as unknown as [string, RequestInit][]
+    expect(calls.map(([url, init]) => [init.method, url, init.body])).toEqual([
+      ['GET', '/api/videos/v1/discussion', undefined],
+      ['POST', '/api/videos/v1/comments', JSON.stringify({ body: 'Hi', timestampMs: 1000 })],
+      ['PATCH', '/api/videos/v1/comments/c%201', JSON.stringify({ body: 'Hey' })],
+      ['DELETE', '/api/videos/v1/comments/c%201', undefined],
+      ['POST', '/api/videos/v1/reactions', JSON.stringify({ emoji: '🔥', timestampMs: 2000 })],
+    ])
   })
 })

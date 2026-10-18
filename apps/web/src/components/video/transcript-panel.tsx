@@ -56,23 +56,15 @@ export function TranscriptPanel({ transcript, currentMs, onSeek, vttUrl }: Trans
   }, [active, isSearching])
 
   return (
-    <section
-      aria-labelledby="transcript-title"
-      className="absolute inset-0 flex flex-col overflow-hidden rounded-2xl border border-line bg-surface"
-    >
+    <div className="flex min-h-0 flex-1 flex-col">
       <div className="grid gap-3 border-b border-line p-4">
-        <div className="flex items-center justify-between gap-3">
-          <h2 id="transcript-title" className="font-semibold tracking-tight">
-            {t('title')}
-          </h2>
-          <div className="flex items-center gap-2 text-xs text-muted">
-            <span className="rounded-md bg-surface-sunken px-1.5 py-0.5">
-              {languageName(transcript.language, locale)}
-            </span>
-            <a href={vttUrl} download className="font-medium underline-offset-4 hover:underline">
-              .vtt
-            </a>
-          </div>
+        <div className="flex items-center justify-end gap-2 text-xs text-muted">
+          <span className="rounded-md bg-surface-sunken px-1.5 py-0.5">
+            {languageName(transcript.language, locale)}
+          </span>
+          <a href={vttUrl} download className="font-medium underline-offset-4 hover:underline">
+            .vtt
+          </a>
         </div>
         <div className="relative">
           <label htmlFor="transcript-search" className="sr-only">
@@ -136,6 +128,6 @@ export function TranscriptPanel({ transcript, currentMs, onSeek, vttUrl }: Trans
           )
         })}
       </ol>
-    </section>
+    </div>
   )
 }

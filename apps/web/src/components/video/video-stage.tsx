@@ -6,6 +6,12 @@ import { useRef, useState } from 'react'
 import { formatDuration } from '@/lib/recording-format'
 import type { VideoView } from '@/lib/video-summary'
 import { CopyField } from '../ui/copy-field'
+import { timelineMarkers } from '@/lib/discussion'
+import { addReaction } from '@/lib/video-api'
+import { CommentsPanel } from '../discussion/comments-panel'
+import { ReactionBar, ReactionBurst } from '../discussion/reaction-bar'
+import { SidePanel } from '../discussion/side-panel'
+import { useDiscussion } from '../discussion/use-discussion'
 import { useTranscript } from '../player/use-transcript'
 import { VideoPlayer, type PlayerHandle } from '../player/video-player'
 import { DeleteVideo } from './delete-video'
@@ -37,39 +43,65 @@ export function VideoStage({ video, shareUrl, embedCode, startAt }: VideoStagePr
   const transcript = useTranscript(video.captions?.transcriptUrl)
   const [currentMs, setCurrentMs] = useState(0)
 
-  const player = (
-    <VideoPlayer
-      key={playerKey}
-      ref={playerRef}
-      playlistUrl={playback.playlistUrl}
-      isLive={isLive}
-      skip={playback.skip}
-      posterUrl={video.posterUrl}
-      thumbnails={video.thumbnails}
-      startAt={startAt}
-      captions={transcript?.segments}
-      onTimeChange={(seconds) => setCurrentMs(seconds * 1000)}
-    />
-  )
+  const { discussion, apply, incoming } = useDiscussion(video.id)
+  const markers = discussion ? timelineMarkers(discussion, video.durationMs ?? 0) : []
+  const seek = (ms: number) => playerRef.current?.seek(ms / 1000)
+
+  async function react(emoji: string) {
+    try {
+      apply({ type: 'reaction.created', reaction: await addReaction(video.id, emoji, currentMs) })
+    } catch {
+      // Reactions are fleeting; a failed one (e.g. rate limited) is simply dropped.
+    }
+  }
 
   return (
     <div className="grid gap-6">
-      {transcript && video.captions ? (
-        <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_21rem]">
-          {player}
-          {/* Out of the flow, so the row is as tall as the player and the list scrolls. */}
-          <div className="relative h-96 lg:h-auto">
-            <TranscriptPanel
-              transcript={transcript}
-              currentMs={currentMs}
-              vttUrl={video.captions.vttUrl}
-              onSeek={(ms) => playerRef.current?.seek(ms / 1000)}
-            />
-          </div>
+      <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_22rem]">
+        <div className="relative">
+          <VideoPlayer
+            key={playerKey}
+            ref={playerRef}
+            playlistUrl={playback.playlistUrl}
+            isLive={isLive}
+            skip={playback.skip}
+            posterUrl={video.posterUrl}
+            thumbnails={video.thumbnails}
+            startAt={startAt}
+            captions={transcript?.segments}
+            markers={markers}
+            onTimeChange={(seconds) => setCurrentMs(seconds * 1000)}
+          />
+          <ReactionBurst items={incoming} />
         </div>
-      ) : (
-        player
-      )}
+        {/* Out of the flow, so the row is as tall as the player and the lists scroll. */}
+        <div className="relative h-[28rem] lg:h-auto">
+          <SidePanel
+            commentCount={discussion?.comments.filter((c) => !c.deleted).length ?? 0}
+            comments={
+              <CommentsPanel
+                videoId={video.id}
+                discussion={discussion}
+                apply={apply}
+                currentMs={currentMs}
+                onSeek={seek}
+              />
+            }
+            transcript={
+              transcript && video.captions ? (
+                <TranscriptPanel
+                  transcript={transcript}
+                  currentMs={currentMs}
+                  vttUrl={video.captions.vttUrl}
+                  onSeek={seek}
+                />
+              ) : null
+            }
+          />
+        </div>
+      </div>
+
+      <ReactionBar onReact={(emoji) => void react(emoji)} disabled={!discussion} />
 
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div className="grid min-w-0 flex-1 gap-1.5">

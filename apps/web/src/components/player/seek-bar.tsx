@@ -3,6 +3,7 @@
 import { useTranslations } from 'next-intl'
 import { useRef, useState, type KeyboardEvent, type PointerEvent } from 'react'
 import { formatClock, spriteTile } from '@/lib/player-timeline'
+import type { TimelineMarker } from '@/lib/discussion'
 import type { ThumbnailSprite } from '@/lib/video-summary'
 
 interface SeekBarProps {
@@ -11,6 +12,8 @@ interface SeekBarProps {
   duration: number
   buffered: number
   thumbnails: ThumbnailSprite | null
+  /** Comments and reactions along the timeline. */
+  markers?: readonly TimelineMarker[]
   onSeek: (seconds: number) => void
 }
 
@@ -18,7 +21,14 @@ const KEYBOARD_STEP_SECONDS = 5
 const PREVIEW_WIDTH = 160
 
 /** Scrubber with buffered range and a thumbnail preview where the pointer hovers. */
-export function SeekBar({ time, duration, buffered, thumbnails, onSeek }: SeekBarProps) {
+export function SeekBar({
+  time,
+  duration,
+  buffered,
+  thumbnails,
+  markers = [],
+  onSeek,
+}: SeekBarProps) {
   const t = useTranslations('player')
   const trackRef = useRef<HTMLDivElement>(null)
   const [hover, setHover] = useState<{ fraction: number } | null>(null)
@@ -90,6 +100,23 @@ export function SeekBar({ time, duration, buffered, thumbnails, onSeek }: SeekBa
           style={{ width: `${fractionOf(time) * 100}%` }}
         />
       </div>
+      {markers.map((marker) => (
+        <span
+          key={`${marker.kind}-${marker.position}`}
+          aria-hidden="true"
+          className={`pointer-events-none absolute bottom-full mb-1 -translate-x-1/2 ${
+            marker.kind === 'comment'
+              ? 'grid size-4 place-items-center rounded-full bg-accent text-[0.5625rem] font-semibold text-on-accent ring-2 ring-black/40'
+              : 'text-xs leading-none'
+          }`}
+          style={{ left: `${marker.position * 100}%` }}
+        >
+          {marker.label}
+          {marker.count > 1 && marker.kind === 'reaction' && (
+            <span className="ml-px font-mono text-[0.5625rem] text-white/80">{marker.count}</span>
+          )}
+        </span>
+      ))}
       <div
         className="pointer-events-none absolute top-1/2 size-3 -translate-x-1/2 -translate-y-1/2 scale-0 rounded-full bg-white shadow transition-transform duration-150 group-hover/seek:scale-100 group-focus-visible/seek:scale-100"
         style={{ left: `${fractionOf(time) * 100}%` }}

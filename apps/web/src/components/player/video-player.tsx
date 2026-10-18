@@ -18,6 +18,7 @@ import {
   toVisibleTime,
   visibleWindow,
 } from '@/lib/player-timeline'
+import type { TimelineMarker } from '@/lib/discussion'
 import { activeSegmentIndex, type TranscriptSegment } from '@/lib/transcript'
 import type { ThumbnailSprite, TrimRange } from '@/lib/video-summary'
 import { PlayerIcon } from './icons'
@@ -47,6 +48,8 @@ export interface VideoPlayerProps {
   fill?: boolean
   /** Timed text shown as captions (on the visible timeline). */
   captions?: readonly TranscriptSegment[] | null
+  /** Comments and reactions shown along the seek bar. */
+  markers?: readonly TimelineMarker[]
   /** Reports the playback position (visible seconds) a few times per second. */
   onTimeChange?: (visibleSeconds: number) => void
   ref?: Ref<PlayerHandle>
@@ -108,6 +111,7 @@ export function VideoPlayer({
   startAt = 0,
   fill = false,
   captions = null,
+  markers,
   onTimeChange,
   ref,
 }: VideoPlayerProps) {
@@ -377,6 +381,7 @@ export function VideoPlayer({
           duration={visibleDuration}
           buffered={toVisibleTime(state.bufferedEnd, visible)}
           thumbnails={thumbnails}
+          markers={markers}
           onSeek={seek}
         />
         <div className="flex items-center gap-1">

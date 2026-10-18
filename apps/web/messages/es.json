@@ -331,6 +331,31 @@
       "search": "Buscar en la transcripción",
       "matches": "{count, plural, =0 {Sin resultados} one {# resultado} other {# resultados}}",
       "empty": "No se encontró habla en este video."
+    },
+    "panel": "Comentarios y transcripción",
+    "comments": {
+      "title": "Comentarios",
+      "label": "Comentario",
+      "placeholder": "Escribe un comentario…",
+      "at": "En {time}",
+      "send": "Comentar",
+      "reply": "Responder",
+      "edit": "Editar",
+      "save": "Guardar",
+      "delete": "Eliminar",
+      "cancel": "Cancelar",
+      "edited": "editado",
+      "deleted": "Comentario eliminado",
+      "jumpTo": "Ir a {time}",
+      "empty": "Todavía no hay comentarios. Sé el primero.",
+      "loading": "Cargando comentarios…",
+      "error": "No se pudo enviar. Inténtalo de nuevo.",
+      "signIn": "Inicia sesión",
+      "signInHint": "para comentar."
+    },
+    "reactions": {
+      "label": "Reaccionar en este momento",
+      "react": "Reaccionar con {emoji}"
     }
   }
 }

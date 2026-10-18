@@ -112,3 +112,29 @@
     opacity: 0.35;
   }
 }
+
+/* Without motion the floating reactions are simply not shown; the timeline still has them. */
+.float-up {
+  opacity: 0;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .float-up {
+    animation: float-up 1.8s var(--ease-out-expo) both;
+  }
+}
+
+@keyframes float-up {
+  0% {
+    opacity: 0;
+    transform: translateY(0) scale(0.6);
+  }
+  15% {
+    opacity: 1;
+    transform: translateY(-12px) scale(1.15);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-160px) scale(1);
+  }
+}

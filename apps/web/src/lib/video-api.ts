@@ -1,4 +1,5 @@
 import { UploadError, type UploadApi } from '@weft/recorder/core'
+import type { CommentView, Discussion, ReactionView } from './discussion'
 import type { TranscriptView } from './transcript'
 import type { TranscriptLanguage, TrimRange, VideoPrivacy, VideoView } from './video-summary'
 
@@ -103,4 +104,39 @@ export function requestTranscription(videoId: string): Promise<VideoView> {
 /** The transcript at a URL the API advertised in `captions.transcriptUrl`. */
 export function fetchTranscript(url: string): Promise<TranscriptView> {
   return call<TranscriptView>(url, undefined, 'GET')
+}
+
+export function fetchDiscussion(videoId: string): Promise<Discussion> {
+  return call<Discussion>(`${videoPath(videoId)}/discussion`, undefined, 'GET')
+}
+
+export function addComment(
+  videoId: string,
+  comment: { body: string; timestampMs?: number | null; parentId?: string | null },
+): Promise<CommentView> {
+  return call<CommentView>(`${videoPath(videoId)}/comments`, comment)
+}
+
+export function editComment(
+  videoId: string,
+  commentId: string,
+  body: string,
+): Promise<CommentView> {
+  return call<CommentView>(
+    `${videoPath(videoId)}/comments/${encodeURIComponent(commentId)}`,
+    { body },
+    'PATCH',
+  )
+}
+
+export async function deleteComment(videoId: string, commentId: string): Promise<void> {
+  await call(`${videoPath(videoId)}/comments/${encodeURIComponent(commentId)}`, undefined, 'DELETE')
+}
+
+export function addReaction(
+  videoId: string,
+  emoji: string,
+  timestampMs: number,
+): Promise<ReactionView> {
+  return call<ReactionView>(`${videoPath(videoId)}/reactions`, { emoji, timestampMs })
 }

@@ -331,6 +331,31 @@
       "search": "Search the transcript",
       "matches": "{count, plural, =0 {No matches} one {# match} other {# matches}}",
       "empty": "No speech was found in this video."
+    },
+    "panel": "Comments and transcript",
+    "comments": {
+      "title": "Comments",
+      "label": "Comment",
+      "placeholder": "Add a comment…",
+      "at": "At {time}",
+      "send": "Comment",
+      "reply": "Reply",
+      "edit": "Edit",
+      "save": "Save",
+      "delete": "Delete",
+      "cancel": "Cancel",
+      "edited": "edited",
+      "deleted": "Comment deleted",
+      "jumpTo": "Jump to {time}",
+      "empty": "No comments yet. Be the first.",
+      "loading": "Loading comments…",
+      "error": "Couldn't send it. Try again.",
+      "signIn": "Sign in",
+      "signInHint": "to comment."
+    },
+    "reactions": {
+      "label": "React at this moment",
+      "react": "React with {emoji}"
     }
   }
 }
