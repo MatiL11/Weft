@@ -8,6 +8,7 @@ import type {
   TranscriptSegment,
 } from '../domain/transcript'
 import type { SegmentKind, Video, VideoSegment } from '../domain/video'
+import type { Invitation, Member } from '../domain/membership'
 import type { Workspace, WorkspaceMembership, WorkspaceRole } from '../domain/workspace'
 import type {
   Clock,
@@ -16,7 +17,11 @@ import type {
   VideoEvent,
   VideoEventPublisher,
   IdGenerator,
+  InvitationRepository,
   MediaRenderer,
+  SecretTokens,
+  UserDirectory,
+  UserProfile,
   ObjectStorage,
   PasswordHasher,
   PresignedUpload,
@@ -54,14 +59,42 @@ interface StoredMembership {
   workspaceId: string
   userId: string
   role: WorkspaceRole
+  joinedAt: Date
+}
+
+/** Accounts in memory; tests register the people they need. */
+export class InMemoryUserDirectory implements UserDirectory {
+  private users: readonly UserProfile[]
+
+  constructor(users: UserProfile[] = []) {
+    this.users = users
+  }
+
+  add(user: UserProfile): void {
+    this.users = [...this.users, user]
+  }
+
+  async findById(id: string): Promise<UserProfile | null> {
+    return this.users.find((u) => u.id === id) ?? null
+  }
+
+  async findByEmail(email: string): Promise<UserProfile | null> {
+    return this.users.find((u) => u.email.toLowerCase() === email.toLowerCase()) ?? null
+  }
 }
 
 export class InMemoryWorkspaceRepository implements WorkspaceRepository {
   private workspaces: readonly Workspace[] = []
   private memberships: readonly StoredMembership[] = []
 
-  /** @param reservedSlugs slugs treated as already taken (for collision tests). */
-  constructor(private readonly reservedSlugs: ReadonlySet<string> = new Set()) {}
+  /**
+   * @param reservedSlugs slugs treated as already taken (for collision tests).
+   * @param users where member names and emails come from.
+   */
+  constructor(
+    private readonly reservedSlugs: ReadonlySet<string> = new Set(),
+    private readonly users: UserDirectory = new InMemoryUserDirectory(),
+  ) {}
 
   async slugExists(slug: string): Promise<boolean> {
     return this.reservedSlugs.has(slug) || this.workspaces.some((w) => w.slug === slug)
@@ -69,12 +102,49 @@ export class InMemoryWorkspaceRepository implements WorkspaceRepository {
 
   async createWithMember(workspace: Workspace, userId: string, role: WorkspaceRole): Promise<void> {
     this.workspaces = [...this.workspaces, workspace]
-    this.memberships = [...this.memberships, { workspaceId: workspace.id, userId, role }]
+    this.memberships = [
+      ...this.memberships,
+      { workspaceId: workspace.id, userId, role, joinedAt: workspace.createdAt },
+    ]
   }
 
-  /** Test helper: adds a member to an existing workspace. */
   async addMember(workspaceId: string, userId: string, role: WorkspaceRole): Promise<void> {
-    this.memberships = [...this.memberships, { workspaceId, userId, role }]
+    if (await this.roleOf(workspaceId, userId)) return
+    this.memberships = [...this.memberships, { workspaceId, userId, role, joinedAt: new Date(0) }]
+  }
+
+  async setRole(workspaceId: string, userId: string, role: WorkspaceRole): Promise<void> {
+    this.memberships = this.memberships.map((m) =>
+      m.workspaceId === workspaceId && m.userId === userId ? { ...m, role } : m,
+    )
+  }
+
+  async removeMember(workspaceId: string, userId: string): Promise<void> {
+    this.memberships = this.memberships.filter(
+      (m) => !(m.workspaceId === workspaceId && m.userId === userId),
+    )
+  }
+
+  async findById(id: string): Promise<Workspace | null> {
+    return this.workspaces.find((w) => w.id === id) ?? null
+  }
+
+  async listMembers(workspaceId: string): Promise<Member[]> {
+    const members = await Promise.all(
+      this.memberships
+        .filter((m) => m.workspaceId === workspaceId)
+        .map(async (m) => {
+          const user = await this.users.findById(m.userId)
+          return {
+            userId: m.userId,
+            name: user?.name ?? m.userId,
+            email: user?.email ?? '',
+            role: m.role,
+            joinedAt: m.joinedAt,
+          }
+        }),
+    )
+    return members.sort((a, b) => Number(b.role === 'owner') - Number(a.role === 'owner'))
   }
 
   async roleOf(workspaceId: string, userId: string): Promise<WorkspaceRole | null> {
@@ -408,5 +478,45 @@ export class RecordingEventPublisher implements VideoEventPublisher {
     const entry = { videoId, listener }
     this.listeners.add(entry)
     return () => this.listeners.delete(entry)
+  }
+}
+
+export class InMemoryInvitationRepository implements InvitationRepository {
+  private readonly invitations = new Map<string, Invitation>()
+
+  async create(invitation: Invitation): Promise<void> {
+    this.invitations.set(invitation.id, invitation)
+  }
+
+  async update(invitation: Invitation): Promise<void> {
+    this.invitations.set(invitation.id, invitation)
+  }
+
+  async findById(id: string): Promise<Invitation | null> {
+    return this.invitations.get(id) ?? null
+  }
+
+  async findByTokenHash(tokenHash: string): Promise<Invitation | null> {
+    return [...this.invitations.values()].find((i) => i.tokenHash === tokenHash) ?? null
+  }
+
+  async listOpen(workspaceId: string): Promise<Invitation[]> {
+    return [...this.invitations.values()].filter(
+      (i) => i.workspaceId === workspaceId && !i.acceptedAt && !i.revokedAt,
+    )
+  }
+}
+
+/** Predictable tokens: tok_1, tok_2… hashed as "hash:<token>". */
+export class FakeSecretTokens implements SecretTokens {
+  private counter = 0
+
+  create(): string {
+    this.counter += 1
+    return `tok_${this.counter}`
+  }
+
+  hash(token: string): string {
+    return `hash:${token}`
   }
 }

@@ -7,6 +7,7 @@ import type {
   TranscriptSegment,
 } from '../domain/transcript'
 import type { SegmentKind, Video, VideoSegment } from '../domain/video'
+import type { Invitation, Member } from '../domain/membership'
 import type { Workspace, WorkspaceMembership, WorkspaceRole } from '../domain/workspace'
 
 export interface Clock {
@@ -24,6 +25,40 @@ export interface WorkspaceRepository {
   listForUser(userId: string): Promise<WorkspaceMembership[]>
   /** The user's role in the workspace, or null if they are not a member. */
   roleOf(workspaceId: string, userId: string): Promise<WorkspaceRole | null>
+  findById(id: string): Promise<Workspace | null>
+  /** Members with their names and emails, owners first. */
+  listMembers(workspaceId: string): Promise<Member[]>
+  /** Adds the user unless they already belong to the workspace. */
+  addMember(workspaceId: string, userId: string, role: WorkspaceRole): Promise<void>
+  setRole(workspaceId: string, userId: string, role: WorkspaceRole): Promise<void>
+  removeMember(workspaceId: string, userId: string): Promise<void>
+}
+
+export interface InvitationRepository {
+  create(invitation: Invitation): Promise<void>
+  update(invitation: Invitation): Promise<void>
+  findById(id: string): Promise<Invitation | null>
+  findByTokenHash(tokenHash: string): Promise<Invitation | null>
+  /** Not yet accepted or revoked (they may have expired). */
+  listOpen(workspaceId: string): Promise<Invitation[]>
+}
+
+export interface UserProfile {
+  id: string
+  name: string
+  email: string
+}
+
+/** Read access to accounts (managed by the auth system). */
+export interface UserDirectory {
+  findById(id: string): Promise<UserProfile | null>
+  findByEmail(email: string): Promise<UserProfile | null>
+}
+
+/** Unguessable secrets for links (e.g. invitations); only their hashes are stored. */
+export interface SecretTokens {
+  create(): string
+  hash(token: string): string
 }
 
 export interface VideoRepository {

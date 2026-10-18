@@ -6,8 +6,11 @@ import {
   FakePasswordHasher,
   FakeRenderQueue,
   FakeSpeechRecognizer,
+  FakeSecretTokens,
   FixedClock,
   InMemoryCommentRepository,
+  InMemoryInvitationRepository,
+  InMemoryUserDirectory,
   InMemoryReactionRepository,
   InMemoryTranscriptRepository,
   RecordingEventPublisher,
@@ -27,7 +30,13 @@ export const SHA = 'n4bQgYhMfWWaL+qgxVrQFaO/TxsrC4Is0V1sFbDwCgg='
 
 export async function createTestBed() {
   const videos = new InMemoryVideoRepository()
-  const workspaces = new InMemoryWorkspaceRepository()
+  const users = new InMemoryUserDirectory([
+    { id: 'owner_1', name: 'Ana', email: 'ana@example.com' },
+    { id: 'member_1', name: 'Beto', email: 'beto@example.com' },
+    { id: 'viewer_1', name: 'Caro', email: 'caro@example.com' },
+    { id: 'outsider', name: 'Dani', email: 'dani@example.com' },
+  ])
+  const workspaces = new InMemoryWorkspaceRepository(new Set(), users)
   const storage = new FakeObjectStorage()
   const renders = new FakeRenderQueue()
   const deps = {
@@ -40,6 +49,9 @@ export async function createTestBed() {
     comments: new InMemoryCommentRepository({ owner_1: 'Ana', member_1: 'Beto', viewer_1: 'Caro' }),
     reactions: new InMemoryReactionRepository(),
     events: new RecordingEventPublisher(),
+    users,
+    invitations: new InMemoryInvitationRepository(),
+    tokens: new FakeSecretTokens(),
     recognizer: new FakeSpeechRecognizer(),
     renderer: new FakeMediaRenderer(storage),
     passwords: new FakePasswordHasher(),
