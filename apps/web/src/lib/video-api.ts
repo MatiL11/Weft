@@ -185,3 +185,33 @@ export async function removeMember(workspaceId: string, userId: string): Promise
 export function acceptInvitation(token: string): Promise<{ workspace: { id: string } }> {
   return call(`/api/invitations/${encodeURIComponent(token)}/accept`)
 }
+
+export function moveVideo(videoId: string, folderId: string | null): Promise<VideoView> {
+  return call<VideoView>(`${videoPath(videoId)}/move`, { folderId })
+}
+
+export function trashVideo(videoId: string): Promise<VideoView> {
+  return call<VideoView>(`${videoPath(videoId)}/trash`)
+}
+
+export function restoreVideo(videoId: string): Promise<VideoView> {
+  return call<VideoView>(`${videoPath(videoId)}/restore`)
+}
+
+export function createFolder(
+  workspaceId: string,
+  name: string,
+): Promise<{ id: string; name: string }> {
+  return call(`${workspacePath(workspaceId)}/folders`, { name })
+}
+
+export function renameFolder(
+  folderId: string,
+  name: string,
+): Promise<{ id: string; name: string }> {
+  return call(`/api/folders/${encodeURIComponent(folderId)}`, { name }, 'PATCH')
+}
+
+export async function deleteFolder(folderId: string): Promise<void> {
+  await call(`/api/folders/${encodeURIComponent(folderId)}`, undefined, 'DELETE')
+}

@@ -2,6 +2,12 @@ import { UploadError } from '@weft/recorder/core'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import {
   acceptInvitation,
+  createFolder,
+  deleteFolder,
+  moveVideo,
+  renameFolder,
+  restoreVideo,
+  trashVideo,
   addComment,
   changeMemberRole,
   inviteMember,
@@ -195,6 +201,34 @@ describe('member calls', () => {
       ['PATCH', '/api/workspaces/w%201/members/u1'],
       ['DELETE', '/api/workspaces/w%201/members/u1'],
       ['POST', '/api/invitations/tok/accept'],
+    ])
+  })
+})
+
+describe('library calls', () => {
+  it('moves, trashes and restores videos and manages folders', async () => {
+    const fetch = mockFetch(
+      okJson({ id: 'v' }),
+      okJson({ id: 'v' }),
+      okJson({ id: 'v' }),
+      okJson({ id: 'f', name: 'A' }, 201),
+      okJson({ id: 'f', name: 'B' }),
+      okJson({ deleted: true }),
+    )
+    await moveVideo('v', 'f')
+    await trashVideo('v')
+    await restoreVideo('v')
+    await createFolder('w', 'A')
+    await renameFolder('f', 'B')
+    await deleteFolder('f')
+    const calls = fetch.mock.calls as unknown as [string, RequestInit][]
+    expect(calls.map(([url, init]) => [init.method, url, init.body])).toEqual([
+      ['POST', '/api/videos/v/move', JSON.stringify({ folderId: 'f' })],
+      ['POST', '/api/videos/v/trash', undefined],
+      ['POST', '/api/videos/v/restore', undefined],
+      ['POST', '/api/workspaces/w/folders', JSON.stringify({ name: 'A' })],
+      ['PATCH', '/api/folders/f', JSON.stringify({ name: 'B' })],
+      ['DELETE', '/api/folders/f', undefined],
     ])
   })
 })

@@ -301,12 +301,12 @@
         }
       },
       "delete": {
-        "action": "Eliminar video",
-        "question": "¿Eliminar este video para todos? No se puede deshacer.",
-        "confirm": "Eliminar",
+        "action": "Mover a la papelera",
+        "question": "¿Mover este video a la papelera? Su enlace deja de funcionar; puedes restaurarlo durante 30 días.",
+        "confirm": "Mover a la papelera",
         "cancel": "Cancelar",
-        "deleting": "Eliminando…",
-        "error": "No se pudo eliminar el video. Inténtalo de nuevo."
+        "deleting": "Moviendo…",
+        "error": "No se pudo mover el video. Inténtalo de nuevo."
       },
       "transcription": {
         "title": "Transcripción",
@@ -357,6 +357,11 @@
     "reactions": {
       "label": "Reaccionar en este momento",
       "react": "Reaccionar con {emoji}"
+    },
+    "trashed": {
+      "title": "En la papelera",
+      "body": "Solo tú lo ves. Se borrará para siempre 30 días después de haberlo movido.",
+      "restore": "Restaurar"
     }
   },
   "members": {
@@ -415,5 +420,29 @@
       "wrongAccount": "Esta invitación es para otro email. Inicia sesión con esa cuenta.",
       "generic": "No se pudo unir. Inténtalo de nuevo."
     }
+  },
+  "library": {
+    "search": "Busca en títulos y en lo que se dice en los videos",
+    "folders": "Carpetas",
+    "all": "Todos",
+    "unfiled": "Sin carpeta",
+    "newFolder": "Nueva carpeta",
+    "folderName": "Nombre de la carpeta",
+    "renameFolder": "Renombrar carpeta",
+    "deleteFolder": "Eliminar carpeta",
+    "deleteFolderHint": "Sus videos se quedan en la biblioteca.",
+    "trash": "Papelera",
+    "trashHint": "Los videos de la papelera se borran para siempre a los 30 días. Mientras tanto sus enlaces no funcionan.",
+    "trashEmpty": "La papelera está vacía.",
+    "folderEmpty": "Todavía no hay videos aquí.",
+    "noResults": "Nada coincide con «{query}».",
+    "resultsFor": "Resultados para «{query}»",
+    "actions": "Acciones del video",
+    "moveTo": "Mover a",
+    "moveToTrash": "Mover a la papelera",
+    "restore": "Restaurar",
+    "deleteForever": "Eliminar para siempre",
+    "confirmDelete": "Haz clic otra vez para borrarlo para siempre",
+    "error": "Algo salió mal. Inténtalo de nuevo."
   }
 }

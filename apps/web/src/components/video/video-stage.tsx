@@ -19,6 +19,7 @@ import { OwnerCard } from './owner-card'
 import { PrivacyForm } from './privacy-form'
 import { RenderStatus } from './render-status'
 import { TitleEditor } from './title-editor'
+import { TrashedBanner } from './trashed-banner'
 import { TranscriptPanel } from './transcript-panel'
 import { TranscriptionSettings } from './transcription-settings'
 import { TrimEditor } from './trim-editor'
@@ -57,6 +58,7 @@ export function VideoStage({ video, shareUrl, embedCode, startAt }: VideoStagePr
 
   return (
     <div className="grid gap-6">
+      {video.trashedAt && video.isOwner && <TrashedBanner videoId={video.id} />}
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_22rem]">
         <div className="relative">
           <VideoPlayer

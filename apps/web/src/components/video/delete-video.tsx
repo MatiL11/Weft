@@ -3,9 +3,9 @@
 import { useTranslations } from 'next-intl'
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
-import { deleteVideo } from '@/lib/video-api'
+import { trashVideo } from '@/lib/video-api'
 
-/** Two-step delete: the first click asks, the second deletes. */
+/** Two-step move to the trash: the first click asks, the second confirms. */
 export function DeleteVideo({ videoId }: { videoId: string }) {
   const t = useTranslations('video.owner.delete')
   const router = useRouter()
@@ -14,7 +14,7 @@ export function DeleteVideo({ videoId }: { videoId: string }) {
   async function confirm() {
     setStep('deleting')
     try {
-      await deleteVideo(videoId)
+      await trashVideo(videoId)
       router.push('/')
       router.refresh()
     } catch {

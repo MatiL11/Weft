@@ -301,12 +301,12 @@
         }
       },
       "delete": {
-        "action": "Delete video",
-        "question": "Delete this video for everyone? This can't be undone.",
-        "confirm": "Delete",
+        "action": "Move to trash",
+        "question": "Move this video to the trash? Its link stops working; you can restore it for 30 days.",
+        "confirm": "Move to trash",
         "cancel": "Cancel",
-        "deleting": "Deleting…",
-        "error": "Couldn't delete the video. Try again."
+        "deleting": "Moving…",
+        "error": "Couldn't move the video. Try again."
       },
       "transcription": {
         "title": "Transcript",
@@ -357,6 +357,11 @@
     "reactions": {
       "label": "React at this moment",
       "react": "React with {emoji}"
+    },
+    "trashed": {
+      "title": "In the trash",
+      "body": "Only you can see it. It will be deleted for good 30 days after it was trashed.",
+      "restore": "Restore"
     }
   },
   "members": {
@@ -415,5 +420,29 @@
       "wrongAccount": "This invitation is for a different email. Sign in with that account.",
       "generic": "Couldn't join. Try again."
     }
+  },
+  "library": {
+    "search": "Search titles and what's said in videos",
+    "folders": "Folders",
+    "all": "All",
+    "unfiled": "No folder",
+    "newFolder": "New folder",
+    "folderName": "Folder name",
+    "renameFolder": "Rename folder",
+    "deleteFolder": "Delete folder",
+    "deleteFolderHint": "Its videos stay in the library.",
+    "trash": "Trash",
+    "trashHint": "Videos in the trash are deleted for good after 30 days. Their links don't work meanwhile.",
+    "trashEmpty": "The trash is empty.",
+    "folderEmpty": "No videos here yet.",
+    "noResults": "Nothing matches “{query}”.",
+    "resultsFor": "Results for “{query}”",
+    "actions": "Video actions",
+    "moveTo": "Move to",
+    "moveToTrash": "Move to trash",
+    "restore": "Restore",
+    "deleteForever": "Delete forever",
+    "confirmDelete": "Click again to delete for good",
+    "error": "Something went wrong. Try again."
   }
 }

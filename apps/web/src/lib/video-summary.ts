@@ -29,6 +29,8 @@ export interface VideoView {
   /** After trimming. */
   durationMs: number | null
   isOwner: boolean
+  folderId: string | null
+  trashedAt: string | null
   playback: {
     playlistUrl: string
     /** Parts of the raw recording to hide until a matching render exists. */
@@ -82,16 +84,22 @@ export async function fetchVideoSummary(
   }
 }
 
+/** A library entry; `match` is where a search found the query in the transcript. */
+export interface LibraryVideo extends VideoView {
+  match: { startMs: number; endMs: number; text: string } | null
+}
+
 export type VideoListResult =
-  { kind: 'ok'; videos: VideoView[] } | { kind: 'unauthenticated' } | { kind: 'error' }
+  { kind: 'ok'; videos: LibraryVideo[] } | { kind: 'unauthenticated' } | { kind: 'error' }
 
 /** The signed-in user's library in a workspace (their personal one by default). */
 export async function fetchVideoList(
   apiBaseUrl: string,
   cookieHeader: string,
-  workspaceId?: string,
+  /** Query string for GET /api/videos (see videoListQuery). */
+  listQuery = '',
 ): Promise<VideoListResult> {
-  const query = workspaceId ? `?workspaceId=${encodeURIComponent(workspaceId)}` : ''
+  const query = listQuery ? `?${listQuery}` : ''
   try {
     const res = await fetch(`${apiBaseUrl}/api/videos${query}`, {
       headers: { cookie: cookieHeader },
@@ -99,7 +107,7 @@ export async function fetchVideoList(
     })
     if (res.status === 401) return { kind: 'unauthenticated' }
     if (!res.ok) return { kind: 'error' }
-    const body = (await res.json()) as { data: VideoView[] | null }
+    const body = (await res.json()) as { data: LibraryVideo[] | null }
     return body.data ? { kind: 'ok', videos: body.data } : { kind: 'error' }
   } catch {
     return { kind: 'error' }

@@ -9,6 +9,8 @@ const SUMMARY: VideoView = {
   durationMs: 6000,
   createdAt: '2026-10-16T10:00:00.000Z',
   isOwner: false,
+  folderId: null,
+  trashedAt: null,
   playback: { playlistUrl: '/api/videos/abc/playlist.m3u8', skip: null, processed: true },
   posterUrl: '/api/videos/abc/r/1/poster.jpg',
   thumbnails: null,
@@ -82,11 +84,11 @@ describe('fetchVideoList', () => {
   it('returns the library, or tells signed-out users apart from failures', async () => {
     vi.stubGlobal(
       'fetch',
-      vi.fn(async () => Response.json({ data: [SUMMARY], error: null })),
+      vi.fn(async () => Response.json({ data: [{ ...SUMMARY, match: null }], error: null })),
     )
-    expect(await fetchVideoList('http://api:4000', 'session=1')).toEqual({
+    expect(await fetchVideoList('http://api:4000', 'session=1', 'q=x')).toEqual({
       kind: 'ok',
-      videos: [SUMMARY],
+      videos: [{ ...SUMMARY, match: null }],
     })
 
     vi.stubGlobal(
