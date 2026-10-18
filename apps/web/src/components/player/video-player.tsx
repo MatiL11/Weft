@@ -50,8 +50,8 @@ export interface VideoPlayerProps {
   captions?: readonly TranscriptSegment[] | null
   /** Comments and reactions shown along the seek bar. */
   markers?: readonly TimelineMarker[]
-  /** Reports the playback position (visible seconds) a few times per second. */
-  onTimeChange?: (visibleSeconds: number) => void
+  /** Reports the playback position (visible seconds) a few times per second, and on pauses. */
+  onTimeChange?: (visibleSeconds: number, info: { duration: number; playing: boolean }) => void
   ref?: Ref<PlayerHandle>
 }
 
@@ -190,8 +190,11 @@ export function VideoPlayer({
   onTimeChangeRef.current = onTimeChange
   const timeTick = Math.floor(visibleTime * TIME_REPORTS_PER_SECOND)
   useEffect(() => {
-    onTimeChangeRef.current?.(timeTick / TIME_REPORTS_PER_SECOND)
-  }, [timeTick])
+    onTimeChangeRef.current?.(timeTick / TIME_REPORTS_PER_SECOND, {
+      duration: visibleRef.current.end - visibleRef.current.start,
+      playing: state.playing,
+    })
+  }, [timeTick, state.playing])
 
   const seek = useCallback((visibleSeconds: number) => {
     const video = videoRef.current

@@ -362,6 +362,25 @@
       "title": "In the trash",
       "body": "Only you can see it. It will be deleted for good 30 days after it was trashed.",
       "restore": "Restore"
+    },
+    "stats": {
+      "title": "Views",
+      "description": "Only people other than you count; a view starts after a second of playback.",
+      "views": "Views",
+      "unique": "Unique viewers",
+      "averageWatched": "Watched on average",
+      "completion": "Watched to the end",
+      "empty": "No views yet. Share the link to see who watches and how far.",
+      "retentionTitle": "Audience retention",
+      "retentionLabel": "Share of viewers still watching along the video",
+      "stillWatching": "{percent}% still watching",
+      "showTable": "Show as table",
+      "moment": "Moment",
+      "watching": "Watching",
+      "viewersTitle": "Signed-in viewers",
+      "anonymous": "{count, plural, one {# view} other {# views}} by people who weren't signed in.",
+      "loading": "Loading views…",
+      "error": "Views couldn't be loaded."
     }
   },
   "members": {
@@ -443,6 +462,7 @@
     "restore": "Restore",
     "deleteForever": "Delete forever",
     "confirmDelete": "Click again to delete for good",
-    "error": "Something went wrong. Try again."
+    "error": "Something went wrong. Try again.",
+    "viewCount": "{count, plural, one {# view} other {# views}}"
   }
 }

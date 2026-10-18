@@ -77,6 +77,12 @@ export async function VideoCard({ video, isFeatured, now, folders }: VideoCardPr
             <time dateTime={video.createdAt}>
               {format.relativeTime(new Date(video.createdAt), now)}
             </time>
+            {video.viewCount !== null && (
+              <>
+                <span aria-hidden="true">·</span>
+                <span>{t('library.viewCount', { count: video.viewCount })}</span>
+              </>
+            )}
             {video.privacy !== 'link' && (
               <>
                 <span aria-hidden="true">·</span>

@@ -13,12 +13,14 @@ import { ReactionBar, ReactionBurst } from '../discussion/reaction-bar'
 import { SidePanel } from '../discussion/side-panel'
 import { useDiscussion } from '../discussion/use-discussion'
 import { useTranscript } from '../player/use-transcript'
+import { useViewTracking } from '../player/use-view-tracking'
 import { VideoPlayer, type PlayerHandle } from '../player/video-player'
 import { DeleteVideo } from './delete-video'
 import { OwnerCard } from './owner-card'
 import { PrivacyForm } from './privacy-form'
 import { RenderStatus } from './render-status'
 import { TitleEditor } from './title-editor'
+import { VideoStats } from './video-stats'
 import { TrashedBanner } from './trashed-banner'
 import { TranscriptPanel } from './transcript-panel'
 import { TranscriptionSettings } from './transcription-settings'
@@ -45,6 +47,7 @@ export function VideoStage({ video, shareUrl, embedCode, startAt }: VideoStagePr
   const [currentMs, setCurrentMs] = useState(0)
 
   const { discussion, apply, incoming } = useDiscussion(video.id)
+  const trackView = useViewTracking(video.id, !video.isOwner && !isLive)
   const markers = discussion ? timelineMarkers(discussion, video.durationMs ?? 0) : []
   const seek = (ms: number) => playerRef.current?.seek(ms / 1000)
 
@@ -72,7 +75,10 @@ export function VideoStage({ video, shareUrl, embedCode, startAt }: VideoStagePr
             startAt={startAt}
             captions={transcript?.segments}
             markers={markers}
-            onTimeChange={(seconds) => setCurrentMs(seconds * 1000)}
+            onTimeChange={(seconds, info) => {
+              setCurrentMs(seconds * 1000)
+              trackView(seconds, info)
+            }}
           />
           <ReactionBurst items={incoming} />
         </div>
@@ -190,6 +196,9 @@ function OwnerTools({ video, owner, shareUrl, embedCode, playerTimeMs }: OwnerTo
     <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,1.45fr)_minmax(0,1fr)]">
       <div className="grid gap-4">
         <RenderStatus videoId={video.id} state={owner.renderState} />
+        {video.durationMs !== null && (
+          <VideoStats videoId={video.id} durationMs={video.durationMs} />
+        )}
         {owner.recordingDurationMs !== null && (
           <TrimEditor
             key={`${owner.trim?.startMs}-${owner.trim?.endMs}`}

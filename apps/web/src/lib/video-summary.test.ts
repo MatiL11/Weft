@@ -84,11 +84,13 @@ describe('fetchVideoList', () => {
   it('returns the library, or tells signed-out users apart from failures', async () => {
     vi.stubGlobal(
       'fetch',
-      vi.fn(async () => Response.json({ data: [{ ...SUMMARY, match: null }], error: null })),
+      vi.fn(async () =>
+        Response.json({ data: [{ ...SUMMARY, match: null, viewCount: null }], error: null }),
+      ),
     )
     expect(await fetchVideoList('http://api:4000', 'session=1', 'q=x')).toEqual({
       kind: 'ok',
-      videos: [{ ...SUMMARY, match: null }],
+      videos: [{ ...SUMMARY, match: null, viewCount: null }],
     })
 
     vi.stubGlobal(

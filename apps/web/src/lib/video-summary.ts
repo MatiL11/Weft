@@ -87,6 +87,8 @@ export async function fetchVideoSummary(
 /** A library entry; `match` is where a search found the query in the transcript. */
 export interface LibraryVideo extends VideoView {
   match: { startMs: number; endMs: number; text: string } | null
+  /** Views so far, for the caller's own videos. */
+  viewCount: number | null
 }
 
 export type VideoListResult =

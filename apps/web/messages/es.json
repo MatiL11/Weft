@@ -362,6 +362,25 @@
       "title": "En la papelera",
       "body": "Solo tú lo ves. Se borrará para siempre 30 días después de haberlo movido.",
       "restore": "Restaurar"
+    },
+    "stats": {
+      "title": "Vistas",
+      "description": "Solo cuentan otras personas; una vista empieza tras un segundo de reproducción.",
+      "views": "Vistas",
+      "unique": "Espectadores únicos",
+      "averageWatched": "Visto en promedio",
+      "completion": "Vieron hasta el final",
+      "empty": "Todavía no hay vistas. Comparte el enlace para ver quién lo mira y hasta dónde.",
+      "retentionTitle": "Retención de la audiencia",
+      "retentionLabel": "Porcentaje de espectadores que sigue mirando a lo largo del video",
+      "stillWatching": "{percent}% sigue mirando",
+      "showTable": "Ver como tabla",
+      "moment": "Momento",
+      "watching": "Mirando",
+      "viewersTitle": "Espectadores con sesión iniciada",
+      "anonymous": "{count, plural, one {# vista} other {# vistas}} de personas sin sesión iniciada.",
+      "loading": "Cargando vistas…",
+      "error": "No se pudieron cargar las vistas."
     }
   },
   "members": {
@@ -443,6 +462,7 @@
     "restore": "Restaurar",
     "deleteForever": "Eliminar para siempre",
     "confirmDelete": "Haz clic otra vez para borrarlo para siempre",
-    "error": "Algo salió mal. Inténtalo de nuevo."
+    "error": "Algo salió mal. Inténtalo de nuevo.",
+    "viewCount": "{count, plural, one {# vista} other {# vistas}}"
   }
 }

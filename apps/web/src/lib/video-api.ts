@@ -215,3 +215,45 @@ export function renameFolder(
 export async function deleteFolder(folderId: string): Promise<void> {
   await call(`/api/folders/${encodeURIComponent(folderId)}`, undefined, 'DELETE')
 }
+
+/** Starts counting a view; null for the video's owner (their views don't count). */
+export async function startView(videoId: string): Promise<string | null> {
+  return (await call<{ viewId: string | null }>(`${videoPath(videoId)}/views`)).viewId
+}
+
+export interface ViewProgress {
+  buckets: number
+  watchedMs: number
+}
+
+/**
+ * Reports what has been watched. With `beacon`, it uses navigator.sendBeacon so the report
+ * survives the page closing.
+ */
+export async function sendViewProgress(
+  videoId: string,
+  viewId: string,
+  progress: ViewProgress,
+  beacon = false,
+): Promise<void> {
+  const url = `${videoPath(videoId)}/views/${encodeURIComponent(viewId)}/progress`
+  if (beacon && typeof navigator.sendBeacon === 'function') {
+    navigator.sendBeacon(url, new Blob([JSON.stringify(progress)], { type: 'application/json' }))
+    return
+  }
+  await call(url, progress)
+}
+
+export interface VideoStats {
+  views: number
+  uniqueViewers: number
+  averageWatched: number
+  completionRate: number
+  retention: number[]
+  viewers: { viewerId: string; name: string; views: number; watched: number; lastSeenAt: string }[]
+  anonymousViews: number
+}
+
+export function fetchVideoStats(videoId: string): Promise<VideoStats> {
+  return call<VideoStats>(`${videoPath(videoId)}/stats`, undefined, 'GET')
+}
