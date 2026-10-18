@@ -68,6 +68,12 @@ describe('PgBossJobs (integration)', () => {
     expect(transcriptions).toEqual([{ videoId: 'vid_2', version: 1 }])
     expect(received).toHaveLength(2)
 
+    // The trash purge is scheduled daily and can also be triggered.
+    let purges = 0
+    await worker.workTrashPurge(async () => void (purges += 1), { pollingIntervalSeconds: 0.5 })
+    await api.purgeTrashNow()
+    await waitFor(() => purges === 1)
+
     await api.stop()
     await worker.stop()
   })

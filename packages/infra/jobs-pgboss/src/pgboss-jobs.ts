@@ -3,6 +3,9 @@ import { PgBoss } from 'pg-boss'
 
 export const RENDER_QUEUE = 'video-render'
 export const TRANSCRIPTION_QUEUE = 'video-transcribe'
+export const TRASH_PURGE_QUEUE = 'trash-purge'
+/** Every day at 03:00 UTC. */
+const TRASH_PURGE_CRON = '0 3 * * *'
 
 export interface PgBossJobsOptions {
   connectionString: string
@@ -30,7 +33,7 @@ export class PgBossJobs implements RenderQueue, TranscriptionQueue {
     const boss = new PgBoss(options.connectionString)
     boss.on('error', options.onError)
     await boss.start()
-    for (const queue of [RENDER_QUEUE, TRANSCRIPTION_QUEUE]) {
+    for (const queue of [RENDER_QUEUE, TRANSCRIPTION_QUEUE, TRASH_PURGE_QUEUE]) {
       await boss.createQueue(queue, {
         retryLimit: RETRY_LIMIT,
         retryDelay: options.retryDelaySeconds,
@@ -60,6 +63,20 @@ export class PgBossJobs implements RenderQueue, TranscriptionQueue {
     options: WorkOptions,
   ): Promise<void> {
     return this.work(TRANSCRIPTION_QUEUE, handler, options)
+  }
+
+  /** Runs `handler` once a day (pg-boss makes sure only one worker runs each occurrence). */
+  async workTrashPurge(
+    handler: () => Promise<void>,
+    options: { pollingIntervalSeconds?: number } = {},
+  ) {
+    await this.boss.schedule(TRASH_PURGE_QUEUE, TRASH_PURGE_CRON, null, { tz: 'UTC' })
+    await this.work(TRASH_PURGE_QUEUE, handler, { concurrency: 1, ...options })
+  }
+
+  /** Queues a purge right away (e.g. for tests or an admin action). */
+  async purgeTrashNow(): Promise<void> {
+    await this.boss.send(TRASH_PURGE_QUEUE, {})
   }
 
   /** Lets running jobs finish (up to the timeout), then disconnects. */

@@ -1,4 +1,4 @@
-import { RenderVideo, TranscribeVideo } from '@weft/core'
+import { PurgeTrash, RenderVideo, TranscribeVideo } from '@weft/core'
 import {
   connectDatabase,
   DrizzleTranscriptRepository,
@@ -57,6 +57,9 @@ const renderVideo = new RenderVideo({
 await jobs.workRenders((job) => logged('render', job, () => renderVideo.execute(job)), {
   concurrency: config.RENDER_CONCURRENCY,
 })
+
+const purgeTrash = new PurgeTrash({ videos, storage, clock: { now: () => new Date() } })
+await jobs.workTrashPurge(() => logged('trash purge', {}, () => purgeTrash.execute()))
 
 /** The model may need downloading; retry until it is available. */
 async function whisperModel(): Promise<string> {
