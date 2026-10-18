@@ -57,6 +57,13 @@
       "when": 1792283752232,
       "tag": "0007_omniscient_red_hulk",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1792285799565,
+      "tag": "0008_known_lord_tyger",
+      "breakpoints": true
     }
   ]
 }

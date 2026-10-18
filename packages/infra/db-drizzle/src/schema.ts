@@ -267,6 +267,25 @@ export const reactions = pgTable(
   (t) => [index().on(t.videoId, t.createdAt)],
 )
 
+export const views = pgTable(
+  'views',
+  {
+    id: text().primaryKey(),
+    videoId: text()
+      .notNull()
+      .references(() => videos.id, { onDelete: 'cascade' }),
+    viewerId: text().references(() => users.id, { onDelete: 'set null' }),
+    anonymousId: text(),
+    timelineKey: text().notNull(),
+    /** Bit mask of the twentieths of the video that were watched. */
+    buckets: integer().notNull(),
+    watchedMs: integer().notNull(),
+    startedAt: timestamp({ withTimezone: true }).notNull(),
+    lastSeenAt: timestamp({ withTimezone: true }).notNull(),
+  },
+  (t) => [index().on(t.videoId, t.startedAt)],
+)
+
 /** Mapping passed to Better Auth's Drizzle adapter (model name → table). */
 export const authSchema = {
   user: users,
