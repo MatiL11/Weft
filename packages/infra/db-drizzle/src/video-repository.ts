@@ -10,9 +10,10 @@ import type {
   VideoSegment,
   VideoStatus,
 } from '@weft/core'
-import { and, desc, eq, sql } from 'drizzle-orm'
+import type { VideoListFilter } from '@weft/core'
+import { and, desc, eq, isNotNull, isNull, lt, or, sql, type SQL } from 'drizzle-orm'
 import type { Database } from './client'
-import { videoSegments, videos } from './schema'
+import { transcripts, videoSegments, videos } from './schema'
 
 type VideoRow = typeof videos.$inferSelect
 type SegmentRow = typeof videoSegments.$inferSelect
@@ -42,7 +43,16 @@ const editableColumns = (video: Video) => ({
   trimEndMs: video.trim?.endMs ?? null,
   passwordHash: video.passwordHash,
   transcriptLanguage: video.transcriptLanguage,
+  folderId: video.folderId,
+  trashedAt: video.trashedAt,
 })
+
+/** Escapes LIKE wildcards so a search for "50%" matches literally. */
+const likePattern = (text: string) => `%${text.replace(/[\\%_]/g, (c) => `\\${c}`)}%`
+
+/** Case- and accent-insensitive "contains". */
+const contains = (column: SQL | typeof videos.title, text: string) =>
+  sql`lower(unaccent(${column})) like lower(unaccent(${likePattern(text)}))`
 
 const toSegment = (row: SegmentRow): VideoSegment => ({ ...row, kind: row.kind as SegmentKind })
 
@@ -66,12 +76,37 @@ export class DrizzleVideoRepository implements VideoRepository {
     return row ? toVideo(row) : null
   }
 
-  async listForWorkspace(workspaceId: string, options: { limit: number }): Promise<Video[]> {
+  async listForWorkspace(workspaceId: string, filter: VideoListFilter): Promise<Video[]> {
+    const conditions = [
+      eq(videos.workspaceId, workspaceId),
+      filter.trashed ? isNotNull(videos.trashedAt) : isNull(videos.trashedAt),
+    ]
+    if (filter.folderId !== undefined) {
+      conditions.push(
+        filter.folderId === null ? isNull(videos.folderId) : eq(videos.folderId, filter.folderId),
+      )
+    }
+    if (filter.search) {
+      const transcriptText = sql`coalesce(${transcripts.text}, '')`
+      conditions.push(
+        or(contains(videos.title, filter.search), contains(transcriptText, filter.search)) as SQL,
+      )
+    }
+    const rows = await this.db
+      .select({ video: videos })
+      .from(videos)
+      .leftJoin(transcripts, eq(transcripts.videoId, videos.id))
+      .where(and(...conditions))
+      .orderBy(desc(videos.createdAt))
+      .limit(filter.limit)
+    return rows.map((row) => toVideo(row.video))
+  }
+
+  async listTrashedBefore(cutoff: Date, options: { limit: number }): Promise<Video[]> {
     const rows = await this.db
       .select()
       .from(videos)
-      .where(eq(videos.workspaceId, workspaceId))
-      .orderBy(desc(videos.createdAt))
+      .where(and(isNotNull(videos.trashedAt), lt(videos.trashedAt, cutoff)))
       .limit(options.limit)
     return rows.map(toVideo)
   }

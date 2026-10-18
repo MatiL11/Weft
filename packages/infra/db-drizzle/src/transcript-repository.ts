@@ -8,7 +8,11 @@ export class DrizzleTranscriptRepository implements TranscriptRepository {
 
   async save(transcript: Transcript): Promise<void> {
     const { videoId, ...fields } = transcript
-    const row = { ...fields, segments: [...fields.segments] }
+    const row = {
+      ...fields,
+      segments: [...fields.segments],
+      text: fields.segments.map((s) => s.text).join(' '),
+    }
     await this.db
       .insert(transcripts)
       .values({ videoId, ...row })
@@ -21,6 +25,8 @@ export class DrizzleTranscriptRepository implements TranscriptRepository {
       .from(transcripts)
       .where(eq(transcripts.videoId, videoId))
       .limit(1)
-    return row ?? null
+    if (!row) return null
+    const { text: _text, ...transcript } = row
+    return transcript
   }
 }

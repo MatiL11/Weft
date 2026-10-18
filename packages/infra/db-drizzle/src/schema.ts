@@ -130,6 +130,22 @@ export const invitations = pgTable(
   ],
 )
 
+export const folders = pgTable(
+  'folders',
+  {
+    id: text().primaryKey(),
+    workspaceId: text()
+      .notNull()
+      .references(() => workspaces.id, { onDelete: 'cascade' }),
+    name: text().notNull(),
+    createdBy: text()
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    createdAt: timestamp({ withTimezone: true }).notNull(),
+  },
+  (t) => [index().on(t.workspaceId)],
+)
+
 export const videos = pgTable(
   'videos',
   {
@@ -155,6 +171,8 @@ export const videos = pgTable(
     transcriptLanguage: text().notNull().default('auto'),
     transcriptionState: text().notNull().default('none'),
     transcriptionVersion: integer().notNull().default(0),
+    folderId: text().references(() => folders.id, { onDelete: 'set null' }),
+    trashedAt: timestamp({ withTimezone: true }),
   },
   (t) => [
     index().on(t.workspaceId, t.createdAt),
@@ -206,6 +224,8 @@ export const transcripts = pgTable('transcripts', {
   renderVersion: integer().notNull(),
   language: text().notNull(),
   segments: jsonb().$type<TranscriptSegment[]>().notNull(),
+  /** The segments' text, for library search. */
+  text: text().notNull().default(''),
   createdAt: timestamp({ withTimezone: true }).notNull(),
 })
 

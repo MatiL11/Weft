@@ -43,6 +43,13 @@
       "when": 1792282450351,
       "tag": "0005_curious_whistler",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1792283105417,
+      "tag": "0006_small_zodiak",
+      "breakpoints": true
     }
   ]
 }
