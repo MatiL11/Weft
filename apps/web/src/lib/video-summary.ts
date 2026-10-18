@@ -85,13 +85,15 @@ export async function fetchVideoSummary(
 export type VideoListResult =
   { kind: 'ok'; videos: VideoView[] } | { kind: 'unauthenticated' } | { kind: 'error' }
 
-/** The signed-in user's library (their personal workspace). */
+/** The signed-in user's library in a workspace (their personal one by default). */
 export async function fetchVideoList(
   apiBaseUrl: string,
   cookieHeader: string,
+  workspaceId?: string,
 ): Promise<VideoListResult> {
+  const query = workspaceId ? `?workspaceId=${encodeURIComponent(workspaceId)}` : ''
   try {
-    const res = await fetch(`${apiBaseUrl}/api/videos`, {
+    const res = await fetch(`${apiBaseUrl}/api/videos${query}`, {
       headers: { cookie: cookieHeader },
       cache: 'no-store',
     })

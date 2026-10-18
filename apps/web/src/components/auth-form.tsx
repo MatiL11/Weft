@@ -16,12 +16,14 @@ import {
 
 interface AuthFormProps {
   mode: AuthMode
+  /** Same-site path to continue to afterwards (already validated). */
+  next?: string
 }
 
 const MODE_KEYS = { 'sign-up': 'signUp', 'sign-in': 'signIn' } as const
 const SWITCH_HREF = { 'sign-up': '/sign-in', 'sign-in': '/sign-up' } as const
 
-export function AuthForm({ mode }: AuthFormProps) {
+export function AuthForm({ mode, next = '/' }: AuthFormProps) {
   const router = useRouter()
   const t = useTranslations('auth')
   const modeKey = MODE_KEYS[mode]
@@ -55,7 +57,7 @@ export function AuthForm({ mode }: AuthFormProps) {
       setFormError(t(`errors.${authErrorKey(error.code)}`))
       return
     }
-    router.push('/')
+    router.push(next)
     router.refresh()
   }
 
@@ -118,7 +120,11 @@ export function AuthForm({ mode }: AuthFormProps) {
       <p className="mt-6 text-sm text-muted">
         {t(`${modeKey}.switchText`)}{' '}
         <Link
-          href={SWITCH_HREF[mode]}
+          href={
+            next === '/'
+              ? SWITCH_HREF[mode]
+              : `${SWITCH_HREF[mode]}?next=${encodeURIComponent(next)}`
+          }
           className="font-medium text-fg underline decoration-accent decoration-2 underline-offset-4 transition-colors hover:text-accent"
         >
           {t(`${modeKey}.switchLabel`)}

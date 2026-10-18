@@ -12,6 +12,7 @@
     "test:coverage": "vitest run --coverage"
   },
   "dependencies": {
+    "@weft/core": "workspace:*",
     "@weft/i18n": "workspace:*",
     "@weft/recorder": "workspace:*",
     "better-auth": "^1.7.10",

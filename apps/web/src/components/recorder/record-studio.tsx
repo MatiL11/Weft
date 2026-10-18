@@ -73,9 +73,12 @@ function downloadBlob(blob: Blob, filename: string): void {
 }
 
 /** Creates the server video (and link) for a new recording; null when the API is unreachable. */
-async function openUploadSession(title: string): Promise<UploadSession | null> {
+async function openUploadSession(
+  title: string,
+  workspaceId?: string,
+): Promise<UploadSession | null> {
   try {
-    const started = await startVideo(title)
+    const started = await startVideo(title, workspaceId)
     return {
       videoId: started.id,
       shareUrl: started.shareUrl,
@@ -96,7 +99,8 @@ function discardServerCopy(upload: UploadSession | null): void {
   void deleteVideo(upload.videoId).catch(() => undefined)
 }
 
-export function RecordStudio() {
+/** @param workspaceId where the recording goes; the personal workspace when absent. */
+export function RecordStudio({ workspaceId }: { workspaceId?: string }) {
   const t = useTranslations('recorder')
   const format = useFormatter()
   const [support, setSupport] = useState<BrowserSupport | null>(null)
@@ -198,7 +202,7 @@ export function RecordStudio() {
       const title = t('defaultTitle', {
         date: format.dateTime(new Date(), { dateStyle: 'medium', timeStyle: 'short' }),
       })
-      upload = await openUploadSession(title)
+      upload = await openUploadSession(title, workspaceId)
       const store = await getStore()
       const localId = crypto.randomUUID()
       const session = upload

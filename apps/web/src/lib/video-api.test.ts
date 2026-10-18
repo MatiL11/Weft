@@ -1,7 +1,12 @@
 import { UploadError } from '@weft/recorder/core'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import {
+  acceptInvitation,
   addComment,
+  changeMemberRole,
+  inviteMember,
+  removeMember,
+  revokeInvitation,
   addReaction,
   createUploadApi,
   deleteComment,
@@ -163,6 +168,33 @@ describe('discussion calls', () => {
       ['PATCH', '/api/videos/v1/comments/c%201', JSON.stringify({ body: 'Hey' })],
       ['DELETE', '/api/videos/v1/comments/c%201', undefined],
       ['POST', '/api/videos/v1/reactions', JSON.stringify({ emoji: '🔥', timestampMs: 2000 })],
+    ])
+  })
+})
+
+describe('member calls', () => {
+  it('invites, revokes, changes roles, removes and accepts', async () => {
+    const fetch = mockFetch(
+      okJson({ invitation: { id: 'i1' }, inviteUrl: 'http://x/invite/t' }, 201),
+      okJson({ revoked: true }),
+      okJson({ updated: true }),
+      okJson({ removed: true }),
+      okJson({ workspace: { id: 'w' } }),
+    )
+    await expect(inviteMember('w 1', 'a@b.co', 'member')).resolves.toMatchObject({
+      inviteUrl: 'http://x/invite/t',
+    })
+    await revokeInvitation('w 1', 'i1')
+    await changeMemberRole('w 1', 'u1', 'admin')
+    await removeMember('w 1', 'u1')
+    await acceptInvitation('tok')
+    const calls = fetch.mock.calls as unknown as [string, RequestInit][]
+    expect(calls.map(([url, init]) => [init.method, url])).toEqual([
+      ['POST', '/api/workspaces/w%201/invitations'],
+      ['DELETE', '/api/workspaces/w%201/invitations/i1'],
+      ['PATCH', '/api/workspaces/w%201/members/u1'],
+      ['DELETE', '/api/workspaces/w%201/members/u1'],
+      ['POST', '/api/invitations/tok/accept'],
     ])
   })
 })

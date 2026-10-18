@@ -7,7 +7,7 @@ const nextConfig: NextConfig = {
   output: 'standalone',
   poweredByHeader: false,
   // Workspace packages ship TypeScript sources.
-  transpilePackages: ['@weft/i18n', '@weft/recorder'],
+  transpilePackages: ['@weft/core', '@weft/i18n', '@weft/recorder'],
   // The browser only talks to this origin; /api is proxied to the API server so auth
   // cookies stay first-party.
   async headers() {

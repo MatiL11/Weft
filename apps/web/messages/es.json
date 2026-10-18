@@ -65,7 +65,8 @@
     "recording": "Grabando",
     "processing": "Procesando",
     "untitledDuration": "—",
-    "libraryError": "No se pudieron cargar tus videos."
+    "libraryError": "No se pudieron cargar tus videos.",
+    "members": "Miembros"
   },
   "errors": {
     "unreachable": "No se puede conectar con el servidor. Verifica que la API esté en ejecución.",
@@ -356,6 +357,63 @@
     "reactions": {
       "label": "Reaccionar en este momento",
       "react": "Reaccionar con {emoji}"
+    }
+  },
+  "members": {
+    "title": "Miembros",
+    "back": "Volver",
+    "membersTitle": "{count, plural, one {# miembro} other {# miembros}}",
+    "you": "tú",
+    "roleOf": "Rol de {name}",
+    "leave": "Salir",
+    "remove": "Quitar",
+    "pendingTitle": "Invitaciones pendientes",
+    "expires": "vence el {date}",
+    "revoke": "Revocar",
+    "inviteTitle": "Invitar personas",
+    "inviteHint": "Reciben un enlace para unirse. Solo la cuenta con ese email puede usarlo, durante 7 días.",
+    "email": "Email",
+    "role": "Rol",
+    "invite": "Crear enlace de invitación",
+    "linkLabel": "Enlace de invitación",
+    "linkHint": "Envíalo ahora: por seguridad no se vuelve a mostrar.",
+    "copyLink": "Copiar enlace",
+    "loadError": "No se pudieron cargar los miembros.",
+    "roles": {
+      "owner": "Propietario",
+      "admin": "Administrador",
+      "member": "Miembro",
+      "viewer": "Lector"
+    },
+    "errors": {
+      "forbidden": "No tienes permiso para hacer eso.",
+      "emailInvalid": "Escribe un email válido.",
+      "alreadyMember": "Esa persona ya es miembro.",
+      "generic": "Algo salió mal. Inténtalo de nuevo."
+    }
+  },
+  "invite": {
+    "title": "Invitación",
+    "headline": "Graba, comparte, conversa.",
+    "tagline": "Video asíncrono para tu equipo, en tu propio servidor.",
+    "join": "Únete a {workspace}",
+    "invitedBy": "{name} invitó a {email} a unirse como {role}.",
+    "someone": "Alguien",
+    "accept": "Aceptar invitación",
+    "joining": "Uniéndote…",
+    "signUp": "Crear una cuenta",
+    "signIn": "Ya tengo una cuenta",
+    "notFoundTitle": "Invitación no encontrada",
+    "notFoundBody": "Puede que el enlace esté incompleto. Pide uno nuevo.",
+    "closed": {
+      "accepted": "Esta invitación ya se usó",
+      "revoked": "Esta invitación fue revocada",
+      "expired": "Esta invitación venció"
+    },
+    "closedBody": "Pídele a quien te invitó un enlace nuevo.",
+    "errors": {
+      "wrongAccount": "Esta invitación es para otro email. Inicia sesión con esa cuenta.",
+      "generic": "No se pudo unir. Inténtalo de nuevo."
     }
   }
 }

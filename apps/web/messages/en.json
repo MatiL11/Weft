@@ -65,7 +65,8 @@
     "recording": "Recording",
     "processing": "Processing",
     "untitledDuration": "—",
-    "libraryError": "Your videos couldn't be loaded."
+    "libraryError": "Your videos couldn't be loaded.",
+    "members": "Members"
   },
   "errors": {
     "unreachable": "The server is unreachable. Check that the API is running.",
@@ -356,6 +357,63 @@
     "reactions": {
       "label": "React at this moment",
       "react": "React with {emoji}"
+    }
+  },
+  "members": {
+    "title": "Members",
+    "back": "Back",
+    "membersTitle": "{count, plural, one {# member} other {# members}}",
+    "you": "you",
+    "roleOf": "Role of {name}",
+    "leave": "Leave",
+    "remove": "Remove",
+    "pendingTitle": "Pending invitations",
+    "expires": "expires {date}",
+    "revoke": "Revoke",
+    "inviteTitle": "Invite people",
+    "inviteHint": "They get a link to join. Only the account with that email can use it, within 7 days.",
+    "email": "Email",
+    "role": "Role",
+    "invite": "Create invite link",
+    "linkLabel": "Invite link",
+    "linkHint": "Send it to them now: for security it isn't shown again.",
+    "copyLink": "Copy link",
+    "loadError": "Members couldn't be loaded.",
+    "roles": {
+      "owner": "Owner",
+      "admin": "Admin",
+      "member": "Member",
+      "viewer": "Viewer"
+    },
+    "errors": {
+      "forbidden": "You aren't allowed to do that.",
+      "emailInvalid": "Enter a valid email address.",
+      "alreadyMember": "That person is already a member.",
+      "generic": "Something went wrong. Try again."
+    }
+  },
+  "invite": {
+    "title": "Invitation",
+    "headline": "Record, share, talk it over.",
+    "tagline": "Async video for your team, on your own server.",
+    "join": "Join {workspace}",
+    "invitedBy": "{name} invited {email} to join as {role}.",
+    "someone": "Someone",
+    "accept": "Accept invitation",
+    "joining": "Joining…",
+    "signUp": "Create an account",
+    "signIn": "I already have an account",
+    "notFoundTitle": "Invitation not found",
+    "notFoundBody": "The link may be incomplete. Ask for a new one.",
+    "closed": {
+      "accepted": "This invitation was already used",
+      "revoked": "This invitation was revoked",
+      "expired": "This invitation expired"
+    },
+    "closedBody": "Ask whoever invited you for a new link.",
+    "errors": {
+      "wrongAccount": "This invitation is for a different email. Sign in with that account.",
+      "generic": "Couldn't join. Try again."
     }
   }
 }

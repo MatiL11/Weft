@@ -47,8 +47,11 @@ export interface StartedVideo {
 }
 
 /** Creates the video when recording starts; its share link works immediately. */
-export async function startVideo(title: string): Promise<StartedVideo> {
-  const data = await call<{ video: { id: string }; shareUrl: string }>('/api/videos', { title })
+export async function startVideo(title: string, workspaceId?: string): Promise<StartedVideo> {
+  const data = await call<{ video: { id: string }; shareUrl: string }>(
+    '/api/videos',
+    workspaceId ? { title, workspaceId } : { title },
+  )
   return { id: data.video.id, shareUrl: data.shareUrl }
 }
 
@@ -139,4 +142,46 @@ export function addReaction(
   timestampMs: number,
 ): Promise<ReactionView> {
   return call<ReactionView>(`${videoPath(videoId)}/reactions`, { emoji, timestampMs })
+}
+
+const workspacePath = (workspaceId: string) => `/api/workspaces/${encodeURIComponent(workspaceId)}`
+
+export function inviteMember(
+  workspaceId: string,
+  email: string,
+  role: string,
+): Promise<{ invitation: { id: string }; inviteUrl: string }> {
+  return call(`${workspacePath(workspaceId)}/invitations`, { email, role })
+}
+
+export async function revokeInvitation(workspaceId: string, invitationId: string): Promise<void> {
+  await call(
+    `${workspacePath(workspaceId)}/invitations/${encodeURIComponent(invitationId)}`,
+    undefined,
+    'DELETE',
+  )
+}
+
+export async function changeMemberRole(
+  workspaceId: string,
+  userId: string,
+  role: string,
+): Promise<void> {
+  await call(
+    `${workspacePath(workspaceId)}/members/${encodeURIComponent(userId)}`,
+    { role },
+    'PATCH',
+  )
+}
+
+export async function removeMember(workspaceId: string, userId: string): Promise<void> {
+  await call(
+    `${workspacePath(workspaceId)}/members/${encodeURIComponent(userId)}`,
+    undefined,
+    'DELETE',
+  )
+}
+
+export function acceptInvitation(token: string): Promise<{ workspace: { id: string } }> {
+  return call(`/api/invitations/${encodeURIComponent(token)}/accept`)
 }

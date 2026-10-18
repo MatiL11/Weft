@@ -12,14 +12,21 @@ export const dynamic = 'force-dynamic'
 
 const API_INTERNAL_URL = process.env.API_INTERNAL_URL ?? 'http://localhost:4000'
 
-export default async function DashboardPage() {
+export default async function DashboardPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>
+}) {
   const cookieHeader = (await cookies()).toString()
-  const [result, library] = await Promise.all([
-    fetchWorkspaces(API_INTERNAL_URL, cookieHeader),
-    fetchVideoList(API_INTERNAL_URL, cookieHeader),
-  ])
-
+  const result = await fetchWorkspaces(API_INTERNAL_URL, cookieHeader)
   if (result.kind === 'unauthenticated') redirect('/sign-in')
+  const requested = (await searchParams).workspace
+  const memberships = result.kind === 'ok' ? result.memberships : []
+  // The workspace picked in the URL, or the first (personal) one.
+  const current = memberships.find((m) => m.workspace.id === requested) ?? memberships[0]
+  const library: VideoListResult = current
+    ? await fetchVideoList(API_INTERNAL_URL, cookieHeader, current.workspace.id)
+    : { kind: 'ok', videos: [] }
   const t = await getTranslations()
 
   return (
@@ -32,7 +39,7 @@ export default async function DashboardPage() {
             {t(`errors.${errorKey(result.code)}`)}
           </p>
         ) : (
-          <WorkspaceOverview memberships={result.memberships} library={library} />
+          <WorkspaceOverview current={current} memberships={memberships} library={library} />
         )}
       </main>
     </div>
@@ -40,13 +47,16 @@ export default async function DashboardPage() {
 }
 
 interface WorkspaceOverviewProps {
+  current: WorkspaceMembership | undefined
   memberships: WorkspaceMembership[]
   library: VideoListResult
 }
 
-async function WorkspaceOverview({ memberships, library }: WorkspaceOverviewProps) {
+const CAN_RECORD = new Set(['owner', 'admin', 'member'])
+
+async function WorkspaceOverview({ current, memberships, library }: WorkspaceOverviewProps) {
   const t = await getTranslations('dashboard')
-  const [current, ...others] = memberships
+  const others = memberships.filter((m) => m.workspace.id !== current?.workspace.id)
 
   if (!current) {
     return <p className="text-muted">{t('noWorkspace')}</p>
@@ -63,13 +73,23 @@ async function WorkspaceOverview({ memberships, library }: WorkspaceOverviewProp
             {current.workspace.name}
           </h1>
         </div>
-        <Link
-          href="/record"
-          className="flex h-11 items-center gap-2.5 rounded-xl bg-primary px-5 font-medium text-on-primary transition-[background-color,transform] duration-200 hover:bg-primary-hover active:scale-[0.98]"
-        >
-          <span className="size-2.5 rounded-full bg-accent" aria-hidden="true" />
-          {t('newRecording')}
-        </Link>
+        <div className="flex flex-wrap items-center gap-2">
+          <Link
+            href={`/members?workspace=${current.workspace.id}`}
+            className="flex h-11 items-center rounded-xl border border-line px-4 font-medium transition-colors hover:border-line-strong"
+          >
+            {t('members')}
+          </Link>
+          {CAN_RECORD.has(current.role) && (
+            <Link
+              href={`/record?workspace=${current.workspace.id}`}
+              className="flex h-11 items-center gap-2.5 rounded-xl bg-primary px-5 font-medium text-on-primary transition-[background-color,transform] duration-200 hover:bg-primary-hover active:scale-[0.98]"
+            >
+              <span className="size-2.5 rounded-full bg-accent" aria-hidden="true" />
+              {t('newRecording')}
+            </Link>
+          )}
+        </div>
       </div>
 
       <Library library={library} />
@@ -81,9 +101,14 @@ async function WorkspaceOverview({ memberships, library }: WorkspaceOverviewProp
           </h2>
           <ul className="divide-y divide-line rounded-2xl border border-line bg-surface">
             {others.map((m) => (
-              <li key={m.workspace.id} className="flex items-center justify-between px-5 py-3.5">
-                <span className="font-medium">{m.workspace.name}</span>
-                <span className="font-mono text-xs text-muted">{t(`roles.${m.role}`)}</span>
+              <li key={m.workspace.id}>
+                <Link
+                  href={`/?workspace=${m.workspace.id}`}
+                  className="flex items-center justify-between px-5 py-3.5 transition-colors hover:bg-surface-sunken"
+                >
+                  <span className="font-medium">{m.workspace.name}</span>
+                  <span className="font-mono text-xs text-muted">{t(`roles.${m.role}`)}</span>
+                </Link>
               </li>
             ))}
           </ul>
