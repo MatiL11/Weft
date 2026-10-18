@@ -33,6 +33,7 @@ import {
   type Clock,
   type FolderRepository,
   type InvitationRepository,
+  type NotificationQueue,
   type SecretTokens,
   type UserDirectory,
   type CommentRepository,
@@ -63,6 +64,7 @@ export interface VideoAdapters {
   users: UserDirectory
   tokens: SecretTokens
   folders: FolderRepository
+  notifications: NotificationQueue
   passwords: PasswordHasher
   accessTokens: VideoAccessTokens
   ids: IdGenerator

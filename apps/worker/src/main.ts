@@ -1,14 +1,21 @@
-import { PurgeTrash, RenderVideo, TranscribeVideo } from '@weft/core'
+import { DeliverNotification, PurgeTrash, RenderVideo, TranscribeVideo } from '@weft/core'
 import {
   connectDatabase,
+  DrizzleCommentRepository,
+  DrizzleInvitationRepository,
   DrizzleTranscriptRepository,
+  DrizzleUserDirectory,
   DrizzleVideoRepository,
+  DrizzleWorkspaceRepository,
+  RandomSecretTokens,
 } from '@weft/infra-db'
 import { PgBossJobs } from '@weft/infra-jobs'
 import { S3ObjectStorage } from '@weft/infra-storage'
 import { pino } from 'pino'
 import { loadConfig } from './config'
+import { WeftEmailTemplates } from './email-templates'
 import { FfmpegMediaRenderer } from './ffmpeg-renderer'
+import { LogMailer, SmtpMailer } from './mailer'
 import { ensureWhisperModel } from './whisper-models'
 import { WhisperSpeechRecognizer } from './whisper-recognizer'
 
@@ -60,6 +67,29 @@ await jobs.workRenders((job) => logged('render', job, () => renderVideo.execute(
 
 const purgeTrash = new PurgeTrash({ videos, storage, clock: { now: () => new Date() } })
 await jobs.workTrashPurge(() => logged('trash purge', {}, () => purgeTrash.execute()))
+
+const deliverNotification = new DeliverNotification({
+  videos,
+  comments: new DrizzleCommentRepository(database.db),
+  users: new DrizzleUserDirectory(database.db),
+  workspaces: new DrizzleWorkspaceRepository(database.db),
+  invitations: new DrizzleInvitationRepository(database.db),
+  tokens: new RandomSecretTokens(),
+  templates: new WeftEmailTemplates(),
+  mailer: config.SMTP_URL
+    ? new SmtpMailer(config.SMTP_URL, config.MAIL_FROM)
+    : new LogMailer((message, details) => logger.warn(details, message)),
+  clock: { now: () => new Date() },
+  publicUrl: config.PUBLIC_URL,
+})
+await jobs.workNotifications(
+  // Job data carries invite tokens: log only the kind.
+  (notification) =>
+    logged('notification', { kind: notification.kind }, () =>
+      deliverNotification.execute(notification),
+    ),
+  { concurrency: 2 },
+)
 
 /** The model may need downloading; retry until it is available. */
 async function whisperModel(): Promise<string> {

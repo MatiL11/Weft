@@ -23,6 +23,13 @@ describe('loadConfig', () => {
     })
   })
 
+  it('accepts SMTP URLs only', () => {
+    expect(loadConfig({ ...VALID, SMTP_URL: 'smtps://u:p@mail.example.com:465' }).SMTP_URL).toBe(
+      'smtps://u:p@mail.example.com:465',
+    )
+    expect(() => loadConfig({ ...VALID, SMTP_URL: 'http://mail' })).toThrow(/SMTP_URL/)
+  })
+
   it('reports every invalid variable', () => {
     expect(() => loadConfig({ ...VALID, DATABASE_URL: 'nope', RENDER_CONCURRENCY: '0' })).toThrow(
       /DATABASE_URL[\s\S]*RENDER_CONCURRENCY/,

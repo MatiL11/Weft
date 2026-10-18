@@ -1,12 +1,5 @@
-import {
-  createHash,
-  createHmac,
-  randomBytes,
-  scrypt,
-  timingSafeEqual,
-  type ScryptOptions,
-} from 'node:crypto'
-import type { PasswordHasher, SecretTokens, Video, VideoAccessTokens } from '@weft/core'
+import { createHmac, randomBytes, scrypt, timingSafeEqual, type ScryptOptions } from 'node:crypto'
+import type { PasswordHasher, Video, VideoAccessTokens } from '@weft/core'
 
 const SCRYPT = { N: 16_384, r: 8, p: 1 } as const
 const KEY_LENGTH = 32
@@ -137,16 +130,5 @@ export class HitLimiter extends FailureLimiter {
     if (this.isBlocked(key)) return false
     this.recordFailure(key)
     return true
-  }
-}
-
-/** 256-bit random link tokens; the database only ever sees their SHA-256. */
-export class RandomSecretTokens implements SecretTokens {
-  create(): string {
-    return randomBytes(32).toString('base64url')
-  }
-
-  hash(token: string): string {
-    return createHash('sha256').update(token).digest('hex')
   }
 }

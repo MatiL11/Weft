@@ -16,11 +16,14 @@
     "@weft/infra-db": "workspace:*",
     "@weft/infra-jobs": "workspace:*",
     "@weft/infra-storage": "workspace:*",
+    "nodemailer": "^10.1.2",
     "pg-boss": "^12.38.0",
     "pino": "^10.4.0",
     "zod": "^4.6.7"
   },
   "devDependencies": {
+    "@types/nodemailer": "^8.0.2",
+    "testcontainers": "^12.2.1",
     "tsup": "^9.0.0",
     "tsx": "^4.23.15"
   }

@@ -3,6 +3,7 @@ import {
   CreateWorkspace,
   type Clock,
   type IdGenerator,
+  type NotificationQueue,
   type RenderQueue,
   type TranscriptionQueue,
 } from '@weft/core'
@@ -16,6 +17,7 @@ import {
   DrizzleReactionRepository,
   DrizzleTranscriptRepository,
   PostgresVideoEvents,
+  RandomSecretTokens,
   DrizzleVideoRepository,
   DrizzleWorkspaceRepository,
 } from '@weft/infra-db'
@@ -30,7 +32,6 @@ import {
   FailureLimiter,
   HitLimiter,
   HmacVideoAccessTokens,
-  RandomSecretTokens,
   ScryptPasswordHasher,
   UnlockLimiter,
 } from './security'
@@ -73,7 +74,7 @@ const REACTIONS_PER_MINUTE = 30
 
 export interface ContainerOverrides {
   /** Replaces the PostgreSQL job queue (e.g. in tests). */
-  renders?: RenderQueue & TranscriptionQueue
+  renders?: RenderQueue & TranscriptionQueue & NotificationQueue
 }
 
 /** Composition root: wires infrastructure adapters into use cases and HTTP delivery. */
@@ -100,6 +101,7 @@ export async function createContainer(
     secretAccessKey: config.S3_SECRET_ACCESS_KEY,
   })
   const comments = new DrizzleCommentRepository(database.db)
+  const users = new DrizzleUserDirectory(database.db)
   const videoEvents = new PostgresVideoEvents(database, comments, (error) =>
     logger.error({ err: error }, 'video event dispatch failed'),
   )
@@ -114,9 +116,10 @@ export async function createContainer(
     reactions: new DrizzleReactionRepository(database.db),
     events: videoEvents,
     invitations: new DrizzleInvitationRepository(database.db),
-    users: new DrizzleUserDirectory(database.db),
+    users,
     tokens: new RandomSecretTokens(),
     folders: new DrizzleFolderRepository(database.db),
+    notifications: overrides.renders ?? (jobs as PgBossJobs),
     passwords: new ScryptPasswordHasher(),
     accessTokens: new HmacVideoAccessTokens(config.BETTER_AUTH_SECRET),
     ids: videoIds,
@@ -128,6 +131,7 @@ export async function createContainer(
     secret: config.BETTER_AUTH_SECRET,
     publicUrl: config.PUBLIC_URL,
     onUserCreated: async (user) => {
+      await users.setLocale(user.id, user.locale)
       await createWorkspace.execute({
         ownerId: user.id,
         name: personalWorkspaceName(user.name, user.locale),

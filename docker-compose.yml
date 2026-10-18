@@ -70,6 +70,10 @@ services:
       RENDER_CONCURRENCY: ${RENDER_CONCURRENCY:-1}
       # Speech recognition model (tiny, base, small or medium); downloaded on first start.
       WHISPER_MODEL: ${WHISPER_MODEL:-base}
+      # Links in emails point here; set SMTP_URL to send emails (e.g. the mailpit profile below).
+      PUBLIC_URL: ${PUBLIC_URL:-http://localhost:3000}
+      SMTP_URL: ${SMTP_URL:-}
+      MAIL_FROM: ${MAIL_FROM:-Weft <weft@localhost>}
       TRANSCRIBE_CONCURRENCY: ${TRANSCRIBE_CONCURRENCY:-1}
     volumes:
       # Scratch space for renders (about 3× the size of the recording being rendered).
@@ -95,6 +99,15 @@ services:
     depends_on:
       api:
         condition: service_healthy
+    restart: unless-stopped
+
+  # Optional local inbox for trying emails: `docker compose --profile mail up`, then set
+  # SMTP_URL=smtp://mailpit:1025 and open http://localhost:8025.
+  mailpit:
+    image: axllent/mailpit:v1.31
+    profiles: ['mail']
+    ports:
+      - '${MAILPIT_PORT:-8025}:8025'
     restart: unless-stopped
 
 volumes:
