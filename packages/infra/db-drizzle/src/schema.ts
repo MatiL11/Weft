@@ -8,6 +8,7 @@ import {
   integer,
   jsonb,
   pgTable,
+  type AnyPgColumn,
   primaryKey,
   text,
   timestamp,
@@ -183,6 +184,42 @@ export const transcripts = pgTable('transcripts', {
   segments: jsonb().$type<TranscriptSegment[]>().notNull(),
   createdAt: timestamp({ withTimezone: true }).notNull(),
 })
+
+export const comments = pgTable(
+  'comments',
+  {
+    id: text().primaryKey(),
+    videoId: text()
+      .notNull()
+      .references(() => videos.id, { onDelete: 'cascade' }),
+    authorId: text()
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    // Replies are deleted with their thread.
+    parentId: text().references((): AnyPgColumn => comments.id, { onDelete: 'cascade' }),
+    timestampMs: integer(),
+    body: text().notNull(),
+    createdAt: timestamp({ withTimezone: true }).notNull(),
+    editedAt: timestamp({ withTimezone: true }),
+    deletedAt: timestamp({ withTimezone: true }),
+  },
+  (t) => [index().on(t.videoId, t.createdAt)],
+)
+
+export const reactions = pgTable(
+  'reactions',
+  {
+    id: text().primaryKey(),
+    videoId: text()
+      .notNull()
+      .references(() => videos.id, { onDelete: 'cascade' }),
+    userId: text().references(() => users.id, { onDelete: 'set null' }),
+    emoji: text().notNull(),
+    timestampMs: integer().notNull(),
+    createdAt: timestamp({ withTimezone: true }).notNull(),
+  },
+  (t) => [index().on(t.videoId, t.createdAt)],
+)
 
 /** Mapping passed to Better Auth's Drizzle adapter (model name → table). */
 export const authSchema = {

@@ -8,6 +8,8 @@ export type Database = PostgresJsDatabase<typeof schema>
 
 export interface DatabaseHandle {
   db: Database
+  /** The underlying driver, for LISTEN/NOTIFY. */
+  client: postgres.Sql
   close(): Promise<void>
 }
 
@@ -16,7 +18,7 @@ const MIGRATIONS_FOLDER = fileURLToPath(new URL('../drizzle', import.meta.url))
 export function connectDatabase(url: string): DatabaseHandle {
   const client = postgres(url, { max: 10, onnotice: () => {} })
   const db = drizzle(client, { schema, casing: 'snake_case' })
-  return { db, close: () => client.end() }
+  return { db, client, close: () => client.end() }
 }
 
 export async function runMigrations(
