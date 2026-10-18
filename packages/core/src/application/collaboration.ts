@@ -40,6 +40,17 @@ export interface Discussion {
   reactions: Reaction[]
 }
 
+/** Checks that the viewer may watch the video (e.g. before streaming its live events). */
+export class AuthorizeViewer {
+  constructor(
+    private readonly deps: Pick<CollaborationDeps, 'videos' | 'workspaces' | 'accessTokens'>,
+  ) {}
+
+  execute(input: PlaybackRequest): Promise<Video> {
+    return loadViewableVideo(this.deps, input)
+  }
+}
+
 /** Comments and reactions of a video, for anyone who can watch it. */
 export class GetDiscussion {
   constructor(private readonly deps: CollaborationDeps) {}

@@ -1,4 +1,12 @@
-import { playbackSource, visibleDurationMs, type TrimRange, type Video } from '@weft/core'
+import {
+  playbackSource,
+  toVisibleMs,
+  visibleDurationMs,
+  type CommentWithAuthor,
+  type Reaction,
+  type TrimRange,
+  type Video,
+} from '@weft/core'
 
 /** Base path of a video's API resources; the web app proxies /api to this server. */
 export const videoPath = (videoId: string) => `/api/videos/${videoId}`
@@ -76,3 +84,31 @@ function presentCaptions(
     vttUrl: `${videoPath(videoId)}/captions.vtt?v=${version}`,
   }
 }
+
+/** A comment as viewers see it: timestamps on the trimmed timeline, no text once deleted. */
+export function presentComment(comment: CommentWithAuthor, video: Video) {
+  const deleted = comment.deletedAt !== null
+  return {
+    id: comment.id,
+    parentId: comment.parentId,
+    author: comment.author,
+    body: deleted ? '' : comment.body,
+    // null when the comment isn't tied to a moment, or the trim cut that moment out.
+    timestampMs: comment.timestampMs === null ? null : toVisibleMs(video, comment.timestampMs),
+    createdAt: comment.createdAt,
+    editedAt: comment.editedAt,
+    deleted,
+  }
+}
+
+export function presentReaction(reaction: Reaction, video: Video) {
+  return {
+    id: reaction.id,
+    emoji: reaction.emoji,
+    timestampMs: toVisibleMs(video, reaction.timestampMs),
+    createdAt: reaction.createdAt,
+  }
+}
+
+export type CommentView = ReturnType<typeof presentComment>
+export type ReactionView = ReturnType<typeof presentReaction>

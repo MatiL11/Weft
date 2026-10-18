@@ -16,13 +16,16 @@ import {
   FakeRenderQueue,
   FakeSpeechRecognizer,
   FixedClock,
+  InMemoryCommentRepository,
+  InMemoryReactionRepository,
   InMemoryTranscriptRepository,
+  RecordingEventPublisher,
   InMemoryVideoRepository,
   InMemoryWorkspaceRepository,
   SequentialIdGenerator,
 } from '@weft/core/testing'
 import { vi } from 'vitest'
-import { FailureLimiter, UnlockLimiter } from '../security'
+import { FailureLimiter, HitLimiter, UnlockLimiter } from '../security'
 import { videoUseCases } from '../use-cases'
 import { createApp, type AppDeps, type SessionUser } from './app'
 
@@ -40,6 +43,7 @@ export function buildTestApp(options: TestAppOptions = {}) {
   const storage = new FakeObjectStorage()
   const clock = new FixedClock(NOW)
   const renders = new FakeRenderQueue()
+  const events = new RecordingEventPublisher()
   const adapters = {
     videos,
     workspaces,
@@ -47,6 +51,9 @@ export function buildTestApp(options: TestAppOptions = {}) {
     renders,
     transcriptions: renders,
     transcripts: new InMemoryTranscriptRepository(),
+    comments: new InMemoryCommentRepository({ user_1: 'Ana', user_2: 'Beto' }),
+    reactions: new InMemoryReactionRepository(),
+    events,
     passwords: new FakePasswordHasher(),
     accessTokens: new FakeAccessTokens(),
     ids: new SequentialIdGenerator('vid'),
@@ -66,6 +73,9 @@ export function buildTestApp(options: TestAppOptions = {}) {
       clock,
     }),
     ...videoUseCases(adapters),
+    reactionLimiter: new HitLimiter(3, 60_000),
+    videoEvents: events,
+    heartbeatMs: 50,
     unlockLimiter: new UnlockLimiter(
       new FailureLimiter(2, 60_000),
       new FailureLimiter(100, 60_000),
@@ -83,6 +93,7 @@ export function buildTestApp(options: TestAppOptions = {}) {
     storage,
     workspaces,
     renders,
+    events,
     /** Renders with the fake renderer, as the worker would. */
     renderer: new FakeMediaRenderer(storage),
     adapters,

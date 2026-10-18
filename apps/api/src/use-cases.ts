@@ -1,5 +1,11 @@
 import {
+  AddComment,
+  AddReaction,
+  AuthorizeViewer,
   CompleteRecording,
+  DeleteComment,
+  EditComment,
+  GetDiscussion,
   ConfirmSegmentUpload,
   DeleteVideo,
   GetPlayback,
@@ -11,6 +17,9 @@ import {
   UnlockVideo,
   UpdateVideo,
   type Clock,
+  type CommentRepository,
+  type ReactionRepository,
+  type VideoEventPublisher,
   type IdGenerator,
   type ObjectStorage,
   type PasswordHasher,
@@ -29,6 +38,9 @@ export interface VideoAdapters {
   renders: RenderQueue
   transcriptions: TranscriptionQueue
   transcripts: TranscriptRepository
+  comments: CommentRepository
+  reactions: ReactionRepository
+  events: VideoEventPublisher
   passwords: PasswordHasher
   accessTokens: VideoAccessTokens
   ids: IdGenerator
@@ -49,5 +61,11 @@ export function videoUseCases(adapters: VideoAdapters) {
     listVideos: new ListVideos(adapters),
     getPlayback: new GetPlayback(adapters),
     unlockVideo: new UnlockVideo(adapters),
+    authorizeViewer: new AuthorizeViewer(adapters),
+    getDiscussion: new GetDiscussion(adapters),
+    addComment: new AddComment(adapters),
+    editComment: new EditComment(adapters),
+    deleteComment: new DeleteComment(adapters),
+    addReaction: new AddReaction(adapters),
   }
 }

@@ -25,6 +25,7 @@ const STATUS_BY_SUFFIX: [suffix: string, status: ErrorStatus][] = [
   ['.not_found', 404],
   ['.forbidden', 403],
   ['.password_required', 401],
+  ['.sign_in_required', 401],
   ['.password_incorrect', 403],
   ['.not_recording', 409],
   ['.segments_missing', 409],

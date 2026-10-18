@@ -123,3 +123,12 @@ export class UnlockLimiter {
     this.perVideo.recordFailure(videoId)
   }
 }
+
+/** Allows a number of requests per window and key (e.g. reactions per viewer and video). */
+export class HitLimiter extends FailureLimiter {
+  tryHit(key: string): boolean {
+    if (this.isBlocked(key)) return false
+    this.recordFailure(key)
+    return true
+  }
+}

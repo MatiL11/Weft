@@ -9,7 +9,10 @@ import {
 import type { Locale } from '@weft/i18n'
 import {
   connectDatabase,
+  DrizzleCommentRepository,
+  DrizzleReactionRepository,
   DrizzleTranscriptRepository,
+  PostgresVideoEvents,
   DrizzleVideoRepository,
   DrizzleWorkspaceRepository,
 } from '@weft/infra-db'
@@ -22,6 +25,7 @@ import type { Config } from './config'
 import { createApp } from './http/app'
 import {
   FailureLimiter,
+  HitLimiter,
   HmacVideoAccessTokens,
   ScryptPasswordHasher,
   UnlockLimiter,
@@ -60,6 +64,8 @@ export function personalWorkspaceName(userName: string, locale: Locale): string 
 const UNLOCK_FAILURES_PER_CLIENT = 10
 const UNLOCK_FAILURES_PER_VIDEO = 200
 const UNLOCK_WINDOW_MS = 15 * 60 * 1000
+/** Reactions each viewer may send per video and minute. */
+const REACTIONS_PER_MINUTE = 30
 
 export interface ContainerOverrides {
   /** Replaces the PostgreSQL job queue (e.g. in tests). */
@@ -89,6 +95,10 @@ export async function createContainer(
     accessKeyId: config.S3_ACCESS_KEY_ID,
     secretAccessKey: config.S3_SECRET_ACCESS_KEY,
   })
+  const comments = new DrizzleCommentRepository(database.db)
+  const videoEvents = new PostgresVideoEvents(database, comments, (error) =>
+    logger.error({ err: error }, 'video event dispatch failed'),
+  )
   const useCases = videoUseCases({
     videos: new DrizzleVideoRepository(database.db),
     workspaces,
@@ -96,6 +106,9 @@ export async function createContainer(
     renders: overrides.renders ?? (jobs as PgBossJobs),
     transcriptions: overrides.renders ?? (jobs as PgBossJobs),
     transcripts: new DrizzleTranscriptRepository(database.db),
+    comments,
+    reactions: new DrizzleReactionRepository(database.db),
+    events: videoEvents,
     passwords: new ScryptPasswordHasher(),
     accessTokens: new HmacVideoAccessTokens(config.BETTER_AUTH_SECRET),
     ids: videoIds,
@@ -127,6 +140,8 @@ export async function createContainer(
       new FailureLimiter(UNLOCK_FAILURES_PER_CLIENT, UNLOCK_WINDOW_MS),
       new FailureLimiter(UNLOCK_FAILURES_PER_VIDEO, UNLOCK_WINDOW_MS),
     ),
+    reactionLimiter: new HitLimiter(REACTIONS_PER_MINUTE, 60_000),
+    videoEvents,
     publicUrl: config.PUBLIC_URL,
     logger,
   })
@@ -136,6 +151,7 @@ export async function createContainer(
     storage,
     close: async () => {
       await jobs?.stop()
+      await videoEvents.close()
       await database.close()
     },
   }

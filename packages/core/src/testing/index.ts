@@ -392,11 +392,21 @@ export class InMemoryReactionRepository implements ReactionRepository {
   }
 }
 
-/** Keeps every published event, for assertions. */
+/** Keeps every published event, for assertions, and delivers them to subscribers. */
 export class RecordingEventPublisher implements VideoEventPublisher {
   readonly events: VideoEvent[] = []
+  private readonly listeners = new Set<{ videoId: string; listener: (e: VideoEvent) => void }>()
 
   async publish(event: VideoEvent): Promise<void> {
     this.events.push(event)
+    for (const entry of this.listeners) {
+      if (entry.videoId === event.videoId) entry.listener(event)
+    }
+  }
+
+  async subscribe(videoId: string, listener: (event: VideoEvent) => void): Promise<() => void> {
+    const entry = { videoId, listener }
+    this.listeners.add(entry)
+    return () => this.listeners.delete(entry)
   }
 }

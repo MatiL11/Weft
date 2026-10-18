@@ -37,7 +37,7 @@ const UnlockBody = z.object({ password: z.string().max(1024) })
 export const accessCookieName = (videoId: string) => `weft_access_${videoId}`
 
 /** The client's address as forwarded by the web app's proxy (best effort). */
-const clientOf = (c: Context) =>
+export const clientOf = (c: Context) =>
   c.req.header('x-forwarded-for')?.split(',')[0]?.trim() || c.req.header('x-real-ip') || 'unknown'
 
 const assetMissing = () => new DomainError('asset.not_found', 'This file does not exist.')
