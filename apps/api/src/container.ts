@@ -10,6 +10,8 @@ import type { Locale } from '@weft/i18n'
 import {
   connectDatabase,
   DrizzleCommentRepository,
+  DrizzleInvitationRepository,
+  DrizzleUserDirectory,
   DrizzleReactionRepository,
   DrizzleTranscriptRepository,
   PostgresVideoEvents,
@@ -27,6 +29,7 @@ import {
   FailureLimiter,
   HitLimiter,
   HmacVideoAccessTokens,
+  RandomSecretTokens,
   ScryptPasswordHasher,
   UnlockLimiter,
 } from './security'
@@ -109,6 +112,9 @@ export async function createContainer(
     comments,
     reactions: new DrizzleReactionRepository(database.db),
     events: videoEvents,
+    invitations: new DrizzleInvitationRepository(database.db),
+    users: new DrizzleUserDirectory(database.db),
+    tokens: new RandomSecretTokens(),
     passwords: new ScryptPasswordHasher(),
     accessTokens: new HmacVideoAccessTokens(config.BETTER_AUTH_SECRET),
     ids: videoIds,

@@ -1,5 +1,12 @@
 import {
+  AcceptInvitation,
   AddComment,
+  ChangeMemberRole,
+  GetInvitation,
+  InviteMember,
+  ListMembers,
+  RemoveMember,
+  RevokeInvitation,
   AddReaction,
   AuthorizeViewer,
   CompleteRecording,
@@ -17,6 +24,9 @@ import {
   UnlockVideo,
   UpdateVideo,
   type Clock,
+  type InvitationRepository,
+  type SecretTokens,
+  type UserDirectory,
   type CommentRepository,
   type ReactionRepository,
   type VideoEventPublisher,
@@ -41,6 +51,9 @@ export interface VideoAdapters {
   comments: CommentRepository
   reactions: ReactionRepository
   events: VideoEventPublisher
+  invitations: InvitationRepository
+  users: UserDirectory
+  tokens: SecretTokens
   passwords: PasswordHasher
   accessTokens: VideoAccessTokens
   ids: IdGenerator
@@ -67,5 +80,12 @@ export function videoUseCases(adapters: VideoAdapters) {
     editComment: new EditComment(adapters),
     deleteComment: new DeleteComment(adapters),
     addReaction: new AddReaction(adapters),
+    listMembers: new ListMembers(adapters),
+    inviteMember: new InviteMember(adapters),
+    revokeInvitation: new RevokeInvitation(adapters),
+    changeMemberRole: new ChangeMemberRole(adapters),
+    removeMember: new RemoveMember(adapters),
+    getInvitation: new GetInvitation(adapters),
+    acceptInvitation: new AcceptInvitation(adapters),
   }
 }

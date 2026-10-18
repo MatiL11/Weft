@@ -14,9 +14,12 @@ import {
   FakeObjectStorage,
   FakePasswordHasher,
   FakeRenderQueue,
+  FakeSecretTokens,
   FakeSpeechRecognizer,
   FixedClock,
   InMemoryCommentRepository,
+  InMemoryInvitationRepository,
+  InMemoryUserDirectory,
   InMemoryReactionRepository,
   InMemoryTranscriptRepository,
   RecordingEventPublisher,
@@ -38,7 +41,12 @@ export interface TestAppOptions extends Partial<AppDeps> {
 
 /** Builds the HTTP app wired to in-memory fakes. */
 export function buildTestApp(options: TestAppOptions = {}) {
-  const workspaces: WorkspaceRepository = options.workspaces ?? new InMemoryWorkspaceRepository()
+  const users = new InMemoryUserDirectory([
+    { id: 'user_1', name: 'Ana', email: 'ana@example.com' },
+    { id: 'user_2', name: 'Beto', email: 'beto@example.com' },
+  ])
+  const workspaces: WorkspaceRepository =
+    options.workspaces ?? new InMemoryWorkspaceRepository(new Set(), users)
   const videos = new InMemoryVideoRepository()
   const storage = new FakeObjectStorage()
   const clock = new FixedClock(NOW)
@@ -54,6 +62,9 @@ export function buildTestApp(options: TestAppOptions = {}) {
     comments: new InMemoryCommentRepository({ user_1: 'Ana', user_2: 'Beto' }),
     reactions: new InMemoryReactionRepository(),
     events,
+    invitations: new InMemoryInvitationRepository(),
+    users,
+    tokens: new FakeSecretTokens(),
     passwords: new FakePasswordHasher(),
     accessTokens: new FakeAccessTokens(),
     ids: new SequentialIdGenerator('vid'),
