@@ -1,4 +1,5 @@
 import type {
+  EmailLocale,
   InvitableRole,
   Invitation,
   InvitationRepository,
@@ -71,12 +72,17 @@ export class DrizzleUserDirectory implements UserDirectory {
     return this.findOne(sql`lower(${users.email}) = ${email.toLowerCase()}`)
   }
 
-  private async findOne(condition: ReturnType<typeof eq>) {
+  /** Remembers the language someone signed up in, for their emails. */
+  async setLocale(id: string, locale: EmailLocale): Promise<void> {
+    await this.db.update(users).set({ locale }).where(eq(users.id, id))
+  }
+
+  private async findOne(condition: ReturnType<typeof eq>): Promise<UserProfile | null> {
     const [row] = await this.db
-      .select({ id: users.id, name: users.name, email: users.email })
+      .select({ id: users.id, name: users.name, email: users.email, locale: users.locale })
       .from(users)
       .where(condition)
       .limit(1)
-    return row ?? null
+    return row ? { ...row, locale: row.locale === 'es' ? 'es' : 'en' } : null
   }
 }

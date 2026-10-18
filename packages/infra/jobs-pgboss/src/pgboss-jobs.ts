@@ -1,9 +1,17 @@
-import type { RenderJob, RenderQueue, TranscriptionJob, TranscriptionQueue } from '@weft/core'
+import type {
+  Notification,
+  NotificationQueue,
+  RenderJob,
+  RenderQueue,
+  TranscriptionJob,
+  TranscriptionQueue,
+} from '@weft/core'
 import { PgBoss } from 'pg-boss'
 
 export const RENDER_QUEUE = 'video-render'
 export const TRANSCRIPTION_QUEUE = 'video-transcribe'
 export const TRASH_PURGE_QUEUE = 'trash-purge'
+export const NOTIFICATION_QUEUE = 'notification'
 /** Every day at 03:00 UTC. */
 const TRASH_PURGE_CRON = '0 3 * * *'
 
@@ -25,7 +33,7 @@ const RETRY_LIMIT = 2
 const EXPIRE_SECONDS = 3 * 60 * 60
 
 /** Job queues on PostgreSQL (pg-boss): the API enqueues work, workers process it. */
-export class PgBossJobs implements RenderQueue, TranscriptionQueue {
+export class PgBossJobs implements RenderQueue, TranscriptionQueue, NotificationQueue {
   private constructor(private readonly boss: PgBoss) {}
 
   static async start(input: PgBossJobsOptions): Promise<PgBossJobs> {
@@ -33,7 +41,12 @@ export class PgBossJobs implements RenderQueue, TranscriptionQueue {
     const boss = new PgBoss(options.connectionString)
     boss.on('error', options.onError)
     await boss.start()
-    for (const queue of [RENDER_QUEUE, TRANSCRIPTION_QUEUE, TRASH_PURGE_QUEUE]) {
+    for (const queue of [
+      RENDER_QUEUE,
+      TRANSCRIPTION_QUEUE,
+      TRASH_PURGE_QUEUE,
+      NOTIFICATION_QUEUE,
+    ]) {
       await boss.createQueue(queue, {
         retryLimit: RETRY_LIMIT,
         retryDelay: options.retryDelaySeconds,
@@ -50,6 +63,25 @@ export class PgBossJobs implements RenderQueue, TranscriptionQueue {
 
   async enqueueTranscription(job: TranscriptionJob): Promise<void> {
     await this.boss.send(TRANSCRIPTION_QUEUE, { videoId: job.videoId, version: job.version })
+  }
+
+  async notify(
+    notification: Notification,
+    options?: { dedupeKey: string; dedupeSeconds: number },
+  ): Promise<void> {
+    await this.boss.send(
+      NOTIFICATION_QUEUE,
+      notification,
+      options ? { singletonKey: options.dedupeKey, singletonSeconds: options.dedupeSeconds } : {},
+    )
+  }
+
+  /** Sends notification emails; a thrown error schedules a retry. */
+  workNotifications(
+    handler: (notification: Notification) => Promise<void>,
+    options: WorkOptions,
+  ): Promise<void> {
+    return this.work(NOTIFICATION_QUEUE, handler, options)
   }
 
   /** Processes renders; a thrown error schedules a retry. */

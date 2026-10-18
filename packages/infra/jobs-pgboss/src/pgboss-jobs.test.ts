@@ -74,6 +74,24 @@ describe('PgBossJobs (integration)', () => {
     await api.purgeTrashNow()
     await waitFor(() => purges === 1)
 
+    // Notifications with the same dedupe key inside the window go out once.
+    const notified: unknown[] = []
+    await worker.workNotifications(async (n) => void notified.push(n), {
+      concurrency: 1,
+      pollingIntervalSeconds: 0.5,
+    })
+    const comment = { kind: 'comment' as const, recipientId: 'u', videoId: 'v', commentId: 'c1' }
+    const dedupe = { dedupeKey: 'comment:u:v', dedupeSeconds: 600 }
+    await api.notify(comment, dedupe)
+    await api.notify({ ...comment, commentId: 'c2' }, dedupe)
+    await api.notify({ kind: 'invitation', invitationId: 'i', token: 't' })
+    await waitFor(() => notified.length === 2)
+    await new Promise((r) => setTimeout(r, 1500))
+    expect(notified).toEqual(
+      expect.arrayContaining([comment, { kind: 'invitation', invitationId: 'i', token: 't' }]),
+    )
+    expect(notified).toHaveLength(2)
+
     await api.stop()
     await worker.stop()
   })

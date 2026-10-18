@@ -7,7 +7,12 @@ import {
   RemoveMember,
   RevokeInvitation,
 } from '@weft/core'
-import { FakeSecretTokens, FixedClock, SequentialIdGenerator } from '@weft/core/testing'
+import {
+  FakeNotificationQueue,
+  FakeSecretTokens,
+  FixedClock,
+  SequentialIdGenerator,
+} from '@weft/core/testing'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { connectDatabase, runMigrations, type DatabaseHandle } from './client'
 import { DrizzleInvitationRepository, DrizzleUserDirectory } from './invitation-repository'
@@ -47,6 +52,7 @@ describe('members and invitations (integration)', () => {
       invitations: new DrizzleInvitationRepository(handle.db),
       users: new DrizzleUserDirectory(handle.db),
       tokens: new FakeSecretTokens(),
+      notifications: new FakeNotificationQueue(),
       ids: new SequentialIdGenerator('inv'),
       clock: new FixedClock(NOW),
     }
@@ -87,6 +93,9 @@ describe('members and invitations (integration)', () => {
     expect(await workspaces.findById('ws')).toMatchObject({ name: 'Acme' })
     expect(await workspaces.findById('nope')).toBeNull()
     expect(await deps.users.findByEmail('nobody@example.com')).toBeNull()
+    expect((await deps.users.findById('u2'))?.locale).toBe('en')
+    await deps.users.setLocale('u2', 'es')
+    expect((await deps.users.findById('u2'))?.locale).toBe('es')
 
     await new ChangeMemberRole(deps).execute({
       userId: 'u1',

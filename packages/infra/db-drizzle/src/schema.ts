@@ -24,6 +24,8 @@ export const users = pgTable('users', {
   image: text(),
   createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
+  /** Language for emails, set at sign-up (Weft's own column; the auth library ignores it). */
+  locale: text().notNull().default('en'),
 })
 
 export const sessions = pgTable(
