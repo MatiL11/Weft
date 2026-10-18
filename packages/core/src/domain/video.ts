@@ -45,6 +45,10 @@ export interface Video {
   readonly transcriptionState: TranscriptionState
   /** Incremented on every transcription request; stale jobs compare against it. */
   readonly transcriptionVersion: number
+  /** Library folder (same workspace); null at the top level. */
+  readonly folderId: string | null
+  /** In the trash since then; trashed videos are only visible to their owner. */
+  readonly trashedAt: Date | null
 }
 
 export interface VideoSegment {
@@ -98,6 +102,8 @@ export function createVideo(props: CreateVideoProps): Video {
     transcriptLanguage: 'auto',
     transcriptionState: 'none',
     transcriptionVersion: 0,
+    folderId: null,
+    trashedAt: null,
   }
 }
 
@@ -163,6 +169,7 @@ export type Access = 'granted' | 'password_required' | 'hidden'
 /** What a viewer may do with a video; the owner can always watch their own videos. */
 export function accessFor(video: Video, viewer: Viewer): Access {
   if (viewer.userId !== null && viewer.userId === video.ownerId) return 'granted'
+  if (video.trashedAt) return 'hidden'
   switch (video.privacy) {
     case 'link':
       return 'granted'

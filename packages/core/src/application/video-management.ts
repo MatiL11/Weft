@@ -110,19 +110,3 @@ export class RequestTranscription {
     return loadVideo(this.deps.videos, video.id)
   }
 }
-
-const LIST_LIMIT = 100
-
-/** Videos of a workspace the caller belongs to; others' private videos are left out. */
-export class ListVideos {
-  constructor(private readonly deps: ManagementDeps) {}
-
-  async execute(input: { userId: string; workspaceId: string }): Promise<Video[]> {
-    const role = await this.deps.workspaces.roleOf(input.workspaceId, input.userId)
-    if (!role) throw new DomainError('workspace.forbidden', 'You are not in this workspace.')
-    const videos = await this.deps.videos.listForWorkspace(input.workspaceId, {
-      limit: LIST_LIMIT,
-    })
-    return videos.filter((v) => v.privacy !== 'private' || v.ownerId === input.userId)
-  }
-}

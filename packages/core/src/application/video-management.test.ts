@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import { createTestBed } from './test-bed'
-import { ListVideos, RequestRender, UpdateVideo } from './video-management'
+import { RequestRender, UpdateVideo } from './video-management'
 
 describe('video management', () => {
   let bed: Awaited<ReturnType<typeof createTestBed>>
@@ -89,20 +89,6 @@ describe('video management', () => {
       await expect(
         new RequestRender(bed.deps).execute({ userId: 'owner_1', videoId: video.id }),
       ).rejects.toMatchObject({ code: 'video.not_ready' })
-    })
-  })
-
-  describe('ListVideos', () => {
-    it("lists the workspace's videos, without other people's private ones", async () => {
-      const mine = await bed.recorded()
-      const theirs = await bed.start('member_1')
-      await bed.videos.update({ ...theirs, privacy: 'private' })
-
-      const list = (userId: string) =>
-        new ListVideos(bed.deps).execute({ userId, workspaceId: 'ws_1' })
-      expect((await list('owner_1')).map((v) => v.id)).toEqual([mine.id])
-      expect((await list('member_1')).map((v) => v.id).sort()).toEqual([mine.id, theirs.id].sort())
-      await expect(list('stranger')).rejects.toMatchObject({ code: 'workspace.forbidden' })
     })
   })
 })

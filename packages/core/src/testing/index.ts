@@ -8,6 +8,7 @@ import type {
   TranscriptSegment,
 } from '../domain/transcript'
 import type { SegmentKind, Video, VideoSegment } from '../domain/video'
+import { foldForSearch, type Folder } from '../domain/library'
 import type { Invitation, Member } from '../domain/membership'
 import type { Workspace, WorkspaceMembership, WorkspaceRole } from '../domain/workspace'
 import type {
@@ -17,7 +18,9 @@ import type {
   VideoEvent,
   VideoEventPublisher,
   IdGenerator,
+  FolderRepository,
   InvitationRepository,
+  VideoListFilter,
   MediaRenderer,
   SecretTokens,
   UserDirectory,
@@ -171,6 +174,9 @@ export class InMemoryVideoRepository implements VideoRepository {
   private readonly videos = new Map<string, Video>()
   private readonly segments = new Map<string, VideoSegment>()
 
+  /** @param transcriptText a video's transcript as plain text, for searches. */
+  constructor(private readonly transcriptText: (videoId: string) => string = () => '') {}
+
   async create(video: Video): Promise<void> {
     this.videos.set(video.id, video)
   }
@@ -179,10 +185,25 @@ export class InMemoryVideoRepository implements VideoRepository {
     return this.videos.get(id) ?? null
   }
 
-  async listForWorkspace(workspaceId: string, options: { limit: number }): Promise<Video[]> {
+  async listForWorkspace(workspaceId: string, filter: VideoListFilter): Promise<Video[]> {
+    const needle = filter.search ? foldForSearch(filter.search) : null
     return [...this.videos.values()]
       .filter((v) => v.workspaceId === workspaceId)
+      .filter((v) => (v.trashedAt !== null) === filter.trashed)
+      .filter((v) => filter.folderId === undefined || v.folderId === filter.folderId)
+      .filter(
+        (v) =>
+          !needle ||
+          foldForSearch(v.title).includes(needle) ||
+          foldForSearch(this.transcriptText(v.id)).includes(needle),
+      )
       .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
+      .slice(0, filter.limit)
+  }
+
+  async listTrashedBefore(cutoff: Date, options: { limit: number }): Promise<Video[]> {
+    return [...this.videos.values()]
+      .filter((v) => v.trashedAt !== null && v.trashedAt.getTime() < cutoff.getTime())
       .slice(0, options.limit)
   }
 
@@ -198,6 +219,13 @@ export class InMemoryVideoRepository implements VideoRepository {
       transcriptionState,
       transcriptionVersion,
     })
+  }
+
+  /** Moves a deleted folder's videos to the top level (like ON DELETE SET NULL). */
+  async clearFolder(folderId: string): Promise<void> {
+    for (const [id, video] of this.videos) {
+      if (video.folderId === folderId) this.videos.set(id, { ...video, folderId: null })
+    }
   }
 
   async requestRender(id: string): Promise<number | null> {
@@ -339,6 +367,13 @@ export class FakeRenderQueue implements RenderQueue, TranscriptionQueue {
 
 export class InMemoryTranscriptRepository implements TranscriptRepository {
   private readonly transcripts = new Map<string, Transcript>()
+
+  /** Plain text of a video's transcript ('' without one). */
+  textOf = (videoId: string): string =>
+    this.transcripts
+      .get(videoId)
+      ?.segments.map((s) => s.text)
+      .join(' ') ?? ''
 
   async save(transcript: Transcript): Promise<void> {
     this.transcripts.set(transcript.videoId, transcript)
@@ -518,5 +553,35 @@ export class FakeSecretTokens implements SecretTokens {
 
   hash(token: string): string {
     return `hash:${token}`
+  }
+}
+
+export class InMemoryFolderRepository implements FolderRepository {
+  private readonly folders = new Map<string, Folder>()
+
+  /** @param videos where a deleted folder's videos move to the top level. */
+  constructor(private readonly videos?: InMemoryVideoRepository) {}
+
+  async create(folder: Folder): Promise<void> {
+    this.folders.set(folder.id, folder)
+  }
+
+  async update(folder: Folder): Promise<void> {
+    this.folders.set(folder.id, folder)
+  }
+
+  async delete(id: string): Promise<void> {
+    this.folders.delete(id)
+    await this.videos?.clearFolder(id)
+  }
+
+  async findById(id: string): Promise<Folder | null> {
+    return this.folders.get(id) ?? null
+  }
+
+  async listForWorkspace(workspaceId: string): Promise<Folder[]> {
+    return [...this.folders.values()]
+      .filter((f) => f.workspaceId === workspaceId)
+      .sort((a, b) => a.name.localeCompare(b.name))
   }
 }

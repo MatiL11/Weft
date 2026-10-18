@@ -9,6 +9,7 @@ import {
   FakeSecretTokens,
   FixedClock,
   InMemoryCommentRepository,
+  InMemoryFolderRepository,
   InMemoryInvitationRepository,
   InMemoryUserDirectory,
   InMemoryReactionRepository,
@@ -29,7 +30,8 @@ export const NOW = new Date('2026-10-16T10:00:00Z')
 export const SHA = 'n4bQgYhMfWWaL+qgxVrQFaO/TxsrC4Is0V1sFbDwCgg='
 
 export async function createTestBed() {
-  const videos = new InMemoryVideoRepository()
+  const transcripts = new InMemoryTranscriptRepository()
+  const videos = new InMemoryVideoRepository(transcripts.textOf)
   const users = new InMemoryUserDirectory([
     { id: 'owner_1', name: 'Ana', email: 'ana@example.com' },
     { id: 'member_1', name: 'Beto', email: 'beto@example.com' },
@@ -45,7 +47,8 @@ export async function createTestBed() {
     storage,
     renders,
     transcriptions: renders,
-    transcripts: new InMemoryTranscriptRepository(),
+    transcripts,
+    folders: new InMemoryFolderRepository(videos),
     comments: new InMemoryCommentRepository({ owner_1: 'Ana', member_1: 'Beto', viewer_1: 'Caro' }),
     reactions: new InMemoryReactionRepository(),
     events: new RecordingEventPublisher(),

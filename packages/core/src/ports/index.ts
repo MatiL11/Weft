@@ -7,6 +7,7 @@ import type {
   TranscriptSegment,
 } from '../domain/transcript'
 import type { SegmentKind, Video, VideoSegment } from '../domain/video'
+import type { Folder } from '../domain/library'
 import type { Invitation, Member } from '../domain/membership'
 import type { Workspace, WorkspaceMembership, WorkspaceRole } from '../domain/workspace'
 
@@ -65,7 +66,9 @@ export interface VideoRepository {
   create(video: Video): Promise<void>
   findById(id: string): Promise<Video | null>
   /** Newest first. */
-  listForWorkspace(workspaceId: string, options: { limit: number }): Promise<Video[]>
+  listForWorkspace(workspaceId: string, filter: VideoListFilter): Promise<Video[]>
+  /** Videos that went to the trash before `cutoff`, for permanent deletion. */
+  listTrashedBefore(cutoff: Date, options: { limit: number }): Promise<Video[]>
   /**
    * Saves the owner-editable fields and recording status. Render and transcription progress
    * is left alone: it changes only through `requestRender`/`saveRender` and
@@ -94,6 +97,26 @@ export interface VideoRepository {
   listSegments(videoId: string): Promise<VideoSegment[]>
   /** Deletes the video and its segment records. */
   delete(id: string): Promise<void>
+}
+
+export interface VideoListFilter {
+  limit: number
+  /** Trashed videos only, or only those not in the trash. */
+  trashed: boolean
+  /** A folder, null for the top level, or undefined for every folder. */
+  folderId?: string | null
+  /** Matches the title or the transcript, ignoring case and accents. */
+  search?: string
+}
+
+export interface FolderRepository {
+  create(folder: Folder): Promise<void>
+  update(folder: Folder): Promise<void>
+  /** Deletes the folder; its videos move to the top level. */
+  delete(id: string): Promise<void>
+  findById(id: string): Promise<Folder | null>
+  /** Alphabetical. */
+  listForWorkspace(workspaceId: string): Promise<Folder[]>
 }
 
 export interface PresignedUpload {

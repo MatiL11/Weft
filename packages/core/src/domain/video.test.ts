@@ -48,6 +48,8 @@ describe('createVideo', () => {
       transcriptLanguage: 'auto',
       transcriptionState: 'none',
       transcriptionVersion: 0,
+      folderId: null,
+      trashedAt: null,
     })
   })
 
