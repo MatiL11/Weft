@@ -24,6 +24,11 @@ const copy = {
       intro: `${c.authorName} replied to your comment on “${c.videoTitle}”:`,
       action: 'Open the conversation',
     }),
+    view: (c: ViewContent) => ({
+      subject: `${c.viewerName} watched “${c.videoTitle}”`,
+      intro: `${c.viewerName} is watching your video “${c.videoTitle}”. See how far people get in its stats.`,
+      action: 'See the video and its stats',
+    }),
     invitation: (c: InvitationContent) => ({
       subject: `${c.inviterName || 'Someone'} invited you to ${c.workspaceName} on Weft`,
       intro: `${c.inviterName || 'Someone'} invited you to join ${c.workspaceName} as ${ROLES.en[c.role] ?? c.role}.`,
@@ -43,6 +48,11 @@ const copy = {
       intro: `${c.authorName} respondió tu comentario en «${c.videoTitle}»:`,
       action: 'Abrir la conversación',
     }),
+    view: (c: ViewContent) => ({
+      subject: `${c.viewerName} vio «${c.videoTitle}»`,
+      intro: `${c.viewerName} está viendo tu video «${c.videoTitle}». Mira hasta dónde llega la gente en sus estadísticas.`,
+      action: 'Ver el video y sus estadísticas',
+    }),
     invitation: (c: InvitationContent) => ({
       subject: `${c.inviterName || 'Alguien'} te invitó a ${c.workspaceName} en Weft`,
       intro: `${c.inviterName || 'Alguien'} te invitó a unirte a ${c.workspaceName} como ${ROLES.es[c.role] ?? c.role}.`,
@@ -56,6 +66,7 @@ const copy = {
 
 type CommentContent = Extract<NotificationContent, { kind: 'comment' | 'reply' }>
 type InvitationContent = Extract<NotificationContent, { kind: 'invitation' }>
+type ViewContent = Extract<NotificationContent, { kind: 'view' }>
 
 const ACCENT = '#d4237a'
 
@@ -101,6 +112,19 @@ export class WeftEmailTemplates implements EmailTemplates {
           action: words.action,
           url: content.url,
           note,
+          footer: t.footer,
+        }),
+      }
+    }
+    if (content.kind === 'view') {
+      const words = t.view(content)
+      return {
+        subject: words.subject,
+        text: `${words.intro}\n\n${words.action}: ${content.url}\n\n${t.footer}\n`,
+        html: layout({
+          intro: words.intro,
+          action: words.action,
+          url: content.url,
           footer: t.footer,
         }),
       }

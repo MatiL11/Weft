@@ -95,8 +95,8 @@ export function videoRoutes(deps: VideoRouteDeps): Hono<AppEnv> {
       search: c.req.query('q'),
       trashed: c.req.query('trash') === '1',
     })
-    const views = items.map(({ video, match }) => {
-      const view = { ...presentVideo(video, user), match }
+    const views = items.map(({ video, match, viewCount }) => {
+      const view = { ...presentVideo(video, user), match, viewCount }
       // Members still need the password to open others' protected videos, poster included.
       return video.privacy === 'password' && !view.isOwner
         ? { ...view, posterUrl: null, thumbnails: null, downloadUrl: null, match: null }

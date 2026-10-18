@@ -14,6 +14,7 @@ import {
   DrizzleFolderRepository,
   DrizzleInvitationRepository,
   DrizzleUserDirectory,
+  DrizzleViewRepository,
   DrizzleReactionRepository,
   DrizzleTranscriptRepository,
   PostgresVideoEvents,
@@ -73,6 +74,8 @@ const UNLOCK_WINDOW_MS = 15 * 60 * 1000
 const REACTIONS_PER_MINUTE = 30
 const COMMENTS_PER_MINUTE = 20
 const INVITATIONS_PER_HOUR = 20
+/** New views each address may start per video and hour. */
+const VIEWS_PER_HOUR = 30
 
 export interface ContainerOverrides {
   /** Replaces the PostgreSQL job queue (e.g. in tests). */
@@ -122,6 +125,7 @@ export async function createContainer(
     tokens: new RandomSecretTokens(),
     folders: new DrizzleFolderRepository(database.db),
     notifications: overrides.renders ?? (jobs as PgBossJobs),
+    views: new DrizzleViewRepository(database.db),
     passwords: new ScryptPasswordHasher(),
     accessTokens: new HmacVideoAccessTokens(config.BETTER_AUTH_SECRET),
     ids: videoIds,
@@ -157,6 +161,7 @@ export async function createContainer(
     reactionLimiter: new HitLimiter(REACTIONS_PER_MINUTE, 60_000),
     commentLimiter: new HitLimiter(COMMENTS_PER_MINUTE, 60_000),
     inviteLimiter: new HitLimiter(INVITATIONS_PER_HOUR, 60 * 60_000),
+    viewLimiter: new HitLimiter(VIEWS_PER_HOUR, 60 * 60_000),
     trustedProxyHops: config.TRUSTED_PROXY_HOPS,
     videoEvents,
     publicUrl: config.PUBLIC_URL,

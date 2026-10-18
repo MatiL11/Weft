@@ -29,6 +29,20 @@ describe('email templates', () => {
     expect(es.text).toContain('Abrir la conversación')
   })
 
+  it('writes "they watched your video" emails', () => {
+    const view = {
+      kind: 'view' as const,
+      recipientName: 'Ana',
+      viewerName: 'Beto',
+      videoTitle: 'Demo',
+      url: 'https://w/v/a',
+    }
+    expect(templates.render(view, 'es').subject).toBe('Beto vio «Demo»')
+    expect(templates.render(view, 'en').text).toContain(
+      'See the video and its stats: https://w/v/a',
+    )
+  })
+
   it('writes invitations with the role and expiry', () => {
     const invitation = {
       kind: 'invitation' as const,

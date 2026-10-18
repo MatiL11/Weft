@@ -16,6 +16,9 @@ import {
   RestoreVideo,
   TrashVideo,
   AuthorizeViewer,
+  GetVideoStats,
+  RecordViewProgress,
+  StartView,
   CompleteRecording,
   DeleteComment,
   EditComment,
@@ -32,6 +35,7 @@ import {
   UpdateVideo,
   type Clock,
   type FolderRepository,
+  type ViewRepository,
   type InvitationRepository,
   type NotificationQueue,
   type SecretTokens,
@@ -65,6 +69,7 @@ export interface VideoAdapters {
   tokens: SecretTokens
   folders: FolderRepository
   notifications: NotificationQueue
+  views: ViewRepository
   passwords: PasswordHasher
   accessTokens: VideoAccessTokens
   ids: IdGenerator
@@ -105,5 +110,8 @@ export function videoUseCases(adapters: VideoAdapters) {
     moveVideo: new MoveVideo(adapters),
     trashVideo: new TrashVideo(adapters),
     restoreVideo: new RestoreVideo(adapters),
+    startView: new StartView(adapters),
+    recordViewProgress: new RecordViewProgress(adapters),
+    getVideoStats: new GetVideoStats(adapters),
   }
 }

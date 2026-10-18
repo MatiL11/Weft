@@ -22,6 +22,7 @@ import {
   InMemoryFolderRepository,
   InMemoryInvitationRepository,
   InMemoryUserDirectory,
+  InMemoryViewRepository,
   InMemoryReactionRepository,
   InMemoryTranscriptRepository,
   RecordingEventPublisher,
@@ -64,6 +65,7 @@ export function buildTestApp(options: TestAppOptions = {}) {
     transcripts,
     folders: new InMemoryFolderRepository(videos),
     notifications: new FakeNotificationQueue(),
+    views: new InMemoryViewRepository(),
     comments: new InMemoryCommentRepository({ user_1: 'Ana', user_2: 'Beto' }),
     reactions: new InMemoryReactionRepository(),
     events,
@@ -92,6 +94,7 @@ export function buildTestApp(options: TestAppOptions = {}) {
     reactionLimiter: new HitLimiter(3, 60_000),
     commentLimiter: new HitLimiter(100, 60_000),
     inviteLimiter: new HitLimiter(100, 60_000),
+    viewLimiter: new HitLimiter(3, 60_000),
     videoEvents: events,
     heartbeatMs: 50,
     unlockLimiter: new UnlockLimiter(
