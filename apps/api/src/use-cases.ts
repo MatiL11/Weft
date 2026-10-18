@@ -8,6 +8,13 @@ import {
   RemoveMember,
   RevokeInvitation,
   AddReaction,
+  CreateFolder,
+  DeleteFolder,
+  ListFolders,
+  MoveVideo,
+  RenameFolder,
+  RestoreVideo,
+  TrashVideo,
   AuthorizeViewer,
   CompleteRecording,
   DeleteComment,
@@ -24,6 +31,7 @@ import {
   UnlockVideo,
   UpdateVideo,
   type Clock,
+  type FolderRepository,
   type InvitationRepository,
   type SecretTokens,
   type UserDirectory,
@@ -54,6 +62,7 @@ export interface VideoAdapters {
   invitations: InvitationRepository
   users: UserDirectory
   tokens: SecretTokens
+  folders: FolderRepository
   passwords: PasswordHasher
   accessTokens: VideoAccessTokens
   ids: IdGenerator
@@ -87,5 +96,12 @@ export function videoUseCases(adapters: VideoAdapters) {
     removeMember: new RemoveMember(adapters),
     getInvitation: new GetInvitation(adapters),
     acceptInvitation: new AcceptInvitation(adapters),
+    listFolders: new ListFolders(adapters),
+    createFolder: new CreateFolder(adapters),
+    renameFolder: new RenameFolder(adapters),
+    deleteFolder: new DeleteFolder(adapters),
+    moveVideo: new MoveVideo(adapters),
+    trashVideo: new TrashVideo(adapters),
+    restoreVideo: new RestoreVideo(adapters),
   }
 }

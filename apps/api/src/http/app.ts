@@ -9,7 +9,12 @@ import { discussionRoutes, type DiscussionRouteDeps } from './routes/discussion'
 import { oembedRoutes } from './routes/oembed'
 import { playbackRoutes, type PlaybackRouteDeps } from './routes/playback'
 import { videoRoutes, type VideoRouteDeps } from './routes/videos'
-import { invitationRoutes, workspaceRoutes, type WorkspaceRouteDeps } from './routes/workspaces'
+import {
+  folderRoutes,
+  invitationRoutes,
+  workspaceRoutes,
+  type WorkspaceRouteDeps,
+} from './routes/workspaces'
 
 export type { SessionUser } from './context'
 
@@ -50,6 +55,7 @@ export function createApp(deps: AppDeps): Hono<AppEnv> {
   })
   api.route('/workspaces', workspaceRoutes(deps))
   api.route('/invitations', invitationRoutes(deps))
+  api.route('/folders', folderRoutes(deps))
   api.route('/videos', videoRoutes(deps))
   api.route('/videos', playbackRoutes(deps))
   api.route('/videos', discussionRoutes(deps))

@@ -1,5 +1,9 @@
 import type {
   AcceptInvitation,
+  CreateFolder,
+  DeleteFolder,
+  ListFolders,
+  RenameFolder,
   ChangeMemberRole,
   CreateWorkspace,
   GetInvitation,
@@ -27,8 +31,14 @@ export interface WorkspaceRouteDeps {
   removeMember: RemoveMember
   getInvitation: GetInvitation
   acceptInvitation: AcceptInvitation
+  listFolders: ListFolders
+  createFolder: CreateFolder
+  renameFolder: RenameFolder
+  deleteFolder: DeleteFolder
   publicUrl: string
 }
+
+const FolderBody = z.object({ name: z.string().max(200) })
 
 const InviteBody = z.object({ email: z.string().max(320), role: z.string() })
 const RoleBody = z.object({ role: z.string() })
@@ -59,6 +69,25 @@ export function workspaceRoutes(deps: WorkspaceRouteDeps): Hono<AppEnv> {
 
   const userId = (c: { get: (key: 'user') => AppEnv['Variables']['user'] }) =>
     currentUser(c.get('user')).id
+
+  routes.get('/:id/folders', async (c) => {
+    const folders = await deps.listFolders.execute({
+      userId: userId(c),
+      workspaceId: c.req.param('id'),
+    })
+    return c.json(ok(folders))
+  })
+
+  routes.post('/:id/folders', async (c) => {
+    const body = await parseJson(c, FolderBody)
+    if (!body) return invalid(c)
+    const folder = await deps.createFolder.execute({
+      userId: userId(c),
+      workspaceId: c.req.param('id'),
+      name: body.name,
+    })
+    return c.json(ok(folder), 201)
+  })
 
   routes.get('/:id/members', async (c) => {
     const roster = await deps.listMembers.execute({
@@ -156,6 +185,32 @@ export function invitationRoutes(deps: WorkspaceRouteDeps): Hono<AppEnv> {
       token: c.req.param('token'),
     })
     return c.json(ok({ workspace }))
+  })
+
+  return routes
+}
+
+export function folderRoutes(deps: WorkspaceRouteDeps): Hono<AppEnv> {
+  const routes = new Hono<AppEnv>()
+  routes.use(requireUser)
+
+  routes.patch('/:folderId', async (c) => {
+    const body = await parseJson(c, FolderBody)
+    if (!body) return invalid(c)
+    const folder = await deps.renameFolder.execute({
+      userId: currentUser(c.get('user')).id,
+      folderId: c.req.param('folderId'),
+      name: body.name,
+    })
+    return c.json(ok(folder))
+  })
+
+  routes.delete('/:folderId', async (c) => {
+    await deps.deleteFolder.execute({
+      userId: currentUser(c.get('user')).id,
+      folderId: c.req.param('folderId'),
+    })
+    return c.json(ok({ deleted: true }))
   })
 
   return routes

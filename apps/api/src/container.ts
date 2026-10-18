@@ -10,6 +10,7 @@ import type { Locale } from '@weft/i18n'
 import {
   connectDatabase,
   DrizzleCommentRepository,
+  DrizzleFolderRepository,
   DrizzleInvitationRepository,
   DrizzleUserDirectory,
   DrizzleReactionRepository,
@@ -115,6 +116,7 @@ export async function createContainer(
     invitations: new DrizzleInvitationRepository(database.db),
     users: new DrizzleUserDirectory(database.db),
     tokens: new RandomSecretTokens(),
+    folders: new DrizzleFolderRepository(database.db),
     passwords: new ScryptPasswordHasher(),
     accessTokens: new HmacVideoAccessTokens(config.BETTER_AUTH_SECRET),
     ids: videoIds,

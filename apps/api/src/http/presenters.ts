@@ -44,6 +44,8 @@ export function presentVideo(
     createdAt: video.createdAt,
     durationMs: visibleDurationMs(video),
     isOwner,
+    folderId: video.folderId,
+    trashedAt: video.trashedAt,
     playback: {
       playlistUrl: `${videoPath(video.id)}/playlist.m3u8`,
       // While no render matches the trim, players hide what it cuts from the raw recording.

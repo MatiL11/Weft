@@ -18,6 +18,7 @@ import {
   FakeSpeechRecognizer,
   FixedClock,
   InMemoryCommentRepository,
+  InMemoryFolderRepository,
   InMemoryInvitationRepository,
   InMemoryUserDirectory,
   InMemoryReactionRepository,
@@ -47,7 +48,8 @@ export function buildTestApp(options: TestAppOptions = {}) {
   ])
   const workspaces: WorkspaceRepository =
     options.workspaces ?? new InMemoryWorkspaceRepository(new Set(), users)
-  const videos = new InMemoryVideoRepository()
+  const transcripts = new InMemoryTranscriptRepository()
+  const videos = new InMemoryVideoRepository(transcripts.textOf)
   const storage = new FakeObjectStorage()
   const clock = new FixedClock(NOW)
   const renders = new FakeRenderQueue()
@@ -58,7 +60,8 @@ export function buildTestApp(options: TestAppOptions = {}) {
     storage,
     renders,
     transcriptions: renders,
-    transcripts: new InMemoryTranscriptRepository(),
+    transcripts,
+    folders: new InMemoryFolderRepository(videos),
     comments: new InMemoryCommentRepository({ user_1: 'Ana', user_2: 'Beto' }),
     reactions: new InMemoryReactionRepository(),
     events,

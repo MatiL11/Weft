@@ -7,6 +7,9 @@ import {
   type ConfirmSegmentUpload,
   type DeleteVideo,
   type ListVideos,
+  type MoveVideo,
+  type RestoreVideo,
+  type TrashVideo,
   type PrepareSegmentUpload,
   type RequestRender,
   type RequestTranscription,
@@ -32,6 +35,9 @@ export interface VideoRouteDeps {
   requestRender: RequestRender
   requestTranscription: RequestTranscription
   listVideos: ListVideos
+  moveVideo: MoveVideo
+  trashVideo: TrashVideo
+  restoreVideo: RestoreVideo
   /** Public base URL of the web app, used to build share links. */
   publicUrl: string
 }
@@ -50,6 +56,7 @@ const CompleteBody = z.object({
   durationMs: z.number().int().nonnegative(),
   segmentCount: z.number().int().nonnegative().max(MAX_MEDIA_SEGMENTS),
 })
+const MoveBody = z.object({ folderId: z.string().min(1).max(64).nullable() })
 const UpdateBody = z
   .object({
     title: z.string(),
@@ -79,12 +86,20 @@ export function videoRoutes(deps: VideoRouteDeps): Hono<AppEnv> {
     const user = userId(c)
     const workspaceId =
       c.req.query('workspaceId') ?? (await defaultWorkspaceId(deps.workspaces, user))
-    const videos = await deps.listVideos.execute({ userId: user, workspaceId })
-    const views = videos.map((video) => {
-      const view = presentVideo(video, user)
+    const folder = c.req.query('folderId')
+    const items = await deps.listVideos.execute({
+      userId: user,
+      workspaceId,
+      // "root" lists the top level; no folderId lists every folder.
+      folderId: folder === 'root' ? null : folder,
+      search: c.req.query('q'),
+      trashed: c.req.query('trash') === '1',
+    })
+    const views = items.map(({ video, match }) => {
+      const view = { ...presentVideo(video, user), match }
       // Members still need the password to open others' protected videos, poster included.
       return video.privacy === 'password' && !view.isOwner
-        ? { ...view, posterUrl: null, thumbnails: null, downloadUrl: null }
+        ? { ...view, posterUrl: null, thumbnails: null, downloadUrl: null, match: null }
         : view
     })
     return c.json(ok(views))
@@ -149,6 +164,30 @@ export function videoRoutes(deps: VideoRouteDeps): Hono<AppEnv> {
       userId: user,
       videoId: c.req.param('id'),
     })
+    return c.json(ok(presentVideo(video, user)))
+  })
+
+  routes.post('/:id/move', requireUser, async (c) => {
+    const body = await parseJson(c, MoveBody)
+    if (!body) return invalid(c)
+    const user = userId(c)
+    const video = await deps.moveVideo.execute({
+      userId: user,
+      videoId: c.req.param('id'),
+      ...body,
+    })
+    return c.json(ok(presentVideo(video, user)))
+  })
+
+  routes.post('/:id/trash', requireUser, async (c) => {
+    const user = userId(c)
+    const video = await deps.trashVideo.execute({ userId: user, videoId: c.req.param('id') })
+    return c.json(ok(presentVideo(video, user)))
+  })
+
+  routes.post('/:id/restore', requireUser, async (c) => {
+    const user = userId(c)
+    const video = await deps.restoreVideo.execute({ userId: user, videoId: c.req.param('id') })
     return c.json(ok(presentVideo(video, user)))
   })
 
