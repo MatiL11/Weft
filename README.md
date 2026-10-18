@@ -3,7 +3,7 @@
 Open-source, self-hostable async video messaging: record your screen and camera,
 get a shareable link instantly, and collect comments and reactions.
 
-> Status: early development (Phase 5 — collaboration done). See [docs/plan/PLAN.md](docs/plan/PLAN.md).
+> Status: early development (Phase 6 — analytics done). See [docs/plan/PLAN.md](docs/plan/PLAN.md).
 
 ## Stack
 

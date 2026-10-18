@@ -213,9 +213,11 @@ Cada fase cierra con tests (≥80 % de cobertura en paquetes de dominio), revisi
 
 ### Fase 6 — Analítica básica (1 semana)
 
-- [ ] Vistas (>1 s reproducido), visto completo/parcial (20 buckets), beacon al cerrar
-- [ ] Panel del dueño: quién vio, cuánto, gráfico de retención
+- [x] Vistas (después de 1 s reproducido; las del dueño no cuentan), qué veinteavos del video se vieron y cuánto tiempo, informado cada 15 s y al cerrar la página (`sendBeacon`); también desde los embeds. Espectadores únicos por cuenta o cookie anónima; límite de vistas nuevas por dirección y video
+- [x] Panel del dueño: vistas, únicos, porcentaje visto en promedio, quiénes llegaron al final, gráfico de retención (con tooltip y vista de tabla) y quiénes lo vieron (con sesión) y cuánto. La retención solo compara vistas hechas con el recorte actual
+- [x] Email "Fulano vio tu video" (uno por espectador y video por día) y vistas en las tarjetas de la biblioteca
 - **Hito:** retención visible por video.
+  - ✅ E2E con la stack real: un espectador con sesión mira unos segundos y cierra la pestaña, otro anónimo mira más; el dueño ve 2 vistas, 2 únicos, la curva de retención con su caída, a Beto con 40% visto, y recibe el email.
 
 ### Fase 7 — Release self-host v0.1 (1 semana)
 
