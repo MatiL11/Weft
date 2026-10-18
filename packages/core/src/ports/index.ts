@@ -62,6 +62,7 @@ export interface UserProfile {
 /** Read access to accounts (managed by the auth system). */
 export interface UserDirectory {
   findById(id: string): Promise<UserProfile | null>
+  findByIds(ids: readonly string[]): Promise<UserProfile[]>
   findByEmail(email: string): Promise<UserProfile | null>
 }
 
@@ -264,7 +265,14 @@ export interface Mailer {
 
 export interface ViewRepository {
   create(view: View): Promise<void>
-  update(view: View): Promise<void>
+  /**
+   * Atomically adds watched parts (bitwise OR), keeps the larger watch time (capped) and
+   * stamps the time, so concurrent reports never overwrite each other.
+   */
+  mergeProgress(
+    id: string,
+    progress: { buckets: number; watchedMs: number; maxWatchedMs: number; at: Date },
+  ): Promise<void>
   findById(id: string): Promise<View | null>
   /** Most recent first, up to `limit`. */
   listForVideo(videoId: string, options: { limit: number }): Promise<View[]>

@@ -1,5 +1,5 @@
 import type { View, ViewRepository } from '@weft/core'
-import { count, desc, eq, inArray } from 'drizzle-orm'
+import { count, desc, eq, inArray, sql } from 'drizzle-orm'
 import type { Database } from './client'
 import { views } from './schema'
 
@@ -10,9 +10,18 @@ export class DrizzleViewRepository implements ViewRepository {
     await this.db.insert(views).values(view)
   }
 
-  async update(view: View): Promise<void> {
-    const { buckets, watchedMs, lastSeenAt } = view
-    await this.db.update(views).set({ buckets, watchedMs, lastSeenAt }).where(eq(views.id, view.id))
+  async mergeProgress(
+    id: string,
+    progress: { buckets: number; watchedMs: number; maxWatchedMs: number; at: Date },
+  ): Promise<void> {
+    await this.db
+      .update(views)
+      .set({
+        buckets: sql`${views.buckets} | ${progress.buckets}`,
+        watchedMs: sql`least(${progress.maxWatchedMs}, greatest(${views.watchedMs}, ${progress.watchedMs}))`,
+        lastSeenAt: progress.at,
+      })
+      .where(eq(views.id, id))
   }
 
   async findById(id: string): Promise<View | null> {

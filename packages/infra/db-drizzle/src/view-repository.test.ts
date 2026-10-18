@@ -54,12 +54,33 @@ describe('DrizzleViewRepository (integration)', () => {
     await repo.create(view('v2', 'a', 2))
     await repo.create(view('v3', 'b', 3))
 
-    await repo.update({ ...view('v1', 'a', 1), buckets: 0b111, watchedMs: 4200, lastSeenAt: at(9) })
+    // Concurrent reports merge instead of overwriting each other.
+    await Promise.all([
+      repo.mergeProgress('v1', {
+        buckets: 0b011,
+        watchedMs: 4200,
+        maxWatchedMs: 10_000,
+        at: at(9),
+      }),
+      repo.mergeProgress('v1', {
+        buckets: 0b100,
+        watchedMs: 3000,
+        maxWatchedMs: 10_000,
+        at: at(9),
+      }),
+    ])
     expect(await repo.findById('v1')).toMatchObject({
       buckets: 7,
       watchedMs: 4200,
       lastSeenAt: at(9),
     })
+    await repo.mergeProgress('v1', {
+      buckets: 0,
+      watchedMs: 99_999,
+      maxWatchedMs: 10_000,
+      at: at(10),
+    })
+    expect((await repo.findById('v1'))?.watchedMs).toBe(10_000)
     expect(await repo.findById('nope')).toBeNull()
     expect((await repo.listForVideo('a', { limit: 10 })).map((v) => v.id)).toEqual(['v2', 'v1'])
     expect(await repo.countForVideos(['a', 'b', 'c'])).toEqual(

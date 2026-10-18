@@ -32,8 +32,10 @@ export interface AnalyticsDeps {
   clock: Clock
 }
 
-/** How many recent views the owner's stats consider. */
+/** How many recent views the owner's stats consider (the total count covers all of them). */
 const STATS_VIEW_LIMIT = 5000
+/** Upper bound for stored watch time (fits the database column comfortably). */
+const MAX_WATCHED_MS = 1_000_000_000
 
 /**
  * A viewer started watching (the player calls this after a second of playback). The owner's
@@ -93,12 +95,15 @@ export class RecordViewProgress {
       throw new DomainError('view.not_found', 'View not found.')
     }
     // Watch time can exceed the length (rewatching), but not absurdly.
-    const cap = (visibleDurationMs(video) ?? 0) * 10 || Number.MAX_SAFE_INTEGER
-    await this.deps.views.update({
-      ...view,
-      buckets: view.buckets | sanitizeBuckets(input.buckets),
-      watchedMs: Math.min(cap, Math.max(view.watchedMs, Math.round(input.watchedMs) || 0)),
-      lastSeenAt: this.deps.clock.now(),
+    const maxWatchedMs = Math.min(
+      MAX_WATCHED_MS,
+      (visibleDurationMs(video) ?? 0) * 10 || MAX_WATCHED_MS,
+    )
+    await this.deps.views.mergeProgress(view.id, {
+      buckets: sanitizeBuckets(input.buckets),
+      watchedMs: Math.min(maxWatchedMs, Math.max(0, Math.round(input.watchedMs) || 0)),
+      maxWatchedMs,
+      at: this.deps.clock.now(),
     })
   }
 }
@@ -109,10 +114,14 @@ export class GetVideoStats {
 
   async execute(input: { userId: string; videoId: string }): Promise<VideoStats> {
     const video = await loadOwnVideo(this.deps.videos, input.userId, input.videoId)
-    const views = await this.deps.views.listForVideo(video.id, { limit: STATS_VIEW_LIMIT })
+    const [views, counts] = await Promise.all([
+      this.deps.views.listForVideo(video.id, { limit: STATS_VIEW_LIMIT }),
+      this.deps.views.countForVideos([video.id]),
+    ])
     const viewerIds = [...new Set(views.flatMap((v) => (v.viewerId ? [v.viewerId] : [])))]
-    const profiles = await Promise.all(viewerIds.map((id) => this.deps.users.findById(id)))
-    const names = new Map(profiles.flatMap((p) => (p ? [[p.id, p.name] as const] : [])))
-    return summarizeViews(views, timelineKey(video.trim), names)
+    const profiles = await this.deps.users.findByIds(viewerIds)
+    const names = new Map(profiles.map((p) => [p.id, p.name] as const))
+    const stats = summarizeViews(views, timelineKey(video.trim), names)
+    return { ...stats, views: counts.get(video.id) ?? 0 }
   }
 }

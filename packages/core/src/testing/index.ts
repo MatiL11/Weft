@@ -95,6 +95,10 @@ export class InMemoryUserDirectory implements UserDirectory {
   async findByEmail(email: string): Promise<UserProfile | null> {
     return this.users.find((u) => u.email.toLowerCase() === email.toLowerCase()) ?? null
   }
+
+  async findByIds(ids: readonly string[]): Promise<UserProfile[]> {
+    return this.users.filter((u) => ids.includes(u.id))
+  }
 }
 
 export class InMemoryWorkspaceRepository implements WorkspaceRepository {
@@ -637,8 +641,18 @@ export class InMemoryViewRepository implements ViewRepository {
     this.views.set(view.id, view)
   }
 
-  async update(view: View): Promise<void> {
-    this.views.set(view.id, view)
+  async mergeProgress(
+    id: string,
+    progress: { buckets: number; watchedMs: number; maxWatchedMs: number; at: Date },
+  ): Promise<void> {
+    const view = this.views.get(id)
+    if (!view) return
+    this.views.set(id, {
+      ...view,
+      buckets: view.buckets | progress.buckets,
+      watchedMs: Math.min(progress.maxWatchedMs, Math.max(view.watchedMs, progress.watchedMs)),
+      lastSeenAt: progress.at,
+    })
   }
 
   async findById(id: string): Promise<View | null> {

@@ -31,10 +31,11 @@ export function analyticsRoutes(deps: AnalyticsRouteDeps): Hono<AppEnv> {
 
   routes.post('/:id/views', async (c) => {
     const videoId = c.req.param('id')
-    if (!deps.viewLimiter.tryHit(`${c.get('clientIp')} ${videoId}`)) {
+    const viewerId = c.get('user')?.id ?? null
+    // Signed-in people are limited on their own; anonymous ones per address.
+    if (!deps.viewLimiter.tryHit(`${viewerId ?? c.get('clientIp')} ${videoId}`)) {
       return c.json(fail('view.too_many', 'Too many views from here.'), 429)
     }
-    const viewerId = c.get('user')?.id ?? null
     let anonymousId = getCookie(c, VIEWER_COOKIE) ?? null
     if (!viewerId && !anonymousId) {
       anonymousId = randomBytes(16).toString('base64url')

@@ -213,7 +213,7 @@ Cada fase cierra con tests (≥80 % de cobertura en paquetes de dominio), revisi
 
 ### Fase 6 — Analítica básica (1 semana)
 
-- [x] Vistas (después de 1 s reproducido; las del dueño no cuentan), qué veinteavos del video se vieron y cuánto tiempo, informado cada 15 s y al cerrar la página (`sendBeacon`); también desde los embeds. Espectadores únicos por cuenta o cookie anónima; límite de vistas nuevas por dirección y video
+- [x] Vistas (después de 1 s reproducido; las del dueño no cuentan), qué veinteavos del video se vieron y cuánto tiempo, informado cada 15 s y al cerrar la página (`sendBeacon`); también desde los embeds. Espectadores únicos por cuenta o cookie anónima (en embeds de otros sitios el navegador no guarda esa cookie, así que ahí los únicos anónimos son aproximados); límite de vistas nuevas por cuenta, o por dirección si no hay sesión
 - [x] Panel del dueño: vistas, únicos, porcentaje visto en promedio, quiénes llegaron al final, gráfico de retención (con tooltip y vista de tabla) y quiénes lo vieron (con sesión) y cuánto. La retención solo compara vistas hechas con el recorte actual
 - [x] Email "Fulano vio tu video" (uno por espectador y video por día) y vistas en las tarjetas de la biblioteca
 - **Hito:** retención visible por video.

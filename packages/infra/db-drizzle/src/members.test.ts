@@ -95,6 +95,11 @@ describe('members and invitations (integration)', () => {
     expect(await deps.users.findByEmail('nobody@example.com')).toBeNull()
     expect((await deps.users.findById('u2'))?.locale).toBe('en')
     await deps.users.setLocale('u2', 'es')
+    expect((await deps.users.findByIds(['u1', 'u2', 'nope'])).map((u) => u.name).sort()).toEqual([
+      'Ana',
+      'Beto',
+    ])
+    expect(await deps.users.findByIds([])).toEqual([])
     expect((await deps.users.findById('u2'))?.locale).toBe('es')
 
     await new ChangeMemberRole(deps).execute({

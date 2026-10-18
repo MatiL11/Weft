@@ -64,7 +64,11 @@ describe('analytics routes', () => {
     ctx.actAs(null)
     await start()
     await start()
-    // The test app allows 3 per address, video and hour (the owner's view counted too).
+    await start()
+    // The test app allows 3 per address (or account), video and hour.
     expect((await start()).status).toBe(429)
+    // Signed-in viewers have their own allowance, even from the same address.
+    ctx.actAs({ id: 'user_2' })
+    expect((await start()).status).toBe(201)
   })
 })

@@ -19,9 +19,11 @@ export function VideoStats({ videoId, durationMs }: { videoId: string; durationM
   useEffect(() => {
     let cancelled = false
     const load = () =>
-      fetchVideoStats(videoId)
-        .then((data) => !cancelled && setStats(data))
-        .catch(() => !cancelled && setHasError(true))
+      document.visibilityState === 'hidden'
+        ? undefined
+        : fetchVideoStats(videoId)
+            .then((data) => !cancelled && setStats(data))
+            .catch(() => !cancelled && setHasError(true))
     void load()
     const timer = setInterval(load, REFRESH_MS)
     return () => {

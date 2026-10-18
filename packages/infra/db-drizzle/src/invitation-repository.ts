@@ -6,7 +6,7 @@ import type {
   UserDirectory,
   UserProfile,
 } from '@weft/core'
-import { and, eq, isNull, sql } from 'drizzle-orm'
+import { and, eq, inArray, isNull, sql } from 'drizzle-orm'
 import type { Database } from './client'
 import { invitations, users } from './schema'
 
@@ -70,6 +70,15 @@ export class DrizzleUserDirectory implements UserDirectory {
 
   async findByEmail(email: string): Promise<UserProfile | null> {
     return this.findOne(sql`lower(${users.email}) = ${email.toLowerCase()}`)
+  }
+
+  async findByIds(ids: readonly string[]): Promise<UserProfile[]> {
+    if (ids.length === 0) return []
+    const rows = await this.db
+      .select({ id: users.id, name: users.name, email: users.email, locale: users.locale })
+      .from(users)
+      .where(inArray(users.id, [...ids]))
+    return rows.map((row) => ({ ...row, locale: row.locale === 'es' ? 'es' : 'en' }))
   }
 
   /** Remembers the language someone signed up in, for their emails. */
