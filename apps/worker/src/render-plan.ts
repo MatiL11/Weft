@@ -64,12 +64,15 @@ export function encodeArgs(options: EncodeOptions): string[] {
 export const HLS_SEGMENT_SECONDS = 4
 
 const MIN_TOOL_TIMEOUT_MS = 10 * 60 * 1000
+/** The duration comes from the uploaded file's own header, so it can't stretch this forever. */
+const MAX_TOOL_TIMEOUT_MS = 4 * 60 * 60 * 1000
 /** Even a slow machine encodes far faster than this many times the video's length. */
 const TOOL_TIMEOUT_PER_SOURCE_MS = 10
 
 /** How long one ffmpeg step may run before it's considered stuck (and the render fails). */
 export function toolTimeoutMs(sourceDurationMs: number): number {
-  return Math.max(MIN_TOOL_TIMEOUT_MS, Math.ceil(sourceDurationMs * TOOL_TIMEOUT_PER_SOURCE_MS))
+  const scaled = Math.ceil(sourceDurationMs * TOOL_TIMEOUT_PER_SOURCE_MS)
+  return Math.min(MAX_TOOL_TIMEOUT_MS, Math.max(MIN_TOOL_TIMEOUT_MS, scaled))
 }
 
 /**

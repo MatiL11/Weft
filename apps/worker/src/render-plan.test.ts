@@ -102,6 +102,8 @@ describe('render plan', () => {
       expect(args.slice(input - 4, input)).toEqual(['-protocol_whitelist', 'file', '-f', 'mov'])
     }
     expect(toolTimeoutMs(5_000)).toBe(10 * 60 * 1000)
-    expect(toolTimeoutMs(2 * 3600_000)).toBe(20 * 3600_000)
+    expect(toolTimeoutMs(20 * 60_000)).toBe(200 * 60_000)
+    // A forged header claiming days of video doesn't buy days of CPU.
+    expect(toolTimeoutMs(59 * 3600_000)).toBe(4 * 3600_000)
   })
 })

@@ -6,7 +6,7 @@ install, putting it on the internet behind HTTPS, configuration, backups and upg
 
 ## Requirements
 
-- Docker Engine with the Compose plugin (v2).
+- Docker Engine with the Compose plugin, version 2.23.1 or newer (`docker compose version`).
 - An x86-64 machine. Released images are `linux/amd64`; on ARM, build from source (below).
 - 2 CPU cores and 4 GB of RAM are enough for a small team. Rendering and transcription are
   CPU-bound: more cores make videos ready sooner, they don't change what viewers see while
@@ -84,7 +84,7 @@ Notes for other proxies (nginx, Traefik…):
 - Your proxy must send the visitor's address in `X-Forwarded-For` (all of them do by
   default). `TRUSTED_PROXIES` lists the addresses Weft accepts it from: `private_ranges`
   covers a proxy on the same machine or Docker network; otherwise give its IP or CIDR range.
-  Left empty, every visitor looks like your proxy and they share one rate-limit bucket. Keep
+  By default no proxy is trusted, so every visitor looks like your proxy and they share one rate-limit bucket. Keep
   `WEB_PORT` bound to `127.0.0.1` (or firewalled) so only your proxy can reach it.
 
 ### Who can sign up
@@ -109,7 +109,7 @@ Everything is set through `.env`, read by `docker-compose.yml`.
 | `WEB_PORT`               | `3000`                  | Host port (optionally `ip:port`) of the app (its front door).                                   |
 | `STORAGE_PORT`           | `8333`                  | Host port (optionally `ip:port`) of the storage.                                                |
 | `OPEN_SIGNUP`            | `false`                 | `true`: anyone can sign up. Otherwise only the first account and invited people.                |
-| `TRUSTED_PROXIES`        | empty                   | Your reverse proxy's addresses (e.g. `private_ranges`), trusted to report visitors' IPs.        |
+| `TRUSTED_PROXIES`        | `127.0.0.1/32` (none)   | Your reverse proxy's addresses (e.g. `private_ranges`), trusted to report visitors' IPs.        |
 | `WEFT_VERSION`           | `latest`                | Image tag to pull, e.g. `0.1.0`. Pin it in production.                                          |
 | `RENDER_CONCURRENCY`     | `1`                     | Videos rendered at once. Each render can use every core.                                        |
 | `WHISPER_MODEL`          | `base`                  | Speech model: `tiny`, `base`, `small` or `medium` (more accurate, slower, bigger).              |
@@ -159,7 +159,7 @@ Read the [release notes](https://github.com/MatiL11/Weft/releases) first, back u
 
 ```bash
 # with released images
-sed -i 's/^WEFT_VERSION=.*/WEFT_VERSION=0.1.0/' .env   # the version you're moving to
+sed -i 's/^WEFT_VERSION=.*/WEFT_VERSION=0.1.0/' .env   # the version you're moving to (see .env.example)
 docker compose pull && docker compose up -d
 
 # or, from source
