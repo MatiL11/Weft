@@ -1,4 +1,10 @@
-import { DeliverNotification, PurgeTrash, RenderVideo, TranscribeVideo } from '@weft/core'
+import {
+  DeliverNotification,
+  PurgeAbandonedRecordings,
+  PurgeTrash,
+  RenderVideo,
+  TranscribeVideo,
+} from '@weft/core'
 import {
   connectDatabase,
   DrizzleCommentRepository,
@@ -65,8 +71,16 @@ await jobs.workRenders((job) => logged('render', job, () => renderVideo.execute(
   concurrency: config.RENDER_CONCURRENCY,
 })
 
-const purgeTrash = new PurgeTrash({ videos, storage, clock: { now: () => new Date() } })
-await jobs.workTrashPurge(() => logged('trash purge', {}, () => purgeTrash.execute()))
+const purgeDeps = { videos, storage, clock: { now: () => new Date() } }
+const purgeTrash = new PurgeTrash(purgeDeps)
+const purgeAbandoned = new PurgeAbandonedRecordings(purgeDeps)
+// The daily cleanup: expired trash, then recordings that were never finished.
+await jobs.workTrashPurge(() =>
+  logged('cleanup', {}, async () => ({
+    trash: await purgeTrash.execute(),
+    abandoned: await purgeAbandoned.execute(),
+  })),
+)
 
 const deliverNotification = new DeliverNotification({
   videos,

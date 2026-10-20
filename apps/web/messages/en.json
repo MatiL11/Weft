@@ -44,6 +44,8 @@
       "INVALID_EMAIL": "Enter a valid email address.",
       "PASSWORD_TOO_SHORT": "The password is too short.",
       "PASSWORD_TOO_LONG": "The password is too long.",
+      "SIGN_UP_INVITE_ONLY": "This server only accepts new accounts by invitation. Ask a workspace admin to invite you.",
+      "TOO_MANY_REQUESTS": "Too many attempts. Wait a few seconds and try again.",
       "generic": "We couldn't complete that. Please try again."
     }
   },

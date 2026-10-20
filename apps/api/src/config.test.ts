@@ -17,6 +17,7 @@ describe('loadConfig', () => {
       PORT: 4000,
       PUBLIC_URL: 'http://localhost:3000',
       RUN_MIGRATIONS: true,
+      OPEN_SIGNUP: true,
       LOG_LEVEL: 'info',
       S3_REGION: 'us-east-1',
       S3_BUCKET: 'weft',
@@ -27,6 +28,7 @@ describe('loadConfig', () => {
     const config = loadConfig({ ...VALID, PORT: '8080', RUN_MIGRATIONS: 'false' })
     expect(config.PORT).toBe(8080)
     expect(config.RUN_MIGRATIONS).toBe(false)
+    expect(loadConfig({ ...VALID, OPEN_SIGNUP: 'false' }).OPEN_SIGNUP).toBe(false)
   })
 
   it('fails fast with a readable message listing every problem', () => {

@@ -28,6 +28,25 @@ describe('HTTP app', () => {
     expect(ctx.authHandler).toHaveBeenCalledOnce()
   })
 
+  it('tells the auth handler the client address from the trusted proxy, never the caller', async () => {
+    const forwarded = (headers: Record<string, string>) =>
+      ctx.app.request('/api/auth/sign-in/email', {
+        ...postJson({ email: 'a@b.co' }),
+        headers: { 'content-type': 'application/json', ...headers },
+      })
+    const received = () => {
+      const calls = ctx.authHandler.mock.calls as unknown as [Request][]
+      return calls.at(-1)![0]
+    }
+
+    await forwarded({ 'x-forwarded-for': '6.6.6.6, 203.0.113.9', 'x-weft-client-ip': '1.1.1.1' })
+    expect(received().headers.get('x-weft-client-ip')).toBe('203.0.113.9')
+    expect(await received().json()).toEqual({ email: 'a@b.co' })
+
+    await forwarded({ 'x-weft-client-ip': '1.1.1.1' })
+    expect(received().headers.get('x-weft-client-ip')).toBeNull()
+  })
+
   it('rejects unauthenticated API requests', async () => {
     const res = await buildApp({ user: null }).app.request('/api/workspaces')
     expect(res.status).toBe(401)

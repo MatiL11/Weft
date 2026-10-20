@@ -122,6 +122,15 @@ export class DrizzleVideoRepository implements VideoRepository {
     return rows.map(toVideo)
   }
 
+  async listRecordingsStartedBefore(cutoff: Date, options: { limit: number }): Promise<Video[]> {
+    const rows = await this.db
+      .select()
+      .from(videos)
+      .where(and(eq(videos.status, 'recording'), lt(videos.createdAt, cutoff)))
+      .limit(options.limit)
+    return rows.map(toVideo)
+  }
+
   async update(video: Video): Promise<void> {
     await this.db.update(videos).set(editableColumns(video)).where(eq(videos.id, video.id))
   }

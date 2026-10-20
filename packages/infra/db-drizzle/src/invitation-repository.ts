@@ -58,6 +58,20 @@ export class DrizzleInvitationRepository implements InvitationRepository {
       .orderBy(invitations.createdAt)
     return rows.map(toInvitation)
   }
+
+  async listOpenForEmail(email: string): Promise<Invitation[]> {
+    const rows = await this.db
+      .select()
+      .from(invitations)
+      .where(
+        and(
+          eq(invitations.email, email),
+          isNull(invitations.acceptedAt),
+          isNull(invitations.revokedAt),
+        ),
+      )
+    return rows.map(toInvitation)
+  }
 }
 
 /** Accounts, as stored by the auth system. */
@@ -79,6 +93,11 @@ export class DrizzleUserDirectory implements UserDirectory {
       .from(users)
       .where(inArray(users.id, [...ids]))
     return rows.map((row) => ({ ...row, locale: row.locale === 'es' ? 'es' : 'en' }))
+  }
+
+  async hasAny(): Promise<boolean> {
+    const [row] = await this.db.select({ id: users.id }).from(users).limit(1)
+    return row !== undefined
   }
 
   /** Remembers the language someone signed up in, for their emails. */

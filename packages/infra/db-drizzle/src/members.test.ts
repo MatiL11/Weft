@@ -79,6 +79,9 @@ describe('members and invitations (integration)', () => {
         (i) => i.email,
       ),
     ).toEqual(['beto@example.com'])
+    expect((await deps.invitations.listOpenForEmail('beto@example.com')).length).toBe(1)
+    expect(await deps.invitations.listOpenForEmail('x@y.co')).toEqual([])
+    expect(await deps.users.hasAny()).toBe(true)
 
     // Email matching ignores case.
     await new AcceptInvitation(deps).execute({ userId: 'u2', token })

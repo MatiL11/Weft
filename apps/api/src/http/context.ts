@@ -1,4 +1,5 @@
-import type { MiddlewareHandler } from 'hono'
+import { getConnInfo } from '@hono/node-server/conninfo'
+import type { Context, MiddlewareHandler } from 'hono'
 import { fail } from './envelope'
 
 export interface SessionUser {
@@ -22,6 +23,26 @@ export function clientIpFrom(forwardedFor: string | undefined, trustedHops: numb
     .map((part) => part.trim())
     .filter(Boolean)
   return hops[hops.length - trustedHops] ?? 'unknown'
+}
+
+/**
+ * The API overwrites this header on requests to the auth handler with the client address it
+ * resolved, so Better Auth's rate limits count per person instead of per proxy.
+ */
+export const CLIENT_IP_HEADER = 'x-weft-client-ip'
+
+/**
+ * The caller's address: from X-Forwarded-For behind `trustedHops` proxies, or from the socket
+ * when the API is reached directly.
+ */
+export function resolveClientIp(c: Context, trustedHops: number): string {
+  if (trustedHops > 0) return clientIpFrom(c.req.header('x-forwarded-for'), trustedHops)
+  try {
+    return getConnInfo(c).remote.address ?? 'unknown'
+  } catch {
+    // Not served by the Node adapter (e.g. in-process test requests).
+    return 'unknown'
+  }
 }
 
 /** Rejects anonymous requests. Routes behind it can rely on `c.get('user')` being set. */

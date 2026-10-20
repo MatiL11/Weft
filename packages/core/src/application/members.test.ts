@@ -2,12 +2,14 @@ import { beforeEach, describe, expect, it } from 'vitest'
 import {
   AcceptInvitation,
   ChangeMemberRole,
+  CheckSignUpAllowed,
   GetInvitation,
   InviteMember,
   ListMembers,
   RemoveMember,
   RevokeInvitation,
 } from './members'
+import { InMemoryInvitationRepository, InMemoryUserDirectory } from '../testing'
 import { createTestBed, NOW } from './test-bed'
 
 describe('workspace members', () => {
@@ -157,5 +159,30 @@ describe('workspace members', () => {
     // Anyone but the owner can leave.
     await remove('member_1', 'member_1')
     expect((await roster()).members.map((m) => m.userId)).toEqual(['owner_1'])
+  })
+
+  it('closes sign-up to strangers when sign-up is invite-only', async () => {
+    const allowed = (email: string, open = false) =>
+      new CheckSignUpAllowed(bed.deps, open).execute({ email })
+    const { invitation } = await invite('dani@example.com')
+
+    expect(await allowed('stranger@example.com', true)).toBe(true)
+    expect(await allowed('stranger@example.com')).toBe(false)
+    expect(await allowed('not an email')).toBe(false)
+    expect(await allowed(' Dani@Example.com ')).toBe(true)
+
+    await bed.invitations.update({ ...invitation, revokedAt: NOW })
+    expect(await allowed('dani@example.com')).toBe(false)
+
+    // The first account of a fresh instance is always allowed.
+    const fresh = new CheckSignUpAllowed(
+      {
+        users: new InMemoryUserDirectory(),
+        invitations: new InMemoryInvitationRepository(),
+        clock: bed.clock,
+      },
+      false,
+    )
+    expect(await fresh.execute({ email: 'admin@example.com' })).toBe(true)
   })
 })

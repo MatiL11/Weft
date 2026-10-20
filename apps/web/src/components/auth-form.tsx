@@ -54,7 +54,7 @@ export function AuthForm({ mode, next = '/' }: AuthFormProps) {
     setIsSubmitting(false)
 
     if (error) {
-      setFormError(t(`errors.${authErrorKey(error.code)}`))
+      setFormError(t(`errors.${authErrorKey(error)}`))
       return
     }
     router.push(next)

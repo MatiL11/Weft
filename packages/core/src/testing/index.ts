@@ -99,6 +99,10 @@ export class InMemoryUserDirectory implements UserDirectory {
   async findByIds(ids: readonly string[]): Promise<UserProfile[]> {
     return this.users.filter((u) => ids.includes(u.id))
   }
+
+  async hasAny(): Promise<boolean> {
+    return this.users.length > 0
+  }
 }
 
 export class InMemoryWorkspaceRepository implements WorkspaceRepository {
@@ -225,6 +229,12 @@ export class InMemoryVideoRepository implements VideoRepository {
   async listTrashedBefore(cutoff: Date, options: { limit: number }): Promise<Video[]> {
     return [...this.videos.values()]
       .filter((v) => v.trashedAt !== null && v.trashedAt.getTime() < cutoff.getTime())
+      .slice(0, options.limit)
+  }
+
+  async listRecordingsStartedBefore(cutoff: Date, options: { limit: number }): Promise<Video[]> {
+    return [...this.videos.values()]
+      .filter((v) => v.status === 'recording' && v.createdAt.getTime() < cutoff.getTime())
       .slice(0, options.limit)
   }
 
@@ -559,6 +569,12 @@ export class InMemoryInvitationRepository implements InvitationRepository {
   async listOpen(workspaceId: string): Promise<Invitation[]> {
     return [...this.invitations.values()].filter(
       (i) => i.workspaceId === workspaceId && !i.acceptedAt && !i.revokedAt,
+    )
+  }
+
+  async listOpenForEmail(email: string): Promise<Invitation[]> {
+    return [...this.invitations.values()].filter(
+      (i) => i.email === email && !i.acceptedAt && !i.revokedAt,
     )
   }
 }

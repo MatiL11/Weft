@@ -49,6 +49,8 @@ export interface InvitationRepository {
   findByTokenHash(tokenHash: string): Promise<Invitation | null>
   /** Not yet accepted or revoked (they may have expired). */
   listOpen(workspaceId: string): Promise<Invitation[]>
+  /** Open invitations (any workspace) for this normalized email. */
+  listOpenForEmail(email: string): Promise<Invitation[]>
 }
 
 export interface UserProfile {
@@ -64,6 +66,8 @@ export interface UserDirectory {
   findById(id: string): Promise<UserProfile | null>
   findByIds(ids: readonly string[]): Promise<UserProfile[]>
   findByEmail(email: string): Promise<UserProfile | null>
+  /** Whether any account exists yet. */
+  hasAny(): Promise<boolean>
 }
 
 /** Unguessable secrets for links (e.g. invitations); only their hashes are stored. */
@@ -79,6 +83,8 @@ export interface VideoRepository {
   listForWorkspace(workspaceId: string, filter: VideoListFilter): Promise<Video[]>
   /** Videos that went to the trash before `cutoff`, for permanent deletion. */
   listTrashedBefore(cutoff: Date, options: { limit: number }): Promise<Video[]>
+  /** Videos still recording that started before `cutoff`. */
+  listRecordingsStartedBefore(cutoff: Date, options: { limit: number }): Promise<Video[]>
   /**
    * Saves the owner-editable fields and recording status. Render and transcription progress
    * is left alone: it changes only through `requestRender`/`saveRender` and

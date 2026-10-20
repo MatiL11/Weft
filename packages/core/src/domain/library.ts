@@ -5,6 +5,11 @@ import type { TranscriptSegment } from './transcript'
 export const FOLDER_NAME_MAX_LENGTH = 80
 /** Trashed videos are deleted for good after this long. */
 export const TRASH_RETENTION_MS = 30 * 24 * 60 * 60 * 1000
+/**
+ * Recordings still unfinished this long after they started were abandoned (tab closed, crash);
+ * the browser keeps its own copy to download, so the half-uploaded video is deleted.
+ */
+export const ABANDONED_RECORDING_MS = 24 * 60 * 60 * 1000
 
 export interface Folder {
   readonly id: string

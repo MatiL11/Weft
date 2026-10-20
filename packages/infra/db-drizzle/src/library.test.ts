@@ -116,5 +116,9 @@ describe('library queries (integration)', () => {
 
     expect((await repo.listTrashedBefore(at(5), { limit: 10 })).map((v) => v.id)).toEqual(['c'])
     expect(await repo.listTrashedBefore(at(3), { limit: 10 })).toEqual([])
+    await repo.update({ ...video('b', 'Daily 50% off', 2), status: 'ready' })
+    const recording = await repo.listRecordingsStartedBefore(at(2.5), { limit: 10 })
+    expect(recording.map((v) => v.id)).toEqual(['a'])
+    expect(await repo.listRecordingsStartedBefore(new Date(0), { limit: 10 })).toEqual([])
   })
 })

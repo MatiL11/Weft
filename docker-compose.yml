@@ -44,6 +44,9 @@ services:
       DATABASE_URL: postgres://weft:${POSTGRES_PASSWORD:-weft}@postgres:5432/weft
       BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:?Set BETTER_AUTH_SECRET in .env (openssl rand -base64 48)}
       PUBLIC_URL: ${PUBLIC_URL:-http://localhost:3000}
+      # false: only the first account and invited people can sign up.
+      OPEN_SIGNUP: ${OPEN_SIGNUP:-true}
+      TRUSTED_PROXY_HOPS: ${TRUSTED_PROXY_HOPS:-1}
       S3_ENDPOINT: http://storage:8333
       S3_PUBLIC_ENDPOINT: ${STORAGE_PUBLIC_URL:-http://localhost:8333}
       S3_BUCKET: weft

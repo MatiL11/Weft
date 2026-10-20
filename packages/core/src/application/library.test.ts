@@ -1,10 +1,12 @@
 import { beforeEach, describe, expect, it } from 'vitest'
+import { FixedClock } from '../testing'
 import {
   CreateFolder,
   DeleteFolder,
   ListFolders,
   ListVideos,
   MoveVideo,
+  PurgeAbandonedRecordings,
   PurgeTrash,
   RenameFolder,
   RestoreVideo,
@@ -167,5 +169,22 @@ describe('library', () => {
     expect(await bed.videos.findById(old.id)).toBeNull()
     expect(bed.storage.keys().some((k) => k.includes(`/${old.id}/`))).toBe(false)
     expect(await bed.videos.findById(recent.id)).not.toBeNull()
+  })
+
+  it('deletes recordings that were never finished a day after they started', async () => {
+    const abandoned = await bed.start()
+    await bed.upload(abandoned.id, 'init', 0)
+    const finished = await bed.recorded()
+    const purge = (hoursLater: number) =>
+      new PurgeAbandonedRecordings({
+        ...bed.deps,
+        clock: new FixedClock(new Date(NOW.getTime() + hoursLater * 3600 * 1000)),
+      }).execute()
+
+    expect(await purge(23)).toBe(0)
+    expect(await purge(25)).toBe(1)
+    expect(await bed.videos.findById(abandoned.id)).toBeNull()
+    expect(bed.storage.keys().some((k) => k.includes(`/${abandoned.id}/`))).toBe(false)
+    expect(await bed.videos.findById(finished.id)).not.toBeNull()
   })
 })

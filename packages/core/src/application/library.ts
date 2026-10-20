@@ -1,5 +1,6 @@
 import { DomainError } from '../domain/errors'
 import {
+  ABANDONED_RECORDING_MS,
   findMatchingSegment,
   normalizeFolderName,
   SEARCH_MAX_LENGTH,
@@ -206,28 +207,46 @@ export class RestoreVideo {
 
 const PURGE_BATCH = 100
 
+type PurgeDeps = Pick<LibraryDeps, 'videos' | 'storage' | 'clock'>
+
+/** Deletes every video `listDue` returns, in batches; returns how many were deleted. */
+async function purgeInBatches(
+  deps: PurgeDeps,
+  listDue: (options: { limit: number }) => Promise<Video[]>,
+): Promise<number> {
+  let total = 0
+  for (;;) {
+    const due = await listDue({ limit: PURGE_BATCH })
+    // Files first: if that fails the row stays, and the next run tries again.
+    for (const video of due) {
+      await deps.storage.deletePrefix(videoPrefix(video.id))
+      await deps.videos.delete(video.id)
+    }
+    total += due.length
+    if (due.length < PURGE_BATCH) return total
+  }
+}
+
 /** Background job: deletes for good the videos that have been in the trash long enough. */
 export class PurgeTrash {
-  constructor(private readonly deps: Pick<LibraryDeps, 'videos' | 'storage' | 'clock'>) {}
+  constructor(private readonly deps: PurgeDeps) {}
 
-  /** Purges everything that is due, in batches; returns how many videos were deleted. */
-  async execute(): Promise<number> {
-    let total = 0
-    for (;;) {
-      const purged = await this.purgeBatch()
-      total += purged
-      if (purged < PURGE_BATCH) return total
-    }
-  }
-
-  private async purgeBatch(): Promise<number> {
+  execute(): Promise<number> {
     const cutoff = new Date(this.deps.clock.now().getTime() - TRASH_RETENTION_MS)
-    const expired = await this.deps.videos.listTrashedBefore(cutoff, { limit: PURGE_BATCH })
-    // Files first: if that fails the row stays, and the next run tries again.
-    for (const video of expired) {
-      await this.deps.storage.deletePrefix(videoPrefix(video.id))
-      await this.deps.videos.delete(video.id)
-    }
-    return expired.length
+    return purgeInBatches(this.deps, (options) =>
+      this.deps.videos.listTrashedBefore(cutoff, options),
+    )
+  }
+}
+
+/** Background job: deletes recordings that were never finished (see ABANDONED_RECORDING_MS). */
+export class PurgeAbandonedRecordings {
+  constructor(private readonly deps: PurgeDeps) {}
+
+  execute(): Promise<number> {
+    const cutoff = new Date(this.deps.clock.now().getTime() - ABANDONED_RECORDING_MS)
+    return purgeInBatches(this.deps, (options) =>
+      this.deps.videos.listRecordingsStartedBefore(cutoff, options),
+    )
   }
 }

@@ -3,7 +3,7 @@ import { bodyLimit } from 'hono/body-limit'
 import { HTTPException } from 'hono/http-exception'
 import { secureHeaders } from 'hono/secure-headers'
 import type { Logger } from 'pino'
-import { clientIpFrom, type AppEnv, type SessionUser } from './context'
+import { CLIENT_IP_HEADER, resolveClientIp, type AppEnv, type SessionUser } from './context'
 import { fail, ok, toErrorResponse } from './envelope'
 import { analyticsRoutes, type AnalyticsRouteDeps } from './routes/analytics'
 import { discussionRoutes, type DiscussionRouteDeps } from './routes/discussion'
@@ -52,13 +52,22 @@ export function createApp(deps: AppDeps): Hono<AppEnv> {
 
   app.get('/health', (c) => c.json(ok({ status: 'ok' })))
 
-  app.on(['GET', 'POST'], '/api/auth/*', (c) => deps.authHandler(c.req.raw))
+  const trustedHops = deps.trustedProxyHops ?? 1
+
+  app.on(['GET', 'POST'], '/api/auth/*', (c) => {
+    // Never trust a client-supplied value: it would let callers pick their rate-limit bucket.
+    const headers = new Headers(c.req.raw.headers)
+    headers.delete(CLIENT_IP_HEADER)
+    const ip = resolveClientIp(c, trustedHops)
+    if (ip !== 'unknown') headers.set(CLIENT_IP_HEADER, ip)
+    return deps.authHandler(new Request(c.req.raw, { headers }))
+  })
 
   const api = new Hono<AppEnv>()
   api.use(bodyLimit({ maxSize: JSON_BODY_LIMIT_BYTES }))
   // Resolve the session once; routes decide whether anonymous access is allowed.
   api.use(async (c, next) => {
-    c.set('clientIp', clientIpFrom(c.req.header('x-forwarded-for'), deps.trustedProxyHops ?? 1))
+    c.set('clientIp', resolveClientIp(c, trustedHops))
     c.set('user', await deps.getSessionUser(c.req.raw.headers))
     await next()
   })

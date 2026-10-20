@@ -228,3 +228,27 @@ export class RemoveMember {
     await this.deps.workspaces.removeMember(input.workspaceId, input.memberId)
   }
 }
+
+/**
+ * Who may create an account. With open sign-up anyone can; otherwise only the very first
+ * account (the instance's admin) and people holding a pending invitation.
+ */
+export class CheckSignUpAllowed {
+  constructor(
+    private readonly deps: Pick<MembersDeps, 'users' | 'invitations' | 'clock'>,
+    private readonly openSignUp: boolean,
+  ) {}
+
+  async execute(input: { email: string }): Promise<boolean> {
+    if (this.openSignUp || !(await this.deps.users.hasAny())) return true
+    let email: string
+    try {
+      email = normalizeEmail(input.email)
+    } catch {
+      return false
+    }
+    const now = this.deps.clock.now()
+    const open = await this.deps.invitations.listOpenForEmail(email)
+    return open.some((invitation) => invitationStatus(invitation, now) === 'pending')
+  }
+}

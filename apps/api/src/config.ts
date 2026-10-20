@@ -8,6 +8,8 @@ const ConfigSchema = z.object({
   PUBLIC_URL: z.url().default('http://localhost:3000'),
   BETTER_AUTH_SECRET: z.string().min(32, 'BETTER_AUTH_SECRET must be at least 32 characters'),
   RUN_MIGRATIONS: z.stringbool().default(true),
+  /** false: only the first account and people with a pending invitation can sign up. */
+  OPEN_SIGNUP: z.stringbool().default(true),
   /** S3-compatible storage as reached by this server (e.g. http://seaweedfs:8333). */
   S3_ENDPOINT: z.url(),
   /** The same storage as reached by browsers; presigned URLs point here. */

@@ -1,5 +1,6 @@
 import { randomBytes, randomUUID } from 'node:crypto'
 import {
+  CheckSignUpAllowed,
   CreateWorkspace,
   type Clock,
   type IdGenerator,
@@ -107,6 +108,7 @@ export async function createContainer(
   })
   const comments = new DrizzleCommentRepository(database.db)
   const users = new DrizzleUserDirectory(database.db)
+  const invitations = new DrizzleInvitationRepository(database.db)
   const videoEvents = new PostgresVideoEvents(database, comments, (error) =>
     logger.error({ err: error }, 'video event dispatch failed'),
   )
@@ -120,7 +122,7 @@ export async function createContainer(
     comments,
     reactions: new DrizzleReactionRepository(database.db),
     events: videoEvents,
-    invitations: new DrizzleInvitationRepository(database.db),
+    invitations,
     users,
     tokens: new RandomSecretTokens(),
     folders: new DrizzleFolderRepository(database.db),
@@ -132,10 +134,15 @@ export async function createContainer(
     clock: systemClock,
   })
 
+  const checkSignUp = new CheckSignUpAllowed(
+    { users, invitations, clock: systemClock },
+    config.OPEN_SIGNUP,
+  )
   const auth = createAuth({
     db: database.db,
     secret: config.BETTER_AUTH_SECRET,
     publicUrl: config.PUBLIC_URL,
+    allowSignUp: (email) => checkSignUp.execute({ email }),
     onUserCreated: async (user) => {
       await users.setLocale(user.id, user.locale)
       await createWorkspace.execute({
