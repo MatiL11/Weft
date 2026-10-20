@@ -1,5 +1,6 @@
 {
   "name": "weft",
+  "version": "0.1.0",
   "private": true,
   "description": "Open-source, self-hostable async video messaging (screen + camera recording with instant share links).",
   "license": "MIT",

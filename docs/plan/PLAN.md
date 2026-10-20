@@ -221,9 +221,20 @@ Cada fase cierra con tests (≥80 % de cobertura en paquetes de dominio), revisi
 
 ### Fase 7 — Release self-host v0.1 (1 semana)
 
-- [ ] Hardening: CSP, rate limits, límites de tamaño, auditoría de seguridad
-- [ ] Docs de instalación (Docker, variables, backups), imágenes GHCR versionadas
-- [ ] E2E Playwright: registro → grabar → compartir → comentar
+- [x] Hardening:
+  - CSP con nonce por request; `frame-ancestors` abierto solo para `/embed`; Permissions-Policy.
+  - Un proxy de entrada (Caddy) le pasa a la app la IP real del visitante, así los límites (incluido el login de Better Auth) no se esquivan falsificando `X-Forwarded-For`. `TRUSTED_PROXIES` sirve para un proxy propio delante.
+  - Registro solo por invitación por defecto (`OPEN_SIGNUP`).
+  - Se rechazan los secretos de ejemplo.
+  - Contraseñas de video de 8+ caracteres, con los intentos contados antes del hash.
+  - El buscador no cita partes recortadas.
+  - ffmpeg solo lee MP4 locales y tiene tiempo máximo por paso.
+  - Limpieza diaria de grabaciones abandonadas.
+  - Auditoría de seguridad hecha; lo pendiente quedó como limitaciones conocidas en el CHANGELOG.
+- [x] Guía de instalación ([docs/self-hosting.md](../self-hosting.md)): HTTPS detrás de un proxy, variables, backups, actualizaciones. Imágenes GHCR versionadas (`linux/amd64`) publicadas por un workflow al crear el tag
+- [x] E2E Playwright en el repo (`e2e/`) y en CI contra la stack de Docker:
+  - registro → grabar pantalla + cámara → link → procesado → espectador anónimo → embed → comentario en vivo → vista contada;
+  - falla si hay violaciones de CSP.
 - **Hito:** release `v0.1.0`.
 
 **Total estimado MVP: ~11–13 semanas** (una persona a tiempo parcial puede duplicarlo).
