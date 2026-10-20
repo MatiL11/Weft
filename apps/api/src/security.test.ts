@@ -56,19 +56,24 @@ describe('UnlockLimiter', () => {
       new FailureLimiter(3, 1000, clock),
     )
 
-    limiter.recordFailure('v1', 'a')
-    expect(limiter.isBlocked('v1', 'a')).toBe(false)
-    limiter.recordFailure('v1', 'a')
-    expect(limiter.isBlocked('v1', 'a')).toBe(true)
-    expect(limiter.isBlocked('v1', 'b')).toBe(false)
-    expect(limiter.isBlocked('v2', 'a')).toBe(false)
+    expect(limiter.tryAttempt('v1', 'a')).toBe(true)
+    expect(limiter.tryAttempt('v1', 'a')).toBe(true)
+    // Counted up front: a third concurrent guess is refused before any password is checked.
+    expect(limiter.tryAttempt('v1', 'a')).toBe(false)
+    expect(limiter.tryAttempt('v2', 'a')).toBe(true)
 
-    limiter.recordFailure('v1', 'b')
-    expect(limiter.isBlocked('v1', 'c')).toBe(true)
+    expect(limiter.tryAttempt('v1', 'b')).toBe(true)
+    expect(limiter.tryAttempt('v1', 'c')).toBe(false)
 
     now = 1000
-    expect(limiter.isBlocked('v1', 'a')).toBe(false)
-    limiter.recordFailure('v2', 'a')
-    expect(limiter.isBlocked('v2', 'a')).toBe(false)
+    expect(limiter.tryAttempt('v1', 'a')).toBe(true)
+  })
+
+  it("doesn't count right passwords", () => {
+    const limiter = new UnlockLimiter(new FailureLimiter(1, 1000), new FailureLimiter(1, 1000))
+    for (let i = 0; i < 3; i++) {
+      expect(limiter.tryAttempt('v1', 'a')).toBe(true)
+      limiter.succeeded('v1', 'a')
+    }
   })
 })

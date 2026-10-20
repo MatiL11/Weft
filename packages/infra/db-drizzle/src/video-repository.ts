@@ -98,12 +98,16 @@ export class DrizzleVideoRepository implements VideoRepository {
     const rows = await this.db
       .select({ video: videos })
       .from(videos)
-      // Only the current render's transcript, and never others' password-protected ones.
+      // Only the transcript of the render being played (one made with the current trim, so it
+      // never quotes cut footage), and never others' password-protected ones.
       .leftJoin(
         transcripts,
         and(
           eq(transcripts.videoId, videos.id),
+          eq(videos.status, 'ready'),
           sql`${transcripts.renderVersion} = (${videos.render} ->> 'version')::int`,
+          sql`(${videos.render} -> 'trim' ->> 'startMs')::int is not distinct from ${videos.trimStartMs}`,
+          sql`(${videos.render} -> 'trim' ->> 'endMs')::int is not distinct from ${videos.trimEndMs}`,
           or(ne(videos.privacy, 'password'), isOwn),
         ),
       )

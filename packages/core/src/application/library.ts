@@ -7,6 +7,7 @@ import {
   TRASH_RETENTION_MS,
   type Folder,
 } from '../domain/library'
+import { playbackSource } from '../domain/render'
 import type { TranscriptSegment } from '../domain/transcript'
 import { videoPrefix, type Video } from '../domain/video'
 import type { WorkspaceRole } from '../domain/workspace'
@@ -91,6 +92,8 @@ export class ListVideos {
   private async matchIn(video: Video, search: string, viewerId: string) {
     // Others' password-protected videos never reveal what they say.
     if (video.privacy === 'password' && video.ownerId !== viewerId) return null
+    // A transcript belongs to a render; one made before the current trim may quote cut footage.
+    if (playbackSource(video).kind !== 'render') return null
     const transcript = await this.deps.transcripts.find(video.id)
     return transcript && transcript.renderVersion === video.render?.version
       ? findMatchingSegment(transcript.segments, search)

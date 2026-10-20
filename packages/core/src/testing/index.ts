@@ -1,7 +1,13 @@
 // In-memory fakes of core ports, for fast use-case tests in any package.
 import type { View } from '../domain/analytics'
 import type { Comment, CommentWithAuthor, Reaction } from '../domain/collaboration'
-import type { RenderOutput, RenderState, TrimRange, VideoRender } from '../domain/render'
+import {
+  playbackSource,
+  type RenderOutput,
+  type RenderState,
+  type TrimRange,
+  type VideoRender,
+} from '../domain/render'
 import type {
   Transcript,
   TranscriptionState,
@@ -220,6 +226,7 @@ export class InMemoryVideoRepository implements VideoRepository {
           !needle ||
           foldForSearch(v.title).includes(needle) ||
           ((v.privacy !== 'password' || v.ownerId === filter.viewerId) &&
+            playbackSource(v).kind === 'render' &&
             foldForSearch(this.transcriptText(v.id)).includes(needle)),
       )
       .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())

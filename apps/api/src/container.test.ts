@@ -2,7 +2,7 @@ import { PostgreSqlContainer, type StartedPostgreSqlContainer } from '@testconta
 import { runMigrations } from '@weft/infra-db'
 import { pino } from 'pino'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
-import { loadConfig } from './config'
+import { loadConfig, type Config } from './config'
 import { createContainer, personalWorkspaceName, type Container } from './container'
 
 const PUBLIC_URL = 'http://localhost:3000'
@@ -22,12 +22,14 @@ describe('personalWorkspaceName', () => {
 describe('container (integration: signup → personal workspace)', () => {
   let pg: StartedPostgreSqlContainer
   let container: Container
+  let config: Config
 
   beforeAll(async () => {
     pg = await new PostgreSqlContainer('postgres:17-alpine').start()
     await runMigrations(pg.getConnectionUri())
-    const config = loadConfig({
+    config = loadConfig({
       NODE_ENV: 'test',
+      OPEN_SIGNUP: 'true',
       DATABASE_URL: pg.getConnectionUri(),
       BETTER_AUTH_SECRET: 'test-secret-that-is-long-enough-1234567890',
       PUBLIC_URL,
@@ -35,7 +37,7 @@ describe('container (integration: signup → personal workspace)', () => {
       S3_ENDPOINT: 'http://127.0.0.1:1',
       S3_PUBLIC_ENDPOINT: 'http://127.0.0.1:1',
       S3_ACCESS_KEY_ID: 'unused',
-      S3_SECRET_ACCESS_KEY: 'unused-secret',
+      S3_SECRET_ACCESS_KEY: 'unused-storage-secret',
     })
     container = await createContainer(config, pino({ level: 'silent' }))
   })
@@ -87,6 +89,24 @@ describe('container (integration: signup → personal workspace)', () => {
 
     expect(fromBrowser.data[0]?.workspace.name).toBe('Espacio de Ana')
     expect(fromCookie.data[0]?.workspace.name).toBe('Espacio de Ana')
+  })
+
+  it('turns strangers away when sign-up is invite-only', async () => {
+    const closed = await createContainer(
+      { ...config, OPEN_SIGNUP: false },
+      pino({ level: 'silent' }),
+    )
+    try {
+      const res = await closed.app.request('/api/auth/sign-up/email', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', origin: PUBLIC_URL },
+        body: JSON.stringify({ name: 'Eve', email: 'eve@example.com', password: 'supersecret123' }),
+      })
+      expect(res.status).toBe(403)
+      expect(await res.json()).toMatchObject({ code: 'SIGN_UP_INVITE_ONLY' })
+    } finally {
+      await closed.close()
+    }
   })
 
   it('rejects API requests without a session', async () => {

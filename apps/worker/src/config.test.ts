@@ -5,7 +5,7 @@ const VALID = {
   DATABASE_URL: 'postgres://weft:weft@localhost:5432/weft',
   S3_ENDPOINT: 'http://storage:8333',
   S3_ACCESS_KEY_ID: 'weft',
-  S3_SECRET_ACCESS_KEY: 'weft-secret',
+  S3_SECRET_ACCESS_KEY: 'weft-storage-secret-for-tests',
 }
 
 describe('loadConfig', () => {
@@ -35,6 +35,15 @@ describe('loadConfig', () => {
   it('reports every invalid variable', () => {
     expect(() => loadConfig({ ...VALID, DATABASE_URL: 'nope', RENDER_CONCURRENCY: '0' })).toThrow(
       /DATABASE_URL[\s\S]*RENDER_CONCURRENCY/,
+    )
+  })
+
+  it('rejects the placeholder secrets from .env.example', () => {
+    expect(() =>
+      loadConfig({ ...VALID, S3_SECRET_ACCESS_KEY: 'change-me-please-1234' }),
+    ).toThrowError(/S3_SECRET_ACCESS_KEY is still the example value/)
+    expect(() => loadConfig({ ...VALID, S3_SECRET_ACCESS_KEY: 'short' })).toThrowError(
+      /at least 16 characters/,
     )
   })
 })

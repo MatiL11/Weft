@@ -13,7 +13,7 @@ interface PrivacyFormProps {
   hasPassword: boolean
 }
 
-const PASSWORD_MIN_LENGTH = 4
+const PASSWORD_MIN_LENGTH = 8
 
 /** Who can watch: anyone with the link, the workspace, people with a password, or only me. */
 export function PrivacyForm({ videoId, privacy, hasPassword }: PrivacyFormProps) {

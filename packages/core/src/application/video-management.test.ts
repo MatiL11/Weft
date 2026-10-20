@@ -33,13 +33,15 @@ describe('video management', () => {
         code: 'video.password_missing',
       })
       await expect(
-        update({ videoId: video.id, privacy: 'password', password: 'abc' }),
+        update({ videoId: video.id, privacy: 'password', password: 'abcdefg' }),
       ).rejects.toMatchObject({ code: 'video.password_invalid_length' })
 
-      const locked = await update({ videoId: video.id, privacy: 'password', password: 'abcd' })
-      expect(locked.passwordHash).toBe('hashed:abcd')
+      const locked = await update({ videoId: video.id, privacy: 'password', password: 'abcd1234' })
+      expect(locked.passwordHash).toBe('hashed:abcd1234')
       // Renaming keeps the existing password.
-      expect((await update({ videoId: video.id, title: 'New' })).passwordHash).toBe('hashed:abcd')
+      expect((await update({ videoId: video.id, title: 'New' })).passwordHash).toBe(
+        'hashed:abcd1234',
+      )
       expect((await update({ videoId: video.id, privacy: 'link' })).passwordHash).toBeNull()
     })
 

@@ -3,7 +3,7 @@
 Open-source, self-hostable async video messaging: record your screen and camera,
 get a shareable link instantly, and collect comments and reactions.
 
-> Status: early development (Phase 6 — analytics done). See [docs/plan/PLAN.md](docs/plan/PLAN.md).
+> Status: first release, v0.1.0. See the [plan](docs/plan/PLAN.md) for what's next.
 
 ## Stack
 
@@ -25,17 +25,18 @@ packages/
 ## Self-hosting (Docker)
 
 ```bash
+git clone https://github.com/MatiL11/Weft.git && cd Weft
 cp .env.example .env
 # set BETTER_AUTH_SECRET (openssl rand -base64 48) and S3_SECRET_ACCESS_KEY (openssl rand -hex 24)
-docker compose up --build
+docker compose pull && docker compose up -d
 ```
 
 Open http://localhost:3000, create an account, and you'll land in your personal workspace.
-Use `WEB_PORT=3100 PUBLIC_URL=http://localhost:3100 docker compose up` if port 3000 is taken.
+The **[self-hosting guide](docs/self-hosting.md)** covers HTTPS behind a reverse proxy, every
+setting, invite-only sign-up, backups and upgrades.
 
 Videos are stored in SeaweedFS (S3-compatible). Browsers upload and stream media directly from
-it through short-lived presigned URLs, so its port (8333 by default) must be reachable by viewers.
-In production, put it behind your domain and set `STORAGE_PUBLIC_URL` (e.g. `https://media.example.com`).
+it through short-lived presigned URLs, so it must be reachable by viewers (`STORAGE_PUBLIC_URL`).
 
 When a recording ends, the `worker` service renders it with ffmpeg: an adaptive HLS ladder
 (1080p/720p), a downloadable MP4, a poster and hover thumbnails. The video is watchable from the
@@ -73,6 +74,15 @@ Requirements: Node.js 24+, pnpm 11, Docker, ffmpeg (for the worker and its tests
 ```bash
 pnpm install
 pnpm lint && pnpm typecheck && pnpm test
+```
+
+End-to-end tests drive a real Chromium (with fake camera, microphone and screen) through
+sign-up, recording, sharing, watching and commenting against a running stack:
+
+```bash
+docker compose up -d --build
+pnpm --filter @weft/e2e exec playwright install chromium
+pnpm test:e2e            # WEFT_URL=http://localhost:3100 if you changed the port
 ```
 
 ## License

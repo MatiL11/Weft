@@ -91,6 +91,12 @@ export class FailureLimiter {
     this.windows.set(key, { startedAt: this.now(), count: 1 })
   }
 
+  /** Takes back one recorded failure (e.g. an attempt counted up front that succeeded). */
+  forgive(key: string): void {
+    const window = this.current(key)
+    if (window) window.count = Math.max(0, window.count - 1)
+  }
+
   private current(key: string) {
     const window = this.windows.get(key)
     return window && this.now() - window.startedAt < this.windowMs ? window : undefined
@@ -114,13 +120,22 @@ export class UnlockLimiter {
     private readonly perVideo: FailureLimiter,
   ) {}
 
-  isBlocked(videoId: string, client: string): boolean {
-    return this.perClient.isBlocked(`${client} ${videoId}`) || this.perVideo.isBlocked(videoId)
+  /**
+   * Counts an attempt before the password is checked, so concurrent guesses can't all slip
+   * past the cap while the slow hash runs; false when the client or video is blocked.
+   */
+  tryAttempt(videoId: string, client: string): boolean {
+    const clientKey = `${client} ${videoId}`
+    if (this.perClient.isBlocked(clientKey) || this.perVideo.isBlocked(videoId)) return false
+    this.perClient.recordFailure(clientKey)
+    this.perVideo.recordFailure(videoId)
+    return true
   }
 
-  recordFailure(videoId: string, client: string): void {
-    this.perClient.recordFailure(`${client} ${videoId}`)
-    this.perVideo.recordFailure(videoId)
+  /** The attempt was right: it doesn't count as a failure. */
+  succeeded(videoId: string, client: string): void {
+    this.perClient.forgive(`${client} ${videoId}`)
+    this.perVideo.forgive(videoId)
   }
 }
 

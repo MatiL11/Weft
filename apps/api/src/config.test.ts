@@ -7,7 +7,7 @@ const VALID = {
   S3_ENDPOINT: 'http://seaweedfs:8333',
   S3_PUBLIC_ENDPOINT: 'http://localhost:8333',
   S3_ACCESS_KEY_ID: 'weft',
-  S3_SECRET_ACCESS_KEY: 'weft-secret',
+  S3_SECRET_ACCESS_KEY: 'weft-storage-secret-for-tests',
 }
 
 describe('loadConfig', () => {
@@ -17,7 +17,7 @@ describe('loadConfig', () => {
       PORT: 4000,
       PUBLIC_URL: 'http://localhost:3000',
       RUN_MIGRATIONS: true,
-      OPEN_SIGNUP: true,
+      OPEN_SIGNUP: false,
       LOG_LEVEL: 'info',
       S3_REGION: 'us-east-1',
       S3_BUCKET: 'weft',
@@ -28,12 +28,21 @@ describe('loadConfig', () => {
     const config = loadConfig({ ...VALID, PORT: '8080', RUN_MIGRATIONS: 'false' })
     expect(config.PORT).toBe(8080)
     expect(config.RUN_MIGRATIONS).toBe(false)
-    expect(loadConfig({ ...VALID, OPEN_SIGNUP: 'false' }).OPEN_SIGNUP).toBe(false)
+    expect(loadConfig({ ...VALID, OPEN_SIGNUP: 'true' }).OPEN_SIGNUP).toBe(true)
   })
 
   it('fails fast with a readable message listing every problem', () => {
     expect(() => loadConfig({ BETTER_AUTH_SECRET: 'short' })).toThrowError(
       /DATABASE_URL[\s\S]*BETTER_AUTH_SECRET: BETTER_AUTH_SECRET must be at least 32 characters/,
+    )
+  })
+
+  it('rejects the placeholder secrets from .env.example', () => {
+    expect(() =>
+      loadConfig({ ...VALID, S3_SECRET_ACCESS_KEY: 'change-me-please-1234' }),
+    ).toThrowError(/S3_SECRET_ACCESS_KEY is still the example value/)
+    expect(() => loadConfig({ ...VALID, S3_SECRET_ACCESS_KEY: 'short' })).toThrowError(
+      /at least 16 characters/,
     )
   })
 })

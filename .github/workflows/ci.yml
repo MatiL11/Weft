@@ -55,6 +55,8 @@ jobs:
       S3_SECRET_ACCESS_KEY: ci-only-storage-secret
       # The smallest model keeps the worker's first start quick.
       WHISPER_MODEL: tiny
+      # The tests sign up a viewer without an invitation.
+      OPEN_SIGNUP: 'true'
     steps:
       - uses: actions/checkout@v7
       - uses: docker/setup-buildx-action@v4

@@ -21,8 +21,8 @@ export interface PlaybackRouteDeps {
   unlockVideo: UnlockVideo
   /** Limits wrong password guesses. */
   unlockLimiter: {
-    isBlocked(videoId: string, client: string): boolean
-    recordFailure(videoId: string, client: string): void
+    tryAttempt(videoId: string, client: string): boolean
+    succeeded(videoId: string, client: string): void
   }
   publicUrl: string
 }
@@ -80,17 +80,19 @@ export function playbackRoutes(deps: PlaybackRouteDeps): Hono<AppEnv> {
     if (!body) return invalid(c)
     const videoId = c.req.param('id')
     const client = c.get('clientIp')
-    if (deps.unlockLimiter.isBlocked(videoId, client)) {
+    if (!deps.unlockLimiter.tryAttempt(videoId, client)) {
       return c.json(fail('video.too_many_attempts', 'Too many attempts. Try again later.'), 429)
     }
     const token = await deps.unlockVideo
       .execute({ videoId, password: body.password })
       .catch((error: unknown) => {
-        if (error instanceof DomainError && error.code === 'video.password_incorrect') {
-          deps.unlockLimiter.recordFailure(videoId, client)
+        // Only wrong passwords count; anything else (e.g. not found) gives the attempt back.
+        if (!(error instanceof DomainError && error.code === 'video.password_incorrect')) {
+          deps.unlockLimiter.succeeded(videoId, client)
         }
         throw error
       })
+    deps.unlockLimiter.succeeded(videoId, client)
     setCookie(c, accessCookieName(videoId), token, {
       path: '/',
       httpOnly: true,

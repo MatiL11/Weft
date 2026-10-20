@@ -64,7 +64,7 @@ describe('oEmbed', () => {
 
     await ctx.app.request(
       `/api/videos/${video.id}`,
-      sendJson('PATCH', { privacy: 'password', password: 'abcd' }),
+      sendJson('PATCH', { privacy: 'password', password: 'abcd1234' }),
     )
     expect((await ctx.app.request(oembed(`https://weft.test/v/${video.id}`))).status).toBe(404)
   })

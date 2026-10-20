@@ -109,12 +109,22 @@ describe('library', () => {
     expect(byTitle).toHaveLength(1)
     expect(await list('owner_1', { search: 'nothing like this' })).toEqual([])
 
+    // Once trimmed, the old transcript may quote the cut part: it's not searched until re-rendered.
+    await new UpdateVideo(bed.deps).execute({
+      userId: 'owner_1',
+      videoId: video.id,
+      trim: { startMs: 3000, endMs: 6000 },
+    })
+    expect(await list('member_1', { search: 'Esta es la demo' })).toEqual([])
+    await new UpdateVideo(bed.deps).execute({ userId: 'owner_1', videoId: video.id, trim: null })
+    expect(await list('member_1', { search: 'Esta es la demo' })).toHaveLength(1)
+
     // Others can't learn what a password-protected video says.
     await new UpdateVideo(bed.deps).execute({
       userId: 'owner_1',
       videoId: video.id,
       privacy: 'password',
-      password: 'abcd',
+      password: 'abcd1234',
     })
     expect(await list('member_1', { search: 'Esta es la demo' })).toEqual([])
     expect(await list('owner_1', { search: 'Esta es la demo' })).toHaveLength(1)

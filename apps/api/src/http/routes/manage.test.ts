@@ -29,7 +29,7 @@ describe('video management routes', () => {
   it("hides other members' password-protected posters in the library", async () => {
     const { ctx, base } = await setup()
     await runRenders(ctx)
-    await ctx.app.request(base, sendJson('PATCH', { privacy: 'password', password: 'abcd' }))
+    await ctx.app.request(base, sendJson('PATCH', { privacy: 'password', password: 'abcd1234' }))
     await (ctx.workspaces as InMemoryWorkspaceRepository).addMember('ws_1', 'member_1', 'member')
 
     expect(

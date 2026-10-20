@@ -47,9 +47,8 @@ services:
       DATABASE_URL: postgres://weft:${POSTGRES_PASSWORD:-weft}@postgres:5432/weft
       BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:?Set BETTER_AUTH_SECRET in .env (openssl rand -base64 48)}
       PUBLIC_URL: ${PUBLIC_URL:-http://localhost:3000}
-      # false: only the first account and invited people can sign up.
-      OPEN_SIGNUP: ${OPEN_SIGNUP:-true}
-      TRUSTED_PROXY_HOPS: ${TRUSTED_PROXY_HOPS:-1}
+      # By default only the first account and invited people can sign up; true opens it to all.
+      OPEN_SIGNUP: ${OPEN_SIGNUP:-false}
       S3_ENDPOINT: http://storage:8333
       S3_PUBLIC_ENDPOINT: ${STORAGE_PUBLIC_URL:-http://localhost:8333}
       S3_BUCKET: weft
@@ -106,11 +105,24 @@ services:
       PUBLIC_URL: ${PUBLIC_URL:-http://localhost:3000}
       # Allowed by the Content-Security-Policy for uploads and playback.
       STORAGE_PUBLIC_URL: ${STORAGE_PUBLIC_URL:-http://localhost:8333}
-    ports:
-      - '${WEB_PORT:-3000}:3000'
     depends_on:
       api:
         condition: service_healthy
+    restart: unless-stopped
+
+  # The front door: the only published port for the app. It tells the app each visitor's real
+  # address (rate limits depend on it), so nobody can claim another one in X-Forwarded-For.
+  edge:
+    image: caddy:2.11.4-alpine
+    configs:
+      - source: edge-caddyfile
+        target: /etc/caddy/Caddyfile
+    environment:
+      TRUSTED_PROXIES: ${TRUSTED_PROXIES:-127.0.0.1/32}
+    ports:
+      - '${WEB_PORT:-3000}:80'
+    depends_on:
+      - web
     restart: unless-stopped
 
   # Optional local inbox for trying emails: `docker compose --profile mail up`, then set
@@ -121,6 +133,25 @@ services:
     ports:
       - '${MAILPIT_PORT:-8025}:8025'
     restart: unless-stopped
+
+configs:
+  edge-caddyfile:
+    content: |
+      {
+        admin off
+        auto_https off
+        # Your own reverse proxy (if any): only these may report the client's address.
+        servers {
+          trusted_proxies static {$$TRUSTED_PROXIES}
+          # Read X-Forwarded-For from the right: entries a client wrote can't win.
+          trusted_proxies_strict
+        }
+      }
+      :80 {
+        reverse_proxy web:3000 {
+          header_up X-Forwarded-For {client_ip}
+        }
+      }
 
 volumes:
   postgres-data:

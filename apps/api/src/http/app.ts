@@ -31,7 +31,7 @@ export interface AppDeps
   /** Better Auth request handler mounted under /api/auth. */
   authHandler: (request: Request) => Promise<Response>
   getSessionUser: (headers: Headers) => Promise<SessionUser | null>
-  /** Proxies in front of the API that append to X-Forwarded-For (the web app is one). */
+  /** Proxies in front of the API that append to X-Forwarded-For (the bundled edge is one). */
   trustedProxyHops?: number
   logger: Pick<Logger, 'error'>
 }

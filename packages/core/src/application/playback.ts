@@ -136,7 +136,7 @@ export class GetPlayback {
   }
 }
 
-const PASSWORD_MIN_LENGTH = 4
+const PASSWORD_MIN_LENGTH = 8
 const PASSWORD_MAX_LENGTH = 128
 
 export function validatePassword(password: string): void {

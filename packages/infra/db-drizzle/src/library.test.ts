@@ -60,7 +60,7 @@ describe('library queries (integration)', () => {
     })
     for (const v of [
       video('a', 'Planificación Q4', 1),
-      video('b', 'Daily 50% off', 2),
+      { ...video('b', 'Daily 50% off', 2), status: 'ready' as const },
       video('c', 'Bug report', 3),
     ]) {
       await repo.create(v)
@@ -95,6 +95,12 @@ describe('library queries (integration)', () => {
     await repo.saveRender('b', 0, { state: 'ready', render: { ...RENDER, version: 2 } })
     expect(await list({ search: 'migracion' })).toEqual([])
     await repo.saveRender('b', 0, { state: 'ready', render: { ...RENDER, version: 1 } })
+    // Nor one made before the current trim: it may quote the part that was cut.
+    const b = { ...video('b', 'Daily 50% off', 2), status: 'ready' as const }
+    await repo.update({ ...b, trim: { startMs: 0, endMs: 500 } })
+    expect(await list({ search: 'migracion' })).toEqual([])
+    await repo.update(b)
+    expect(await list({ search: 'migracion' })).toEqual(['b'])
     // Wildcards in the query are literal.
     expect(await list({ search: '50%' })).toEqual(['b'])
     expect(await list({ search: '%' })).toEqual(['b'])
@@ -116,7 +122,6 @@ describe('library queries (integration)', () => {
 
     expect((await repo.listTrashedBefore(at(5), { limit: 10 })).map((v) => v.id)).toEqual(['c'])
     expect(await repo.listTrashedBefore(at(3), { limit: 10 })).toEqual([])
-    await repo.update({ ...video('b', 'Daily 50% off', 2), status: 'ready' })
     const recording = await repo.listRecordingsStartedBefore(at(2.5), { limit: 10 })
     expect(recording.map((v) => v.id)).toEqual(['a'])
     expect(await repo.listRecordingsStartedBefore(new Date(0), { limit: 10 })).toEqual([])

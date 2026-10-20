@@ -67,10 +67,10 @@ describe('collaboration', () => {
       userId: 'owner_1',
       videoId,
       privacy: 'password',
-      password: 'abcd',
+      password: 'abcd1234',
     })
     await expect(comment('member_1')).rejects.toMatchObject({ code: 'video.password_required' })
-    const accessToken = await new UnlockVideo(bed.deps).execute({ videoId, password: 'abcd' })
+    const accessToken = await new UnlockVideo(bed.deps).execute({ videoId, password: 'abcd1234' })
     await expect(comment('member_1', { accessToken })).resolves.toBeDefined()
   })
 

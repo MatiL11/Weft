@@ -1,6 +1,16 @@
 import { availableParallelism, tmpdir } from 'node:os'
 import { z } from 'zod'
 
+/** A generated secret: long enough, and not the placeholder from .env.example. */
+const secret = (name: string, minLength: number) =>
+  z
+    .string()
+    .min(minLength, `${name} must be at least ${minLength} characters`)
+    .refine(
+      (value) => !/change-me/i.test(value),
+      `${name} is still the example value; generate one`,
+    )
+
 const ConfigSchema = z.object({
   DATABASE_URL: z.url(),
   S3_ENDPOINT: z.url(),
@@ -9,7 +19,7 @@ const ConfigSchema = z.object({
   S3_REGION: z.string().min(1).default('us-east-1'),
   S3_BUCKET: z.string().min(3).default('weft'),
   S3_ACCESS_KEY_ID: z.string().min(1),
-  S3_SECRET_ACCESS_KEY: z.string().min(8),
+  S3_SECRET_ACCESS_KEY: secret('S3_SECRET_ACCESS_KEY', 16),
   FFMPEG_PATH: z.string().min(1).default('ffmpeg'),
   FFPROBE_PATH: z.string().min(1).default('ffprobe'),
   /** Renders processed in parallel by this worker; each one can use every CPU core. */

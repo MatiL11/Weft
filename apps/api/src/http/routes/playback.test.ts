@@ -100,7 +100,7 @@ describe('playback routes', () => {
 
   it('asks for the password, sets an access cookie on unlock, and limits guesses', async () => {
     const { ctx, base } = await setup()
-    await ctx.app.request(base, sendJson('PATCH', { privacy: 'password', password: 'abcd' }))
+    await ctx.app.request(base, sendJson('PATCH', { privacy: 'password', password: 'abcd1234' }))
     ctx.actAs(null)
 
     const locked = await ctx.app.request(base)
@@ -111,7 +111,7 @@ describe('playback routes', () => {
     expect(wrong.status).toBe(403)
     expect(await ctx.app.request(`${base}/unlock`, postJson({}))).toHaveProperty('status', 400)
 
-    const right = await ctx.app.request(`${base}/unlock`, postJson({ password: 'abcd' }))
+    const right = await ctx.app.request(`${base}/unlock`, postJson({ password: 'abcd1234' }))
     expect(right.status).toBe(200)
     const cookie = right.headers.get('set-cookie') ?? ''
     expect(cookie).toMatch(
@@ -124,7 +124,7 @@ describe('playback routes', () => {
     // The test app allows 2 wrong guesses per client and video per minute; right ones and
     // invalid bodies don't count.
     await ctx.app.request(`${base}/unlock`, postJson({ password: 'guess' }))
-    const limited = await ctx.app.request(`${base}/unlock`, postJson({ password: 'abcd' }))
+    const limited = await ctx.app.request(`${base}/unlock`, postJson({ password: 'abcd1234' }))
     expect(limited.status).toBe(429)
   })
 
@@ -133,11 +133,11 @@ describe('playback routes', () => {
     const video = await withRecordedVideo(ctx)
     await ctx.app.request(
       `/api/videos/${video.id}`,
-      sendJson('PATCH', { privacy: 'password', password: 'abcd' }),
+      sendJson('PATCH', { privacy: 'password', password: 'abcd1234' }),
     )
     const res = await ctx.app.request(
       `/api/videos/${video.id}/unlock`,
-      postJson({ password: 'abcd' }),
+      postJson({ password: 'abcd1234' }),
     )
     expect(res.headers.get('set-cookie')).not.toContain('Secure')
   })
