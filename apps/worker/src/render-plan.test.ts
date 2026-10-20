@@ -2,11 +2,13 @@ import { describe, expect, it } from 'vitest'
 import {
   avcCodec,
   encodeArgs,
+  hlsPackageArgs,
   peakBandwidth,
   posterArgs,
   scaledDimensions,
   scaleFilter,
   spriteArgs,
+  toolTimeoutMs,
   tileHeight,
 } from './render-plan'
 
@@ -88,5 +90,18 @@ describe('render plan', () => {
     ].join('\n')
     const sizes: Record<string, number> = { 'seg-00000.m4s': 1_000_000, 'seg-00001.m4s': 600_000 }
     expect(peakBandwidth(playlist, (uri) => sizes[uri] ?? 0)).toBe(2_400_000)
+  })
+
+  it('reads only local MP4 files and gives slow steps a duration-scaled timeout', () => {
+    for (const args of [
+      encodeArgs({ input: 'a', output: 'b', scale: 's', trim: null, faststart: false }),
+      posterArgs('in', 'p.jpg', 1000),
+      hlsPackageArgs('in', 'dir'),
+    ]) {
+      const input = args.indexOf('-i')
+      expect(args.slice(input - 4, input)).toEqual(['-protocol_whitelist', 'file', '-f', 'mov'])
+    }
+    expect(toolTimeoutMs(5_000)).toBe(10 * 60 * 1000)
+    expect(toolTimeoutMs(2 * 3600_000)).toBe(20 * 3600_000)
   })
 })

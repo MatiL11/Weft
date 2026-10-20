@@ -24,6 +24,7 @@ import {
   scaleFilter,
   spriteArgs,
   tileHeight,
+  toolTimeoutMs,
 } from './render-plan'
 import { runTool } from './run-tool'
 
@@ -47,6 +48,8 @@ const CONTENT_TYPES: Record<string, string> = {
   '.jpg': 'image/jpeg',
 }
 const UPLOAD_CONCURRENCY = 4
+/** Recordings and renders are MP4; never let ffprobe guess another format. */
+const MP4 = { format: 'mov' }
 
 const contentType = (file: string) =>
   CONTENT_TYPES[file.slice(file.lastIndexOf('.'))] ?? 'application/octet-stream'
@@ -93,7 +96,8 @@ export class FfmpegMediaRenderer implements MediaRenderer {
 
   private async renderFiles(source: string, trim: TrimRange | null, out: string) {
     const { ffmpeg, ffprobe } = this.options
-    const sourceInfo = await probeMedia(ffprobe, source)
+    const sourceInfo = await probeMedia(ffprobe, source, MP4)
+    const timeout = { timeoutMs: toolTimeoutMs(sourceInfo.durationMs) }
     const [topSide, ...lowerSides] = renditionShortSides(
       Math.min(sourceInfo.width, sourceInfo.height),
     ) as [number, ...number[]]
@@ -109,10 +113,11 @@ export class FfmpegMediaRenderer implements MediaRenderer {
         trim,
         faststart: true,
       }),
+      timeout,
     )
-    const mp4Info = await probeMedia(ffprobe, mp4)
+    const mp4Info = await probeMedia(ffprobe, mp4, MP4)
 
-    const renditions = [await this.packageRendition(mp4, mp4Info, out)]
+    const renditions = [await this.packageRendition(mp4, mp4Info, out, timeout)]
     for (const side of lowerSides) {
       const encoded = join(out, `${side}.tmp.mp4`)
       await runTool(
@@ -124,12 +129,14 @@ export class FfmpegMediaRenderer implements MediaRenderer {
           trim: null,
           faststart: false,
         }),
+        timeout,
       )
-      renditions.push(await this.packageRendition(encoded, await probeMedia(ffprobe, encoded), out))
+      const encodedInfo = await probeMedia(ffprobe, encoded, MP4)
+      renditions.push(await this.packageRendition(encoded, encodedInfo, out, timeout))
       await rm(encoded)
     }
 
-    await runTool(ffmpeg, posterArgs(mp4, join(out, 'poster.jpg'), mp4Info.durationMs))
+    await runTool(ffmpeg, posterArgs(mp4, join(out, 'poster.jpg'), mp4Info.durationMs), timeout)
     const plan = thumbnailPlan(mp4Info.durationMs)
     await runTool(
       ffmpeg,
@@ -140,6 +147,7 @@ export class FfmpegMediaRenderer implements MediaRenderer {
         columns: THUMBNAIL_COLUMNS,
         tileWidth: THUMBNAIL_WIDTH,
       }),
+      timeout,
     )
 
     return {
@@ -157,10 +165,15 @@ export class FfmpegMediaRenderer implements MediaRenderer {
   }
 
   /** Splits an encoded MP4 into HLS segments and describes it for the master playlist. */
-  private async packageRendition(file: string, info: MediaInfo, out: string): Promise<Rendition> {
+  private async packageRendition(
+    file: string,
+    info: MediaInfo,
+    out: string,
+    timeout: { timeoutMs: number },
+  ): Promise<Rendition> {
     const directory = join(out, renditionDirectory(info))
     await mkdir(directory)
-    await runTool(this.options.ffmpeg, hlsPackageArgs(file, directory))
+    await runTool(this.options.ffmpeg, hlsPackageArgs(file, directory), timeout)
 
     const playlist = await readFile(join(directory, 'index.m3u8'), 'utf8')
     const sizes = new Map<string, number>()

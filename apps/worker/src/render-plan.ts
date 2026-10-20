@@ -42,7 +42,7 @@ export function encodeArgs(options: EncodeOptions): string[] {
     '-hide_banner',
     '-loglevel', 'error',
     '-y',
-    '-i', options.input,
+    ...localMp4Input(options.input),
     ...trim,
     '-map', '0:v:0',
     '-map', '0:a:0?',
@@ -63,6 +63,24 @@ export function encodeArgs(options: EncodeOptions): string[] {
 
 export const HLS_SEGMENT_SECONDS = 4
 
+const MIN_TOOL_TIMEOUT_MS = 10 * 60 * 1000
+/** Even a slow machine encodes far faster than this many times the video's length. */
+const TOOL_TIMEOUT_PER_SOURCE_MS = 10
+
+/** How long one ffmpeg step may run before it's considered stuck (and the render fails). */
+export function toolTimeoutMs(sourceDurationMs: number): number {
+  return Math.max(MIN_TOOL_TIMEOUT_MS, Math.ceil(sourceDurationMs * TOOL_TIMEOUT_PER_SOURCE_MS))
+}
+
+/**
+ * Reads a local MP4 only: recordings come from browsers, so their bytes are untrusted. Pinning
+ * the demuxer and the file protocol keeps ffmpeg from treating them as a playlist that points
+ * at other files or URLs.
+ */
+export function localMp4Input(path: string): string[] {
+  return ['-protocol_whitelist', 'file', '-f', 'mov', '-i', path]
+}
+
 /** Repackages an encoded MP4 as HLS fMP4 (no re-encode) into `directory`. */
 export function hlsPackageArgs(input: string, directory: string): string[] {
   // prettier-ignore
@@ -70,7 +88,7 @@ export function hlsPackageArgs(input: string, directory: string): string[] {
     '-hide_banner',
     '-loglevel', 'error',
     '-y',
-    '-i', input,
+    ...localMp4Input(input),
     '-c', 'copy',
     '-f', 'hls',
     '-hls_time', String(HLS_SEGMENT_SECONDS),
@@ -92,7 +110,7 @@ export function posterArgs(input: string, output: string, durationMs: number): s
     '-loglevel', 'error',
     '-y',
     '-ss', seconds(atMs),
-    '-i', input,
+    ...localMp4Input(input),
     '-frames:v', '1',
     '-vf', 'scale=-2:min(720\\,ih)',
     '-q:v', '3',
@@ -118,7 +136,7 @@ export function spriteArgs(options: SpriteOptions): string[] {
     '-hide_banner',
     '-loglevel', 'error',
     '-y',
-    '-i', options.input,
+    ...localMp4Input(options.input),
     '-vf', `${fps},scale=${options.tileWidth}:-2,tile=${options.columns}x${rows}`,
     '-frames:v', '1',
     '-q:v', '5',

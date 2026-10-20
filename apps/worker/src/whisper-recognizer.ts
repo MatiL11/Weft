@@ -2,6 +2,7 @@ import { mkdtemp, readFile, rm } from 'node:fs/promises'
 import { join } from 'node:path'
 import type { SpeechRecognizer, TranscriptLanguage } from '@weft/core'
 import { probeMedia } from './probe'
+import { localMp4Input } from './render-plan'
 import { runTool } from './run-tool'
 import { parseWhisperJson } from './whisper-output'
 
@@ -33,17 +34,17 @@ export class WhisperSpeechRecognizer implements SpeechRecognizer {
       const video = join(scratch, 'video.mp4')
       const audio = join(scratch, 'audio.wav')
       await storage.downloadToFile(input.mediaKey, video)
-      const info = await probeMedia(ffprobe, video)
+      const info = await probeMedia(ffprobe, video, { format: 'mov' })
       if (!info.hasAudio) return null
       const timeoutMs = (Math.ceil(info.durationMs / 60_000) + 1) * TIMEOUT_PER_AUDIO_MINUTE_MS
       // whisper.cpp reads 16 kHz mono PCM.
       // prettier-ignore
       await runTool(ffmpeg, [
         '-hide_banner', '-loglevel', 'error', '-y',
-        '-i', video,
+        ...localMp4Input(video),
         '-vn', '-ac', '1', '-ar', '16000', '-c:a', 'pcm_s16le',
         audio,
-      ])
+      ], { timeoutMs })
       const output = join(scratch, 'transcript')
       // prettier-ignore
       await runTool(whisperCli, [
