@@ -30,7 +30,17 @@ const CORE_FORBIDDEN_IMPORTS = [
 ]
 
 export default tseslint.config(
-  { ignores: ['**/dist/**', '**/.next/**', '**/coverage/**', '**/drizzle/**', '**/next-env.d.ts'] },
+  {
+    ignores: [
+      '**/test-results/**',
+      '**/playwright-report/**',
+      '**/dist/**',
+      '**/.next/**',
+      '**/coverage/**',
+      '**/drizzle/**',
+      '**/next-env.d.ts',
+    ],
+  },
   js.configs.recommended,
   ...tseslint.configs.recommended,
   {

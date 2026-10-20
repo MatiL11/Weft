@@ -2,6 +2,7 @@ packages:
   - apps/*
   - packages/*
   - packages/infra/*
+  - e2e
 
 # Install scripts are blocked by default; only allow what is required.
 allowBuilds:
