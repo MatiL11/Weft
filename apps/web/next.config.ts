@@ -10,19 +10,35 @@ const nextConfig: NextConfig = {
   transpilePackages: ['@weft/core', '@weft/i18n', '@weft/recorder'],
   // The browser only talks to this origin; /api is proxied to the API server so auth
   // cookies stay first-party.
+  // The Content-Security-Policy (with a per-request nonce) is set in src/proxy.ts.
   async headers() {
+    const common = [
+      { key: 'X-Content-Type-Options', value: 'nosniff' },
+      { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
+    ]
     return [
-      // Only the embed player may be framed by other sites.
       {
         source: '/((?!embed/).*)',
         headers: [
+          ...common,
           { key: 'X-Frame-Options', value: 'SAMEORIGIN' },
-          { key: 'Content-Security-Policy', value: "frame-ancestors 'self'" },
+          // The recorder asks for the screen, camera and microphone; nothing else does.
+          {
+            key: 'Permissions-Policy',
+            value: 'camera=(self), microphone=(self), display-capture=(self), geolocation=()',
+          },
         ],
       },
       {
+        // Only the embed player may be framed by other sites.
         source: '/embed/:path*',
-        headers: [{ key: 'Content-Security-Policy', value: 'frame-ancestors *' }],
+        headers: [
+          ...common,
+          {
+            key: 'Permissions-Policy',
+            value: 'camera=(), microphone=(), display-capture=(), geolocation=()',
+          },
+        ],
       },
     ]
   },
